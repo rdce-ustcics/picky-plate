@@ -27,16 +27,57 @@
 }
 .pap-sidebar:hover{ width:var(--sidebar-open); }
 
-/* Logo */
-.pap-logo{
+/* Logo Container */
+.pap-logo-container{
+  text-decoration:none;
+  padding:0 8px;
+  display:flex;
+  align-items:center;
+  position:relative;
+  height:56px;
+  overflow:visible;
+}
+
+/* Logo Image - visible when collapsed */
+.pap-logo-image{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  opacity:1;
+  transition:opacity .2s ease;
+  position:absolute;
+  left:0;
+  right:0;
+}
+.pap-logo-img{
+  width:48px;
+  height:48px;
+  object-fit:contain;
+}
+
+/* Text Logo - hidden when collapsed */
+.pap-logo-text{
   font-weight:800;
   font-size:1.55rem;
   color:#111;
-  text-decoration:none;
   letter-spacing:.2px;
-  padding:0 8px;
-  display:flex; align-items:baseline; gap:2px;
+  display:flex;
+  align-items:baseline;
+  gap:2px;
+  opacity:0;
+  transition:opacity .2s ease;
+  white-space:nowrap;
 }
+
+/* When expanded: show text, hide image */
+.pap-sidebar:hover .pap-logo-image{
+  opacity:0;
+  pointer-events:none;
+}
+.pap-sidebar:hover .pap-logo-text{
+  opacity:1;
+}
+
 .pap-logo-a{ color:var(--pap-yellow); }
 .pap-dot{ color:#111; }
 
@@ -137,6 +178,8 @@
   text-decoration:none;
   color:#1f1f1f;
   box-shadow:0 6px 16px rgba(0,0,0,.12);
+  border:none;
+  cursor:pointer;
 }
 
 /* Mobile: expanded (no hover on touch) */
@@ -144,4 +187,6 @@
   .pap-sidebar{ width:var(--sidebar-open); }
   .pap-label{ opacity:1; transform:none; }
   .pap-login-card{ display:flex; }
+  .pap-logo-image{ opacity:0; }
+  .pap-logo-text{ opacity:1; }
 }

@@ -1,278 +1,308 @@
-import React, { useMemo, useRef, useState, useEffect } from "react";
-import { Plus, Search, Image as ImageIcon, Send, User, Sparkles, BookOpen } from "lucide-react";
-
-
-const seedPrompts = [
-  "What to eat today?",
-  "What to eat tomorrow?",
-  "What to eat next week?",
-  "What to eat this Saturday?",
-  "What to eat today?",
-];
+import React, { useState, useRef, useEffect } from "react";
+import { BookOpen, Plus, Search, Image, User, Send, Sparkles } from "lucide-react";
 
 const brand = {
   primary: "#FFC42D",
   dark: "#FFB400",
   text: "#2b2b2b",
-  subtle: "#A7A7A7",
   bg: "#F6F6F7",
 };
 
 function BotLogo() {
   return (
-    <div className="flex flex-col items-center gap-4 select-none">
+    <div className="flex flex-col items-center gap-6 select-none">
       {/* Bot icon */}
       <div className="relative">
         <div
           className="mx-auto rounded-full" 
-          style={{ width: 88, height: 88, background: brand.primary }}
+          style={{ width: 120, height: 120, background: brand.primary }}
         />
         {/* face */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex flex-col items-center">
-            <div className="flex gap-3 mb-2">
-              <div className="w-2 h-2 rounded-full bg-black/80" />
-              <div className="w-2 h-2 rounded-full bg-black/80" />
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex gap-5 mb-2">
+              <div className="w-3 h-3 rounded-full bg-black" />
+              <div className="w-3 h-3 rounded-full bg-black" />
             </div>
-            <div className="w-8 h-2 rounded-b-full bg-black/80" />
+            <div className="w-12 h-4 rounded-b-full bg-black mt-1" />
           </div>
         </div>
         {/* antenna */}
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-          <div className="w-8 h-1 bg-[--brandDark] rounded-full" style={{ background: brand.dark }} />
-          <div className="w-3 h-3 rounded-full mx-auto -mt-2" style={{ background: brand.primary }} />
+        <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex flex-col items-center">
+          <div className="w-3 h-3 rounded-full" style={{ background: brand.primary }} />
+          <div className="w-1 h-5" style={{ background: brand.dark }} />
         </div>
       </div>
       {/* Wordmark */}
       <div className="text-center">
-        <div className="text-2xl font-extrabold tracking-tight text-[--brandText]" style={{ color: brand.text }}>
-          Pick<span className="text-black">A</span>Plate<span className="text-[--brandPrimary]" style={{ color: brand.primary }}>.</span>
+        <div className="text-5xl font-extrabold tracking-tight" style={{ color: brand.text }}>
+          Pick<span style={{ color: brand.primary }}>A</span>Plate<span style={{ color: brand.primary }}>.</span>
         </div>
       </div>
     </div>
   );
 }
 
-function SidebarItem({ icon: Icon, label, active, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm transition hover:bg-white hover:shadow-sm ${
-        active ? "bg-white shadow-sm" : "bg-transparent"
-      }`}
-    >
-      <Icon size={18} className="shrink-0" />
-      <span className="truncate">{label}</span>
-    </button>
-  );
-}
-
-function ChatBubble({ role, content }) {
-  const isUser = role === "user";
-  return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
-      <div
-        className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
-          isUser
-            ? "bg-white border border-black/5"
-            : "bg-[#fff7da] border border-amber-100"
-        }`}
-      >
-        {content}
-      </div>
-    </div>
-  );
-}
-
-export default function PickAPlateChat() {
+export default function ChatBot() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
-  const [chats, setChats] = useState(seedPrompts.map((t, i) => ({ id: i + 1, title: t })));
+  const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const scrollerRef = useRef(null);
 
-  const activeChat = useMemo(() => {
-    return chats.find(c => c.id === activeChatId) || null;
-  }, [chats, activeChatId]);
+  const seedChats = [
+    "What to eat today?",
+    "What to eat tomorrow?",
+    "What to eat next week?",
+    "What to eat this saturday?",
+    "What to eat today?",
+  ];
 
-  function startNewChat(template) {
-    const id = Date.now();
-    const title = template || "New chat";
-    const chat = { id, title };
-    setChats(prev => [chat, ...prev]);
-    setActiveChatId(id);
-    if (template) {
-      handleSend(template);
-    } else {
-      setMessages([]);
+  // Initialize with seed chats on mount
+  useEffect(() => {
+    if (chats.length === 0) {
+      const initialChats = seedChats.map((title, index) => ({
+        id: index + 1,
+        title,
+        messages: []
+      }));
+      setChats(initialChats);
+    }
+  }, []);
+
+  const activeChat = chats.find(c => c.id === activeChatId);
+
+  function createNewChat(initialMessage = null) {
+    const newChat = {
+      id: Date.now(),
+      title: initialMessage || "New Chat",
+      messages: []
+    };
+    
+    setChats(prev => [newChat, ...prev]);
+    setActiveChatId(newChat.id);
+    
+    if (initialMessage) {
+      sendMessage(initialMessage, newChat.id);
     }
   }
 
-  function handleSend(forcedText) {
-    const text = (forcedText ?? input).trim();
-    if (!text) return;
+  function sendMessage(text = null, chatId = null) {
+    const messageText = text || input.trim();
+    const targetChatId = chatId || activeChatId;
+    
+    if (!messageText) return;
+    
     setInput("");
-    const userMsg = { role: "user", content: text };
-    setMessages(prev => [...prev, userMsg]);
+    
+    setChats(prev => prev.map(chat => {
+      if (chat.id === targetChatId) {
+        return {
+          ...chat,
+          messages: [...chat.messages, { role: "user", content: messageText }]
+        };
+      }
+      return chat;
+    }));
 
-    // Fake assistant reply (front‑end only)
     setTimeout(() => {
-      setMessages(prev => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "Thanks! (frontend-only) Imagine a smart meal suggestion here. Hook this up to your API later.",
-        },
-      ]);
-    }, 550);
+      setChats(prev => prev.map(chat => {
+        if (chat.id === targetChatId) {
+          const aiResponse = generateResponse(messageText);
+          return {
+            ...chat,
+            messages: [...chat.messages, { role: "assistant", content: aiResponse }]
+          };
+        }
+        return chat;
+      }));
+    }, 800);
+  }
+
+  function generateResponse(userMessage) {
+    const message = userMessage.toLowerCase();
+    
+    if (message.includes("today")) {
+      return "For today, I'd suggest trying a fresh Greek salad with grilled chicken! It's healthy, filling, and quick to prepare. Would you like the recipe?";
+    } else if (message.includes("tomorrow")) {
+      return "How about some homemade pasta carbonara tomorrow? It's creamy, delicious, and takes only 20 minutes to make!";
+    } else if (message.includes("week")) {
+      return "For the week ahead, I can create a meal plan with variety! Think: Monday - Tacos, Tuesday - Stir-fry, Wednesday - Salmon, Thursday - Pizza night, Friday - BBQ. Sound good?";
+    } else if (message.includes("saturday")) {
+      return "Saturday calls for something special! How about trying a new recipe - maybe some Korean bibimbap or Italian risotto? Perfect for a relaxed weekend cooking session!";
+    } else {
+      return "That's a great question! I can help you decide what to eat based on your preferences, dietary needs, or what you have in the fridge. What sounds good to you?";
+    }
+  }
+
+  function selectChat(chatId) {
+    setActiveChatId(chatId);
   }
 
   useEffect(() => {
-    // Auto-scroll to bottom on message add
-    if (!scrollerRef.current) return;
-    scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
-  }, [messages]);
+    if (scrollerRef.current) {
+      scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
+    }
+  }, [activeChat?.messages]);
 
   return (
-    <div className="min-h-screen w-full" style={{ background: brand.bg }}>
-      {/* Shell */}
-      <div className="mx-auto max-w-[1200px] px-3 py-4 md:py-8">
-        <div className="grid grid-cols-12 gap-4">
-          {/* Sidebar */}
-          <aside className="col-span-12 md:col-span-3">
-            <div className="sticky top-4 flex flex-col gap-4 bg-[#f9f9fa] border border-black/5 rounded-2xl p-3 md:p-4">
-              {/* Toolbar */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 font-semibold">
-                  <BookOpen size={16} />
-                  <span>Menu</span>
-                </div>
-              </div>
+    <div className="min-h-screen w-full flex" style={{ background: brand.bg }}>
+      {/* Sidebar */}
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+        {/* Menu Icon */}
+        <div className="p-4">
+          <BookOpen size={28} style={{ color: brand.primary }} />
+        </div>
 
-              <SidebarItem icon={Plus} label="New Chat" onClick={() => startNewChat()} />
-              <SidebarItem icon={Search} label="Search Chats" onClick={() => {}} />
-              <SidebarItem icon={ImageIcon} label="Library" onClick={() => {}} />
+        {/* Nav Items */}
+        <div className="px-3 space-y-1">
+          <button
+            onClick={() => createNewChat()}
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition hover:bg-gray-50"
+          >
+            <Plus size={20} style={{ color: brand.primary }} />
+            <span className="font-medium">New Chat</span>
+          </button>
 
-              {/* Chats */}
-              <div className="mt-2">
-                <div className="text-xs uppercase tracking-wide text-black/50 px-2 mb-2">Chats</div>
-                <div className="flex flex-col gap-1">
-                  {chats.map((c) => (
-                    <button
-                      key={c.id}
-                      onClick={() => {
-                        setActiveChatId(c.id);
-                        setMessages([]);
-                      }}
-                      className={`text-left px-3 py-2 rounded-xl text-sm hover:bg-white hover:shadow-sm transition ${
-                        activeChatId === c.id ? "bg-white shadow-sm" : "bg-transparent"
-                      }`}
-                    >
-                      {c.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <button
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition hover:bg-gray-50"
+          >
+            <Search size={20} style={{ color: brand.primary }} />
+            <span className="font-medium">Search Chats</span>
+          </button>
 
-              {/* User */}
-              <div className="mt-3 border-t border-black/5 pt-3 flex items-center gap-2 text-sm text-black/70">
-                <div className="w-8 h-8 rounded-full bg-white border border-black/5 flex items-center justify-center">
-                  <User size={16} />
-                </div>
-                <div className="truncate">Username</div>
+          <button
+            className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition hover:bg-gray-50"
+          >
+            <Image size={20} style={{ color: brand.primary }} />
+            <span className="font-medium">Library</span>
+          </button>
+        </div>
+
+        {/* Chats Section */}
+        <div className="mt-8 px-3 flex-1 overflow-y-auto">
+          <div className="text-xs uppercase tracking-wide text-gray-400 px-3 mb-3">Chats</div>
+          <div className="space-y-0.5">
+            {chats.map((chat) => (
+              <button
+                key={chat.id}
+                onClick={() => selectChat(chat.id)}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${
+                  activeChatId === chat.id 
+                    ? "bg-gray-50 text-gray-900 font-medium" 
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {chat.title}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* User Section */}
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ background: brand.primary }}
+            >
+              <User size={20} className="text-white" />
+            </div>
+            <span className="text-sm font-medium">Username</span>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col">
+        {!activeChatId ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8">
+            <BotLogo />
+
+            {/* Input Box */}
+            <div className="w-full max-w-2xl mt-12">
+              <div className="relative">
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && input.trim()) {
+                      createNewChat(input);
+                    }
+                  }}
+                  className="w-full rounded-2xl border border-gray-300 bg-white px-6 py-4 pr-16 text-sm outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent shadow-sm"
+                  placeholder="Type or Ask anything"
+                />
+                <button
+                  onClick={() => {
+                    if (input.trim()) {
+                      createNewChat(input);
+                    }
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-xl p-2.5 transition hover:opacity-90"
+                  style={{ background: brand.primary }}
+                  aria-label="Send"
+                >
+                  <Send size={20} className="text-white" />
+                </button>
               </div>
             </div>
-          </aside>
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col bg-white">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center gap-2">
+              <Sparkles size={18} className="text-yellow-500" />
+              <span className="font-medium text-sm">{activeChat?.title || "Chat"}</span>
+            </div>
 
-          {/* Main */}
-          <main className="col-span-12 md:col-span-9">
-            <div className="bg-[#f9f9fa] border border-black/5 rounded-3xl min-h-[70vh] flex flex-col">
-              {/* Empty state vs chat */}
-              {messages.length === 0 ? (
-                <div className="flex-1 grid place-items-center p-6">
-                  <div className="flex flex-col items-center gap-6">
-                    <BotLogo />
-
-                    {/* Input Box (center) */}
-                    <div className="w-full max-w-2xl">
-                      <div className="relative">
-                        <input
-                          value={input}
-                          onChange={(e) => setInput(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                          className="w-full rounded-2xl border border-black/5 bg-white px-4 py-4 pr-12 text-sm outline-none focus:ring-2 focus:ring-[--brandPrimary]"
-                          placeholder="Type or Ask anything"
-                          style={{
-                            boxShadow: "0 1px 0 rgba(0,0,0,0.03)",
-                          }}
-                        />
-                        <button
-                          onClick={() => handleSend()}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl p-2 bg-[--brandPrimary] hover:bg-[--brandDark] transition"
-                          style={{ background: brand.primary }}
-                          aria-label="Send"
-                        >
-                          <Send size={18} className="text-white" />
-                        </button>
-                      </div>
-
-                      {/* Quick templates */}
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {seedPrompts.map((p, i) => (
-                          <button
-                            key={i}
-                            onClick={() => startNewChat(p)}
-                            className="text-xs px-3 py-2 rounded-full border border-black/10 bg-white hover:bg-[#fff7da] transition"
-                          >
-                            {p}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+            <div ref={scrollerRef} className="flex-1 overflow-y-auto p-6 space-y-4">
+              {activeChat?.messages.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-gray-400">
+                  Start the conversation
                 </div>
               ) : (
-                <div className="flex-1 flex flex-col">
-                  {/* header */}
-                  <div className="px-4 md:px-6 py-3 border-b border-black/5 flex items-center gap-2 text-sm">
-                    <Sparkles size={16} className="text-yellow-500" />
-                    <span className="font-medium">{activeChat?.title || "New chat"}</span>
-                  </div>
-
-                  {/* messages */}
-                  <div ref={scrollerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
-                    {messages.map((m, idx) => (
-                      <ChatBubble key={idx} role={m.role} content={m.content} />
-                    ))}
-                  </div>
-
-                  {/* composer */}
-                  <div className="p-3 md:p-4 border-t border-black/5 bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-                    <div className="relative max-w-3xl mx-auto">
-                      <input
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                        className="w-full rounded-2xl border border-black/10 bg-white px-4 py-3 pr-12 text-sm outline-none focus:ring-2 focus:ring-[--brandPrimary]"
-                        placeholder="Type your message…"
-                      />
-                      <button
-                        onClick={() => handleSend()}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl p-2 bg-[--brandPrimary] hover:bg-[--brandDark] transition"
-                        style={{ background: brand.primary }}
-                        aria-label="Send"
-                      >
-                        <Send size={18} className="text-white" />
-                      </button>
+                activeChat?.messages.map((m, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm ${
+                        m.role === "user"
+                          ? "bg-white border border-gray-200 shadow-sm"
+                          : "shadow-sm"
+                      }`}
+                      style={m.role === "assistant" ? { background: "#FFF7DA" } : {}}
+                    >
+                      {m.content}
                     </div>
                   </div>
-                </div>
+                ))
               )}
             </div>
-          </main>
-        </div>
-      </div>
+
+            <div className="p-4 border-t border-gray-200">
+              <div className="relative max-w-3xl mx-auto">
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                  className="w-full rounded-2xl border border-gray-200 bg-white px-5 py-3 pr-14 text-sm outline-none focus:ring-2 focus:ring-yellow-400"
+                  placeholder="Type your message…"
+                />
+                <button
+                  onClick={() => sendMessage()}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-xl p-2 transition"
+                  style={{ background: brand.primary }}
+                  aria-label="Send"
+                >
+                  <Send size={18} className="text-white" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
