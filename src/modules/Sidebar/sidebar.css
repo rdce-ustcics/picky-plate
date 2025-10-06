@@ -1,0 +1,147 @@
+:root{
+  --pap-yellow:#E5B73B;
+  --pap-yellow-2:#f1c85d;
+  --pap-lavender:#9B92A6;
+  --pap-text:#2E2E2E;
+  --pap-muted:#7e7e7e;
+  --pap-white:#ffffff;
+
+  --sidebar-closed:84px;
+  --sidebar-open:290px;
+}
+
+.pap-sidebar{
+  position:sticky;
+  top:0;
+  height:100vh;
+  width:var(--sidebar-closed);
+  background:var(--pap-white);
+  border-right:1px solid #eee;
+  box-shadow:0 0 30px rgba(0,0,0,.04);
+  padding:22px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  transition:width .2s ease;
+  overflow:hidden;
+}
+.pap-sidebar:hover{ width:var(--sidebar-open); }
+
+/* Logo */
+.pap-logo{
+  font-weight:800;
+  font-size:1.55rem;
+  color:#111;
+  text-decoration:none;
+  letter-spacing:.2px;
+  padding:0 8px;
+  display:flex; align-items:baseline; gap:2px;
+}
+.pap-logo-a{ color:var(--pap-yellow); }
+.pap-dot{ color:#111; }
+
+/* Nav container */
+.pap-nav{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-top:8px;
+  flex:1;
+}
+
+/* Base links (neutral by default) */
+.pap-nav-item,
+.pap-contact-pill{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 12px;
+  border-radius:14px;
+  text-decoration:none;
+  color:#3d3d3d;
+  font-weight:600;
+  white-space:nowrap;
+  background:transparent;
+  box-shadow:none;
+}
+.pap-nav-item .pap-icon,
+.pap-contact-pill .pap-icon{
+  font-size:22px;
+  min-width:28px;
+  color:var(--pap-lavender);
+}
+.pap-nav-item:hover,
+.pap-contact-pill:hover{
+  background:#f5f5f5;
+}
+
+/* ACTIVE = the ONLY yellow item */
+.pap-nav-item.is-active,
+.pap-contact-pill.is-active{
+  background:var(--pap-yellow);
+  color:#222;
+  box-shadow:0 10px 22px rgba(229,183,59,.25);
+}
+.pap-nav-item.is-active .pap-icon,
+.pap-contact-pill.is-active .pap-icon{
+  color:#222; /* dark icon on yellow */
+}
+
+/* Label reveal on hover (icons-only when collapsed) */
+.pap-label{
+  opacity:0;
+  transform:translateX(-6px);
+  transition:opacity .15s ease, transform .15s ease;
+  pointer-events:none;
+}
+.pap-sidebar:hover .pap-label{
+  opacity:1;
+  transform:none;
+  pointer-events:auto;
+}
+
+/* Collapsed tweaks: hide card, make Contact compact like others */
+.pap-sidebar:not(:hover) .pap-login-card{ display:none; }
+.pap-sidebar:not(:hover) .pap-contact-pill{
+  padding:12px;
+  border-radius:14px;
+}
+
+/* Login card at bottom (visible when expanded) */
+.pap-login-card{
+  margin-top:auto;
+  background:radial-gradient(120px 120px at 80% 80%, rgba(0,0,0,.06), transparent 60%), var(--pap-yellow);
+  border-radius:18px;
+  padding:16px;
+  box-shadow:0 20px 40px rgba(229,183,59,.25);
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+}
+.pap-login-title{
+  font-weight:900;
+  color:#2a2a2a;
+  font-size:1rem;
+}
+.pap-login-sub{
+  font-weight:800;
+  font-size:1rem;
+  margin-bottom:14px;
+  color:#2a2a2a;
+}
+.pap-login-btn{
+  padding:10px 16px;
+  border-radius:10px;
+  background:#fff;
+  font-weight:900;
+  text-decoration:none;
+  color:#1f1f1f;
+  box-shadow:0 6px 16px rgba(0,0,0,.12);
+}
+
+/* Mobile: expanded (no hover on touch) */
+@media (max-width: 900px){
+  .pap-sidebar{ width:var(--sidebar-open); }
+  .pap-label{ opacity:1; transform:none; }
+  .pap-login-card{ display:flex; }
+}

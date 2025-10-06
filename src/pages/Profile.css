@@ -1,0 +1,322 @@
+/* Profile Page Container */
+.profile-page {
+  min-height: 100vh;
+  background-color: #f3f4f6;
+  padding: 32px;
+}
+
+/* Header Banner */
+.header-banner {
+  background: linear-gradient(to right, #fcd34d, #fbbf24);
+  border-radius: 24px;
+  padding: 32px;
+  margin-bottom: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.circle-decoration {
+  position: absolute;
+  background-color: rgba(254, 240, 138, 0.3);
+  border-radius: 50%;
+}
+
+.circle-1 {
+  width: 256px;
+  height: 256px;
+  top: -128px;
+  right: -128px;
+}
+
+.circle-2 {
+  width: 192px;
+  height: 192px;
+  bottom: 0;
+  right: 128px;
+}
+
+.header-banner h1 {
+  font-size: 36px;
+  font-weight: bold;
+  color: black;
+  margin: 0 0 8px 0;
+  position: relative;
+  z-index: 1;
+}
+
+.header-banner p {
+  font-size: 18px;
+  color: black;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+}
+
+/* Profile Content */
+.profile-content {
+  display: flex;
+  gap: 32px;
+}
+
+/* Profile Card (Left) */
+.profile-card {
+  background-color: white;
+  border-radius: 24px;
+  padding: 32px;
+  width: 420px;
+  flex-shrink: 0;
+}
+
+.profile-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+/* Profile Picture */
+.profile-picture-wrapper {
+  position: relative;
+  margin-bottom: 24px;
+}
+
+.profile-picture {
+  width: 176px;
+  height: 176px;
+  background-color: #9ca3af;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.profile-icon {
+  width: 64px;
+  height: 64px;
+  background-color: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 40px;
+}
+
+.profile-icon::after {
+  content: '';
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 60px;
+  background-color: white;
+  border-radius: 50% 50% 0 0;
+}
+
+.edit-icon {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 48px;
+  height: 48px;
+  background-color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 4px solid white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.edit-icon svg {
+  color: #4b5563;
+}
+
+/* Profile Fields List */
+.profile-fields-list {
+  width: 100%;
+}
+
+.profile-field-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 16px;
+}
+
+.profile-field-item:last-child {
+  margin-bottom: 0;
+}
+
+.field-icon {
+  width: 20px;
+  height: 20px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.profile-field-item span {
+  font-size: 18px;
+  color: #000;
+}
+
+/* Save Button */
+.save-button {
+  width: 100%;
+  background-color: #fbbf24;
+  color: black;
+  font-weight: 600;
+  padding: 12px;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 12px;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.save-button:hover {
+  background-color: #f59e0b;
+}
+
+/* Logout */
+.logout-wrapper {
+  text-align: center;
+}
+
+.logout-link {
+  color: #6b7280;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.logout-link:hover {
+  color: #374151;
+}
+
+/* Right Section */
+.right-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Account Details Card */
+.account-details-card {
+  background-color: white;
+  border-radius: 24px;
+  padding: 32px;
+}
+
+.account-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 24px;
+}
+
+.account-field:last-child {
+  margin-bottom: 0;
+}
+
+.field-icon-large {
+  width: 24px;
+  height: 24px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.account-field span {
+  font-size: 20px;
+  color: #000;
+}
+
+/* Password Field */
+.password-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.password-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.change-password-link {
+  color: #4b5563;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.change-password-link:hover {
+  color: #1f2937;
+}
+
+/* Food Preferences Card */
+.food-preferences-card {
+  background-color: white;
+  border-radius: 24px;
+  padding: 32px;
+}
+
+.food-preferences-card h2 {
+  font-size: 24px;
+  font-weight: bold;
+  margin: 0 0 24px 0;
+  color: #000;
+}
+
+.preferences-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.preference-input {
+  width: 100%;
+  padding: 16px 24px;
+  border: 2px solid #d1d5db;
+  border-radius: 9999px;
+  font-size: 18px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.preference-input:focus {
+  border-color: #fbbf24;
+}
+
+.add-preferences-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9ca3af;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 16px 24px;
+  font-size: 18px;
+  transition: color 0.3s;
+}
+
+.add-preferences-button:hover {
+  color: #6b7280;
+}
+
+.plus-icon {
+  font-size: 28px;
+  font-weight: 300;
+}
