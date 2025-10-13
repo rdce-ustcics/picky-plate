@@ -53,8 +53,10 @@ export default function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/recipes" element={<CommunityRecipes />} />
+            <Route path="/recipes/upload" element={<UploadRecipe />} />
             <Route path="/restaurants" element={<RestaurantLocator />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
+            
 
             {/* ✅ Moved INSIDE MainLayout so the Sidebar appears */}
             <Route path="/chatbot" element={<ChatBot />} />

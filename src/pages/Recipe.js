@@ -1,8 +1,6 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom"; // <— add this
-import { Plus, Clock, TrendingUp, X, ChefHat, Users } from "lucide-react"; // <— ChefHat (1 f)
-
-
+import { Link } from "react-router-dom";
+import { Plus, Clock, TrendingUp, X, ChefHat, Users } from "lucide-react";
 
 export default function CommunityRecipes() {
   const [selectedRecipe, setSelectedRecipe] = useState(null);
@@ -219,54 +217,54 @@ export default function CommunityRecipes() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-<div className="bg-white shadow-sm">
-  <div className="max-w-7xl mx-auto px-6 py-6">
-    <div className="flex items-center justify-between">
-      <h1 className="text-4xl font-bold text-gray-800">Community Recipes</h1>
-      <Link
-  to="/recipes/upload"
-  className="bg-yellow-400 hover:bg-yellow-500 text-white font-semibold px-6 py-3 rounded-full flex items-center gap-2 transition shadow-lg hover:shadow-xl transform hover:scale-105"
->
-  <Plus className="w-5 h-5" />
-  Upload Recipe
-</Link>
-    </div>
-  </div>
-</div>
+      <div className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800">Community Recipes</h1>
+            <Link 
+              to="/recipes/upload"
+              className="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-500 text-white font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-full flex items-center justify-center gap-2 transition shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
+            >
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+              Upload Recipe
+            </Link>
+          </div>
+        </div>
+      </div>
 
       {/* Recipe Grid */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-2 gap-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {recipes.map((recipe) => (
             <div 
               key={recipe.id} 
-              className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition cursor-pointer group"
+              className="bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition cursor-pointer group"
               onClick={() => setSelectedRecipe(recipe)}
             >
               <div className="relative overflow-hidden">
                 <img 
                   src={recipe.image} 
                   alt={recipe.title}
-                  className="w-full h-56 object-cover group-hover:scale-110 transition duration-500"
+                  className="w-full h-48 sm:h-56 object-cover group-hover:scale-110 transition duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition"></div>
               </div>
               
-              <div className="p-5">
-                <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-yellow-500 transition">
+              <div className="p-4 sm:p-5">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 group-hover:text-yellow-500 transition">
                   {recipe.title}
                 </h3>
-                <p className="text-sm text-gray-500 mb-3">
+                <p className="text-xs sm:text-sm text-gray-500 mb-3">
                   By <span className="text-gray-700 font-medium">{recipe.author}</span>
                 </p>
-                <div className="flex items-center gap-4 text-sm text-gray-600">
+                <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
                   <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
+                    <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
                     <span>Prep: {recipe.prepTime}</span>
                   </div>
                   <span>•</span>
                   <div className="flex items-center gap-1">
-                    <TrendingUp className="w-4 h-4" />
+                    <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
                     <span>{recipe.difficulty}</span>
                   </div>
                 </div>
@@ -278,10 +276,10 @@ export default function CommunityRecipes() {
 
       {/* Recipe Modal */}
       {selectedRecipe && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50" onClick={() => setSelectedRecipe(null)}>
-          <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto" onClick={() => setSelectedRecipe(null)}>
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl my-4" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header with Image */}
-            <div className="relative h-64">
+            <div className="relative h-48 sm:h-64">
               <img 
                 src={selectedRecipe.image} 
                 alt={selectedRecipe.title}
@@ -290,59 +288,59 @@ export default function CommunityRecipes() {
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
               <button 
                 onClick={() => setSelectedRecipe(null)}
-                className="absolute top-4 right-4 bg-white/90 hover:bg-white rounded-full p-2 transition"
+                className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-white/90 hover:bg-white rounded-full p-2 transition"
               >
-                <X className="w-6 h-6 text-gray-800" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-800" />
               </button>
-              <div className="absolute bottom-4 left-6">
-                <h2 className="text-4xl font-bold text-white mb-2">{selectedRecipe.title}</h2>
-                <p className="text-white/90">By {selectedRecipe.author}</p>
+              <div className="absolute bottom-3 sm:bottom-4 left-4 sm:left-6 right-4">
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1 sm:mb-2">{selectedRecipe.title}</h2>
+                <p className="text-sm sm:text-base text-white/90">By {selectedRecipe.author}</p>
               </div>
             </div>
 
             {/* Modal Content */}
-            <div className="p-8">
+            <div className="p-4 sm:p-6 md:p-8">
               {/* Description */}
-              <div className="mb-6">
-                <p className="text-gray-700 text-lg leading-relaxed">{selectedRecipe.description}</p>
+              <div className="mb-4 sm:mb-6">
+                <p className="text-gray-700 text-sm sm:text-base md:text-lg leading-relaxed">{selectedRecipe.description}</p>
               </div>
 
               {/* Quick Info */}
-              <div className="grid grid-cols-4 gap-4 mb-8 p-4 bg-yellow-50 rounded-xl">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8 p-3 sm:p-4 bg-yellow-50 rounded-xl">
                 <div className="text-center">
-                  <Clock className="w-6 h-6 mx-auto mb-2 text-yellow-600" />
+                  <Clock className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Prep Time</p>
-                  <p className="font-semibold text-gray-800">{selectedRecipe.prepTime}</p>
+                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.prepTime}</p>
                 </div>
                 <div className="text-center">
-                  <Clock className="w-6 h-6 mx-auto mb-2 text-yellow-600" />
+                  <Clock className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Cook Time</p>
-                  <p className="font-semibold text-gray-800">{selectedRecipe.cookTime}</p>
+                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.cookTime}</p>
                 </div>
                 <div className="text-center">
-                  <TrendingUp className="w-6 h-6 mx-auto mb-2 text-yellow-600" />
+                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Difficulty</p>
-                  <p className="font-semibold text-gray-800">{selectedRecipe.difficulty}</p>
+                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.difficulty}</p>
                 </div>
                 <div className="text-center">
-                  <Users className="w-6 h-6 mx-auto mb-2 text-yellow-600" />
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Servings</p>
-                  <p className="font-semibold text-gray-800">{selectedRecipe.servings}</p>
+                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.servings}</p>
                 </div>
               </div>
 
               {/* Ingredients */}
-              <div className="mb-8">
-                <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                  <ChefHat className="w-6 h-6 text-yellow-500" />
+              <div className="mb-6 sm:mb-8">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
+                  <ChefHat className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
                   Ingredients
                 </h3>
-                <div className="bg-gray-50 rounded-xl p-6">
+                <div className="bg-gray-50 rounded-xl p-4 sm:p-6">
                   <ul className="space-y-2">
                     {selectedRecipe.ingredients.map((ingredient, index) => (
-                      <li key={index} className="flex items-start gap-3">
+                      <li key={index} className="flex items-start gap-2 sm:gap-3">
                         <span className="text-yellow-500 mt-1">•</span>
-                        <span className="text-gray-700">{ingredient}</span>
+                        <span className="text-sm sm:text-base text-gray-700">{ingredient}</span>
                       </li>
                     ))}
                   </ul>
@@ -350,15 +348,15 @@ export default function CommunityRecipes() {
               </div>
 
               {/* Instructions */}
-              <div className="mb-8">
-                <h3 className="text-2xl font-bold text-gray-800 mb-4">Step-by-Step Instructions</h3>
-                <div className="space-y-4">
+              <div className="mb-6 sm:mb-8">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Step-by-Step Instructions</h3>
+                <div className="space-y-3 sm:space-y-4">
                   {selectedRecipe.instructions.map((instruction, index) => (
-                    <div key={index} className="flex gap-4">
-                      <div className="flex-shrink-0 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center font-bold text-white">
+                    <div key={index} className="flex gap-3 sm:gap-4">
+                      <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-yellow-400 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-base">
                         {index + 1}
                       </div>
-                      <p className="text-gray-700 pt-1">{instruction}</p>
+                      <p className="text-sm sm:text-base text-gray-700 pt-0.5 sm:pt-1">{instruction}</p>
                     </div>
                   ))}
                 </div>
@@ -366,9 +364,9 @@ export default function CommunityRecipes() {
 
               {/* Notes */}
               {selectedRecipe.notes && (
-                <div className="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-r-xl">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2">💡 Chef's Notes</h3>
-                  <p className="text-gray-700 leading-relaxed">{selectedRecipe.notes}</p>
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 sm:p-6 rounded-r-xl">
+                  <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-2">💡 Chef's Notes</h3>
+                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed">{selectedRecipe.notes}</p>
                 </div>
               )}
             </div>
