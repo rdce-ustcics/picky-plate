@@ -20,10 +20,10 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
+          {/* All routes with MainLayout */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<Dashboard />} />
 
-            {/* user or admin */}
             <Route
               path="/profile"
               element={
@@ -33,7 +33,6 @@ export default function App() {
               }
             />
 
-            {/* admin only */}
             <Route
               path="/admin"
               element={
@@ -49,10 +48,6 @@ export default function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/settings" element={<Settings />} />
 
-            {/* ChatBot Page */}
-            <Route path="/chatbot" element={<ChatBot />} />
-
-            {/* guest-only login (redirects away if already logged in) */}
             <Route
               path="/login"
               element={
@@ -64,6 +59,9 @@ export default function App() {
 
             <Route path="/forbidden" element={<Forbidden />} />
           </Route>
+
+          {/* ChatBot - OUTSIDE MainLayout */}
+          <Route path="/chatbot" element={<ChatBot />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

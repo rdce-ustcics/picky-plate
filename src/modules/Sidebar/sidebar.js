@@ -1,5 +1,5 @@
 import { NavLink, Link } from "react-router-dom";
-import { FiGrid, FiUser, FiZap, FiUsers, FiGlobe, FiPhoneCall, FiSettings, FiMessageCircle } from "react-icons/fi"; // Chatbot icon
+import { FiGrid, FiUser, FiZap, FiUsers, FiGlobe, FiPhoneCall, FiSettings, FiMessageCircle } from "react-icons/fi";
 import { useAuth } from "../../auth/AuthContext";
 import "./sidebar.css";
 
@@ -9,7 +9,7 @@ const items = [
   { to: "/surprise", label: "Suprise me", icon: <FiZap /> },
   { to: "/barkada-vote", label: "Barkada Vote", icon: <FiUsers /> },
   { to: "/explorer", label: "Cultural Food Explorer", icon: <FiGlobe /> },
-  { to: "/chatbot", label: "AI ChatBot", icon: <FiMessageCircle /> }, // Chatbot page
+  { to: "/chatbot", label: "AI ChatBot", icon: <FiMessageCircle /> },
 ];
 
 export default function Sidebar() {
@@ -17,8 +17,28 @@ export default function Sidebar() {
 
   return (
     <aside className="pap-sidebar">
-      <Link to="/" className="pap-logo">
-        Pick<span className="pap-logo-a">A</span>Plate<span className="pap-dot">.</span>
+      <Link to="/" className="pap-logo-container">
+        {/* Logo image - visible when collapsed */}
+        <div className="pap-logo-image">
+          {/* Replace with your actual logo if you have one */}
+          <div style={{
+            width: 48,
+            height: 48,
+            borderRadius: '50%',
+            background: '#FFC42D',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '24px'
+          }}>
+            🍽️
+          </div>
+        </div>
+        
+        {/* Text logo - visible when expanded */}
+        <div className="pap-logo-text">
+          Pick<span className="pap-logo-a">A</span>Plate<span className="pap-dot">.</span>
+        </div>
       </Link>
 
       <nav className="pap-nav">
@@ -69,7 +89,7 @@ export default function Sidebar() {
           </>
         ) : (
           <>
-            <div className="pap-login-title">You’re logged in</div>
+            <div className="pap-login-title">You're logged in</div>
             <div className="pap-login-sub">Access Profile</div>
             <button className="pap-login-btn" onClick={logout}>LOGOUT</button>
           </>
