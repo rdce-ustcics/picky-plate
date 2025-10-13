@@ -10,183 +10,336 @@
   --sidebar-open:290px;
 }
 
-.pap-sidebar{
-  position:sticky;
-  top:0;
-  height:100vh;
-  width:var(--sidebar-closed);
-  background:var(--pap-white);
-  border-right:1px solid #eee;
-  box-shadow:0 0 30px rgba(0,0,0,.04);
-  padding:22px 14px;
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-  transition:width .2s ease;
-  overflow:hidden;
+/* ========== MOBILE MENU BUTTON ========== */
+.mobile-menu-btn {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 1001;
+  background: var(--pap-yellow);
+  border: none;
+  border-radius: 12px;
+  padding: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: white;
+  transition: all 0.2s;
+  display: none; /* Hidden by default on desktop */
 }
-.pap-sidebar:hover{ width:var(--sidebar-open); }
+
+.mobile-menu-btn:hover {
+  background: var(--pap-yellow-2);
+  transform: scale(1.05);
+}
+
+.mobile-menu-btn:active {
+  transform: scale(0.95);
+}
+
+/* Mobile Overlay */
+.mobile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ========== SIDEBAR - DESKTOP ========== */
+.pap-sidebar{
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: var(--sidebar-closed);
+  background: var(--pap-white);
+  border-right: 1px solid #eee;
+  box-shadow: 0 0 30px rgba(0,0,0,.04);
+  padding: 22px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: width .2s ease;
+  overflow: hidden;
+  z-index: 100;
+}
+
+.pap-sidebar:hover{ 
+  width: var(--sidebar-open); 
+}
 
 /* Logo Container */
 .pap-logo-container{
-  text-decoration:none;
-  padding:0 8px;
-  display:flex;
-  align-items:center;
-  position:relative;
-  height:56px;
-  overflow:visible;
+  text-decoration: none;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  height: 56px;
+  overflow: visible;
 }
 
 /* Logo Image - visible when collapsed */
 .pap-logo-image{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  opacity:1;
-  transition:opacity .2s ease;
-  position:absolute;
-  left:0;
-  right:0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  transition: opacity .2s ease;
+  position: absolute;
+  left: 0;
+  right: 0;
 }
+
 .pap-logo-img{
-  width:48px;
-  height:48px;
-  object-fit:contain;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
 }
 
 /* Text Logo - hidden when collapsed */
 .pap-logo-text{
-  font-weight:800;
-  font-size:1.55rem;
-  color:#111;
-  letter-spacing:.2px;
-  display:flex;
-  align-items:baseline;
-  gap:2px;
-  opacity:0;
-  transition:opacity .2s ease;
-  white-space:nowrap;
+  font-weight: 800;
+  font-size: 1.55rem;
+  color: #111;
+  letter-spacing: .2px;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity .2s ease;
+  white-space: nowrap;
 }
 
 /* When expanded: show text, hide image */
 .pap-sidebar:hover .pap-logo-image{
-  opacity:0;
-  pointer-events:none;
-}
-.pap-sidebar:hover .pap-logo-text{
-  opacity:1;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.pap-logo-a{ color:var(--pap-yellow); }
-.pap-dot{ color:#111; }
+.pap-sidebar:hover .pap-logo-text{
+  opacity: 1;
+}
+
+.pap-logo-a{ 
+  color: var(--pap-yellow); 
+}
+
+.pap-dot{ 
+  color: #111; 
+}
 
 /* Nav container */
 .pap-nav{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  margin-top:8px;
-  flex:1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  flex: 1;
+  overflow-y: auto;
 }
 
-/* Base links (neutral by default) */
+/* Base links */
 .pap-nav-item,
 .pap-contact-pill{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  padding:12px 12px;
-  border-radius:14px;
-  text-decoration:none;
-  color:#3d3d3d;
-  font-weight:600;
-  white-space:nowrap;
-  background:transparent;
-  box-shadow:none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 12px;
+  border-radius: 14px;
+  text-decoration: none;
+  color: #3d3d3d;
+  font-weight: 600;
+  white-space: nowrap;
+  background: transparent;
+  box-shadow: none;
+  transition: background 0.2s;
 }
+
 .pap-nav-item .pap-icon,
 .pap-contact-pill .pap-icon{
-  font-size:22px;
-  min-width:28px;
-  color:var(--pap-lavender);
+  font-size: 22px;
+  min-width: 28px;
+  color: var(--pap-lavender);
+  flex-shrink: 0;
 }
+
 .pap-nav-item:hover,
 .pap-contact-pill:hover{
-  background:#f5f5f5;
+  background: #f5f5f5;
 }
 
-/* ACTIVE = the ONLY yellow item */
+/* Active state */
 .pap-nav-item.is-active,
 .pap-contact-pill.is-active{
-  background:var(--pap-yellow);
-  color:#222;
-  box-shadow:0 10px 22px rgba(229,183,59,.25);
+  background: var(--pap-yellow);
+  color: #222;
+  box-shadow: 0 10px 22px rgba(229,183,59,.25);
 }
+
 .pap-nav-item.is-active .pap-icon,
 .pap-contact-pill.is-active .pap-icon{
-  color:#222; /* dark icon on yellow */
+  color: #222;
 }
 
-/* Label reveal on hover (icons-only when collapsed) */
+/* Label reveal on hover */
 .pap-label{
-  opacity:0;
-  transform:translateX(-6px);
-  transition:opacity .15s ease, transform .15s ease;
-  pointer-events:none;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity .15s ease, transform .15s ease;
+  pointer-events: none;
 }
+
 .pap-sidebar:hover .pap-label{
-  opacity:1;
-  transform:none;
-  pointer-events:auto;
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
 }
 
-/* Collapsed tweaks: hide card, make Contact compact like others */
-.pap-sidebar:not(:hover) .pap-login-card{ display:none; }
+/* Collapsed state */
+.pap-sidebar:not(:hover) .pap-login-card{ 
+  display: none; 
+}
+
 .pap-sidebar:not(:hover) .pap-contact-pill{
-  padding:12px;
-  border-radius:14px;
+  padding: 12px;
+  border-radius: 14px;
 }
 
-/* Login card at bottom (visible when expanded) */
+/* Login card */
 .pap-login-card{
-  margin-top:auto;
-  background:radial-gradient(120px 120px at 80% 80%, rgba(0,0,0,.06), transparent 60%), var(--pap-yellow);
-  border-radius:18px;
-  padding:16px;
-  box-shadow:0 20px 40px rgba(229,183,59,.25);
-  display:flex;
-  flex-direction:column;
-  align-items:flex-start;
-}
-.pap-login-title{
-  font-weight:900;
-  color:#2a2a2a;
-  font-size:1rem;
-}
-.pap-login-sub{
-  font-weight:800;
-  font-size:1rem;
-  margin-bottom:14px;
-  color:#2a2a2a;
-}
-.pap-login-btn{
-  padding:10px 16px;
-  border-radius:10px;
-  background:#fff;
-  font-weight:900;
-  text-decoration:none;
-  color:#1f1f1f;
-  box-shadow:0 6px 16px rgba(0,0,0,.12);
-  border:none;
-  cursor:pointer;
+  margin-top: auto;
+  background: radial-gradient(120px 120px at 80% 80%, rgba(0,0,0,.06), transparent 60%), var(--pap-yellow);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 20px 40px rgba(229,183,59,.25);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
-/* Mobile: expanded (no hover on touch) */
+.pap-login-title{
+  font-weight: 900;
+  color: #2a2a2a;
+  font-size: 1rem;
+}
+
+.pap-login-sub{
+  font-weight: 800;
+  font-size: 1rem;
+  margin-bottom: 14px;
+  color: #2a2a2a;
+}
+
+.pap-login-btn{
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #fff;
+  font-weight: 900;
+  text-decoration: none;
+  color: #1f1f1f;
+  box-shadow: 0 6px 16px rgba(0,0,0,.12);
+  border: none;
+  cursor: pointer;
+}
+
+/* Scrollbar */
+.pap-nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.pap-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.pap-nav::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 2px;
+}
+
+/* ========== MOBILE RESPONSIVE (TABLETS & PHONES) ========== */
 @media (max-width: 900px){
-  .pap-sidebar{ width:var(--sidebar-open); }
-  .pap-label{ opacity:1; transform:none; }
-  .pap-login-card{ display:flex; }
-  .pap-logo-image{ opacity:0; }
-  .pap-logo-text{ opacity:1; }
+  /* Show mobile menu button */
+  .mobile-menu-btn {
+    display: block !important;
+  }
+
+  /* Hide sidebar by default on mobile */
+  .pap-sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    height: 100vh;
+    width: 85vw;
+    max-width: 320px;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    box-shadow: none;
+  }
+
+  /* Show sidebar when mobile-open class is added */
+  .pap-sidebar.mobile-open {
+    left: 0;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Always show full sidebar content on mobile (no collapse) */
+  .pap-sidebar .pap-label {
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+  }
+
+  .pap-sidebar .pap-logo-image {
+    opacity: 0 !important;
+  }
+
+  .pap-sidebar .pap-logo-text {
+    opacity: 1 !important;
+  }
+
+  .pap-sidebar .pap-login-card {
+    display: flex !important;
+  }
+
+  .pap-sidebar .pap-contact-pill {
+    padding: 12px !important;
+  }
+
+  /* Remove hover effects on mobile */
+  .pap-sidebar:hover {
+    width: 85vw;
+    max-width: 320px;
+  }
+}
+
+/* Small phones */
+@media (max-width: 600px) {
+  .mobile-menu-btn {
+    top: 12px;
+    left: 12px;
+    padding: 10px;
+  }
+
+  .pap-sidebar {
+    width: 90vw;
+    max-width: 280px;
+  }
+
+  .pap-sidebar.mobile-open {
+    width: 90vw;
+    max-width: 280px;
+  }
+}
+
+/* Prevent body scroll when mobile menu is open */
+body.mobile-menu-open {
+  overflow: hidden;
 }
