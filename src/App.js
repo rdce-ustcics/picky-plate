@@ -11,23 +11,28 @@ import Login from "./pages/Login";
 import AdminPage from "./pages/AdminPage";
 import Forbidden from "./pages/Forbidden";
 import ChatBot from "./pages/ChatBot";
+import Recipe from "./pages/Recipe";
+import RestaurantLocator from "./pages/RestaurantLocator";
+import UploadRecipe from "./pages/UploadRecipe";
+import ForgotPassword from "./pages/ForgotPassword";
 import { AuthProvider } from "./auth/AuthContext";
 import RoleRoute, { GuestOnlyRoute } from "./auth/RoleRoute";
 import "./index.css";
+import CommunityRecipes from "./pages/Recipe";
 
 export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* All routes with MainLayout */}
+          {/* ✅ Everything here shows the global Sidebar via MainLayout */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<Dashboard />} />
 
             <Route
               path="/profile"
               element={
-                <RoleRoute allow={['user','admin']}>
+                <RoleRoute allow={["user", "admin"]}>
                   <Profile />
                 </RoleRoute>
               }
@@ -36,7 +41,7 @@ export default function App() {
             <Route
               path="/admin"
               element={
-                <RoleRoute allow={['admin']}>
+                <RoleRoute allow={["admin"]}>
                   <AdminPage />
                 </RoleRoute>
               }
@@ -47,21 +52,25 @@ export default function App() {
             <Route path="/explorer" element={<Explorer />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/recipes" element={<CommunityRecipes />} />
+            <Route path="/restaurants" element={<RestaurantLocator />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
 
-            <Route
-              path="/login"
-              element={
-                <GuestOnlyRoute>
-                  <Login />
-                </GuestOnlyRoute>
-              }
-            />
-
-            <Route path="/forbidden" element={<Forbidden />} />
+            {/* ✅ Moved INSIDE MainLayout so the Sidebar appears */}
+            <Route path="/chatbot" element={<ChatBot />} />
           </Route>
 
-          {/* ChatBot - OUTSIDE MainLayout */}
-          <Route path="/chatbot" element={<ChatBot />} />
+          {/* 🚫 No Sidebar on these routes */}
+          <Route
+            path="/login"
+            element={
+              <GuestOnlyRoute>
+                <Login />
+              </GuestOnlyRoute>
+            }
+          />
+          <Route path="/forbidden" element={<Forbidden />} />
+          <Route path="*" element={<div>Not Found</div>} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

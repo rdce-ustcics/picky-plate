@@ -1,15 +1,20 @@
 import { useState, useEffect } from "react";
 import { NavLink, Link } from "react-router-dom";
-import { FiGrid, FiUser, FiZap, FiUsers, FiGlobe, FiPhoneCall, FiSettings, FiMessageCircle, FiMenu, FiX } from "react-icons/fi";
+import {
+  FiGrid, FiUser, FiZap, FiUsers, FiGlobe, FiPhoneCall, FiSettings,
+  FiMessageCircle, FiMenu, FiX, FiBookOpen, FiMapPin
+} from "react-icons/fi";
 import { useAuth } from "../../auth/AuthContext";
 import "./sidebar.css";
 
 const items = [
   { to: "/", label: "Dashboard", icon: <FiGrid /> },
   { to: "/profile", label: "Profile", icon: <FiUser /> },
-  { to: "/surprise", label: "Suprise me", icon: <FiZap /> },
+  { to: "/surprise", label: "Surprise me", icon: <FiZap /> },                 // fixed typo
   { to: "/barkada-vote", label: "Barkada Vote", icon: <FiUsers /> },
   { to: "/explorer", label: "Cultural Food Explorer", icon: <FiGlobe /> },
+  { to: "/recipes", label: "Community Recipes", icon: <FiBookOpen /> },       // NEW
+  { to: "/restaurants", label: "Restaurant Locator", icon: <FiMapPin /> },    // NEW
   { to: "/chatbot", label: "AI ChatBot", icon: <FiMessageCircle /> },
 ];
 
@@ -17,22 +22,13 @@ export default function Sidebar() {
   const { isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Lock body scroll when mobile menu is open
   useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.classList.add('mobile-menu-open');
-    } else {
-      document.body.classList.remove('mobile-menu-open');
-    }
-
-    return () => {
-      document.body.classList.remove('mobile-menu-open');
-    };
+    if (isMobileMenuOpen) document.body.classList.add("mobile-menu-open");
+    else document.body.classList.remove("mobile-menu-open");
+    return () => document.body.classList.remove("mobile-menu-open");
   }, [isMobileMenuOpen]);
 
-  const closeMobileMenu = () => {
-    setIsMobileMenuOpen(false);
-  };
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
     <>
@@ -46,31 +42,20 @@ export default function Sidebar() {
       </button>
 
       {/* Overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="mobile-overlay"
-          onClick={closeMobileMenu}
-        />
-      )}
+      {isMobileMenuOpen && <div className="mobile-overlay" onClick={closeMobileMenu} />}
 
       {/* Sidebar */}
-      <aside className={`pap-sidebar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
+      <aside className={`pap-sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
         <Link to="/" className="pap-logo-container" onClick={closeMobileMenu}>
           <div className="pap-logo-image">
             <div style={{
-              width: 48,
-              height: 48,
-              borderRadius: '50%',
-              background: '#FFC42D',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '24px'
+              width: 48, height: 48, borderRadius: "50%", background: "#FFC42D",
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px"
             }}>
               🍽️
             </div>
           </div>
-          
+
           <div className="pap-logo-text">
             Pick<span className="pap-logo-a">A</span>Plate<span className="pap-dot">.</span>
           </div>
@@ -79,7 +64,7 @@ export default function Sidebar() {
         <nav className="pap-nav">
           {items
             .filter(it => !(it.to === "/profile" && !isAuthenticated))
-            .map((it) => (
+            .map(it => (
               <NavLink
                 key={it.to}
                 to={it.to}
@@ -91,7 +76,7 @@ export default function Sidebar() {
                 <span className="pap-label">{it.label}</span>
               </NavLink>
             ))}
-          
+
           <NavLink
             to="/contact"
             end

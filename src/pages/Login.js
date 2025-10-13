@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Link } from "react-router-dom";
+
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -319,16 +321,20 @@ export default function AuthPage() {
             )}
 
             {isLogin && (
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 accent-yellow-400" />
-                  <span className="text-sm text-gray-600">Remember me</span>
-                </label>
-                <button className="text-sm text-yellow-500 hover:text-yellow-600 font-semibold">
-                  Forgot Password?
-                </button>
-              </div>
-            )}
+  <div className="flex items-center justify-between">
+    <label className="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" className="w-4 h-4 accent-yellow-400" />
+      <span className="text-sm text-gray-600">Remember me</span>
+    </label>
+    <Link
+      to="/forgot-password"
+      className="text-sm text-yellow-500 hover:text-yellow-600 font-semibold"
+    >
+      Forgot Password?
+    </Link>
+  </div>
+)}
+
 
             <button
               onClick={handleSubmit}
