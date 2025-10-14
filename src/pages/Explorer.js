@@ -39,7 +39,7 @@ const dishes = [
     name: "Kare-Kare",
     desc: "A peanut-based stew with oxtail and vegetables.",
     region: "Luzon",
-    img: "/images/karakare.png",
+    img: "/images/karekare.png",
     recipe: [
       "1 kg oxtail (or pork hocks)",
       "1/2 cup peanut butter",

@@ -1,33 +1,128 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { api } from "./api";
+import React, { createContext, useState, useContext, useEffect } from 'react';
 
-const AuthContext = createContext(null);
+const AuthContext = createContext();
 
-export function AuthProvider({ children }) {
+const API_URL = 'http://localhost:4000/api/auth';
+
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [bootstrapped, setBootstrapped] = useState(false);
+  const [token, setToken] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  // Check authentication on mount
   useEffect(() => {
-    (async () => {
-      try { const { user } = await api('/api/auth/me'); setUser(user); } catch {}
-      setBootstrapped(true);
-    })();
+    const initAuth = () => {
+      const storedToken = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+
+      if (storedToken && storedUser) {
+        try {
+          setToken(storedToken);
+          setUser(JSON.parse(storedUser));
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+        }
+      }
+      
+      setLoading(false);
+    };
+
+    initAuth();
   }, []);
 
   const login = async (email, password) => {
-    const { user } = await api('/api/auth/login', { method:'POST', body: JSON.stringify({ email, password }) });
-    setUser(user);
-  };
-  const register = async (name, email, password) => {
-    const { user } = await api('/api/auth/register', { method:'POST', body: JSON.stringify({ name, email, password }) });
-    setUser(user);
-  };
-  const logout = async () => { await api('/api/auth/logout', { method: 'POST' }); setUser(null); };
+    try {
+      const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-  const value = useMemo(() => ({
-    user, isAuthenticated: !!user, role: user?.role || 'guest', bootstrapped, login, register, logout
-  }), [user, bootstrapped]);
+      const data = await response.json();
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-export const useAuth = () => useContext(AuthContext);
+      if (data.success) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setToken(data.token);
+        setUser(data.user);
+        return { success: true, message: data.message };
+      }
+      
+      return { success: false, message: data.message };
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, message: 'Unable to connect to server' };
+    }
+  };
+
+  const signup = async (name, email, password) => {
+    try {
+      const response = await fetch(`${API_URL}/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setToken(data.token);
+        setUser(data.user);
+        return { success: true, message: data.message };
+      }
+      
+      return { success: false, message: data.message };
+    } catch (error) {
+      console.error('Signup error:', error);
+      return { success: false, message: 'Unable to connect to server' };
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setToken(null);
+    setUser(null);
+  };
+
+  const isAuthenticated = !!token && !!user;
+
+  console.log('Auth State:', { isAuthenticated, user, token: !!token }); // DEBUG
+
+  return (
+    <AuthContext.Provider value={{ 
+      user, 
+      token,
+      login, 
+      signup, 
+      logout, 
+      isAuthenticated, 
+      loading 
+    }}>
+      {loading ? (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh' 
+        }}>
+          Loading...
+        </div>
+      ) : (
+        children
+      )}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+};

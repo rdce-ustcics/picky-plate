@@ -9,7 +9,6 @@ import Contact from "./pages/Contact";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import AdminPage from "./pages/AdminPage";
-import Forbidden from "./pages/Forbidden";
 import ChatBot from "./pages/ChatBot";
 import Recipe from "./pages/Recipe";
 import RestaurantLocator from "./pages/RestaurantLocator";
@@ -56,22 +55,20 @@ export default function App() {
             <Route path="/recipes/upload" element={<UploadRecipe />} />
             <Route path="/restaurants" element={<RestaurantLocator />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-            
-
-            {/* ✅ Moved INSIDE MainLayout so the Sidebar appears */}
             <Route path="/chatbot" element={<ChatBot />} />
+            
+            {/* ✅ Login page WITH sidebar */}
+            <Route
+              path="/login"
+              element={
+                <GuestOnlyRoute>
+                  <Login />
+                </GuestOnlyRoute>
+              }
+            />
           </Route>
 
-          {/* 🚫 No Sidebar on these routes */}
-          <Route
-            path="/login"
-            element={
-              <GuestOnlyRoute>
-                <Login />
-              </GuestOnlyRoute>
-            }
-          />
-          <Route path="/forbidden" element={<Forbidden />} />
+          {/* 🚫 No routes outside MainLayout */}
           <Route path="*" element={<div>Not Found</div>} />
         </Routes>
       </AuthProvider>

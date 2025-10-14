@@ -1,14 +1,18 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "../modules/Sidebar/sidebar";
-import "./layout.css";
 
 export default function MainLayout() {
+  const location = useLocation();
+  
+  // Hide sidebar on login/auth pages
+  const hideSidebar = ['/login', '/forgot-password'].includes(location.pathname);
+
   return (
-    <div className="app-shell">
-      <Sidebar />
-      <main className="app-content">
+    <div className="flex">
+      {!hideSidebar && <Sidebar />}
+      <div className={hideSidebar ? "w-full" : "flex-1"}>
         <Outlet />
-      </main>
+      </div>
     </div>
   );
 }

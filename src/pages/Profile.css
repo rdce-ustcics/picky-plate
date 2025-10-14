@@ -320,3 +320,336 @@
   font-size: 28px;
   font-weight: 300;
 }
+
+/* ========================================== */
+/* RESPONSIVE MOBILE STYLES */
+/* ========================================== */
+
+/* Tablets and below (iPad, etc.) */
+@media (max-width: 1024px) {
+  .profile-content {
+    flex-direction: column;
+  }
+  
+  .profile-card {
+    width: 100%;
+  }
+}
+
+/* Mobile devices */
+@media (max-width: 768px) {
+  .profile-page {
+    padding: 16px;
+  }
+  
+  .header-banner {
+    padding: 24px 20px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .header-banner h1 {
+    font-size: 28px;
+  }
+  
+  .header-banner p {
+    font-size: 16px;
+  }
+  
+  .circle-1 {
+    width: 180px;
+    height: 180px;
+    top: -90px;
+    right: -90px;
+  }
+  
+  .circle-2 {
+    width: 140px;
+    height: 140px;
+    bottom: -40px;
+    right: 60px;
+  }
+  
+  .profile-content {
+    gap: 20px;
+  }
+  
+  .profile-card {
+    padding: 24px 20px;
+    border-radius: 16px;
+  }
+  
+  .profile-picture {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .profile-icon {
+    width: 54px;
+    height: 54px;
+    top: 32px;
+  }
+  
+  .profile-icon::after {
+    width: 80px;
+    height: 50px;
+    bottom: -35px;
+  }
+  
+  .edit-icon {
+    width: 40px;
+    height: 40px;
+    border: 3px solid white;
+  }
+  
+  .edit-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .profile-field-item {
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    gap: 10px;
+  }
+  
+  .profile-field-item span {
+    font-size: 16px;
+  }
+  
+  .field-icon {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .save-button {
+    padding: 12px;
+    font-size: 15px;
+  }
+  
+  .account-details-card,
+  .food-preferences-card {
+    padding: 24px 20px;
+    border-radius: 16px;
+  }
+  
+  .account-field {
+    padding-bottom: 14px;
+    margin-bottom: 20px;
+    gap: 10px;
+  }
+  
+  .field-icon-large {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .account-field span {
+    font-size: 18px;
+  }
+  
+  .password-field {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .change-password-link {
+    padding: 8px 0;
+    width: 100%;
+    text-align: left;
+  }
+  
+  .food-preferences-card h2 {
+    font-size: 22px;
+    margin-bottom: 20px;
+  }
+  
+  .preference-input {
+    padding: 14px 20px;
+    font-size: 16px;
+  }
+  
+  .add-preferences-button {
+    padding: 14px 20px;
+    font-size: 16px;
+  }
+  
+  .plus-icon {
+    font-size: 24px;
+  }
+}
+
+/* Extra small devices (phones in portrait) */
+@media (max-width: 480px) {
+  .profile-page {
+    padding: 12px;
+  }
+  
+  .header-banner {
+    padding: 20px 16px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .header-banner h1 {
+    font-size: 24px;
+  }
+  
+  .header-banner p {
+    font-size: 14px;
+  }
+  
+  .circle-1,
+  .circle-2 {
+    display: none;
+  }
+  
+  .profile-content {
+    gap: 16px;
+  }
+  
+  .profile-card {
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+  
+  .profile-center {
+    margin-bottom: 24px;
+  }
+  
+  .profile-picture {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .profile-icon {
+    width: 48px;
+    height: 48px;
+    top: 28px;
+  }
+  
+  .profile-icon::after {
+    width: 70px;
+    height: 45px;
+    bottom: -30px;
+  }
+  
+  .edit-icon {
+    width: 36px;
+    height: 36px;
+    bottom: 4px;
+    right: 4px;
+  }
+  
+  .edit-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .profile-field-item {
+    padding-bottom: 8px;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+  
+  .profile-field-item span {
+    font-size: 15px;
+  }
+  
+  .field-icon {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .save-button {
+    padding: 10px;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  
+  .logout-link {
+    font-size: 13px;
+  }
+  
+  .account-details-card,
+  .food-preferences-card {
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+  
+  .account-field {
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+    gap: 8px;
+  }
+  
+  .field-icon-large {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .account-field span {
+    font-size: 16px;
+  }
+  
+  .password-content {
+    gap: 8px;
+  }
+  
+  .food-preferences-card h2 {
+    font-size: 20px;
+    margin-bottom: 16px;
+  }
+  
+  .preference-input {
+    padding: 12px 18px;
+    font-size: 15px;
+  }
+  
+  .add-preferences-button {
+    padding: 12px 18px;
+    font-size: 15px;
+  }
+  
+  .plus-icon {
+    font-size: 22px;
+  }
+}
+
+/* Very small devices (iPhone SE, etc.) */
+@media (max-width: 375px) {
+  .header-banner h1 {
+    font-size: 22px;
+  }
+  
+  .header-banner p {
+    font-size: 13px;
+  }
+  
+  .profile-picture {
+    width: 110px;
+    height: 110px;
+  }
+  
+  .profile-icon {
+    width: 44px;
+    height: 44px;
+    top: 26px;
+  }
+  
+  .profile-icon::after {
+    width: 65px;
+    height: 40px;
+    bottom: -28px;
+  }
+  
+  .account-field span,
+  .profile-field-item span {
+    font-size: 14px;
+  }
+  
+  .preference-input {
+    font-size: 14px;
+  }
+}
