@@ -18,6 +18,10 @@ app.use(
   })
 );
 
+// openai chat
+const chatRoute = require('./routes/chat');
+app.use('/api', chatRoute);
+
 // --- Mongo: connect once, reuse
 const client = new MongoClient(process.env.MONGODB_URI, {
   serverApi: {
