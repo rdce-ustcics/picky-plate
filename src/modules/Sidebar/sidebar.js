@@ -9,13 +9,13 @@ import "./sidebar.css";
 
 const items = [
   { to: "/", label: "Dashboard", icon: <FiGrid /> },
-  { to: "/profile", label: "Profile", icon: <FiUser /> },
-  { to: "/surprise", label: "Surprise me", icon: <FiZap /> },                 // fixed typo
-  { to: "/barkada-vote", label: "Barkada Vote", icon: <FiUsers /> },
-  { to: "/explorer", label: "Cultural Food Explorer", icon: <FiGlobe /> },
-  { to: "/recipes", label: "Community Recipes", icon: <FiBookOpen /> },       // NEW
-  { to: "/restaurants", label: "Restaurant Locator", icon: <FiMapPin /> },    // NEW
   { to: "/chatbot", label: "AI ChatBot", icon: <FiMessageCircle /> },
+  { to: "/recipes", label: "Community Recipes", icon: <FiBookOpen /> },      
+  { to: "/profile", label: "Profile", icon: <FiUser /> },
+  { to: "/surprise", label: "Surprise me", icon: <FiZap /> },               
+  { to: "/barkada-vote", label: "Barkada Vote", icon: <FiUsers /> },
+  { to: "/explorer", label: "Cultural Food Explorer", icon: <FiGlobe /> },    
+  { to: "/restaurants", label: "Restaurant Locator", icon: <FiMapPin /> },   
 ];
 
 export default function Sidebar() {

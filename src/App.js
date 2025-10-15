@@ -24,10 +24,14 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <Routes>
-          {/* ✅ Everything here shows the global Sidebar via MainLayout */}
+          {/* ✅ All routes WITH Sidebar via MainLayout */}
           <Route element={<MainLayout />}>
+            {/* 🌐 PUBLIC ROUTES - No login required */}
             <Route path="/" element={<Dashboard />} />
+            <Route path="/chatbot" element={<ChatBot />} />
+            <Route path="/recipes" element={<CommunityRecipes />} />
 
+            {/* 🔒 PROTECTED ROUTES - Login required */}
             <Route
               path="/profile"
               element={
@@ -38,6 +42,70 @@ export default function App() {
             />
 
             <Route
+              path="/surprise"
+              element={
+                <RoleRoute allow={["user", "admin"]}>
+                  <Surprise />
+                </RoleRoute>
+              }
+            />
+
+            <Route
+              path="/barkada-vote"
+              element={
+                <RoleRoute allow={["user", "admin"]}>
+                  <BarkadaVote />
+                </RoleRoute>
+              }
+            />
+
+            <Route
+              path="/explorer"
+              element={
+                <RoleRoute allow={["user", "admin"]}>
+                  <Explorer />
+                </RoleRoute>
+              }
+            />
+
+            <Route
+              path="/restaurants"
+              element={
+                <RoleRoute allow={["user", "admin"]}>
+                  <RestaurantLocator />
+                </RoleRoute>
+              }
+            />
+
+            <Route
+              path="/contact"
+              element={
+                <RoleRoute allow={["user", "admin"]}>
+                  <Contact />
+                </RoleRoute>
+              }
+            />
+
+            <Route
+              path="/settings"
+              element={
+                <RoleRoute allow={["user", "admin"]}>
+                  <Settings />
+                </RoleRoute>
+              }
+            />
+
+            <Route
+              path="/recipes/upload"
+              element={
+                <RoleRoute allow={["user", "admin"]}>
+                  <UploadRecipe />
+                </RoleRoute>
+              }
+            />
+
+            {/* 🔐 ADMIN ONLY */}
+            <Route
               path="/admin"
               element={
                 <RoleRoute allow={["admin"]}>
@@ -46,18 +114,7 @@ export default function App() {
               }
             />
 
-            <Route path="/surprise" element={<Surprise />} />
-            <Route path="/barkada-vote" element={<BarkadaVote />} />
-            <Route path="/explorer" element={<Explorer />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/recipes" element={<CommunityRecipes />} />
-            <Route path="/recipes/upload" element={<UploadRecipe />} />
-            <Route path="/restaurants" element={<RestaurantLocator />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/chatbot" element={<ChatBot />} />
-            
-            {/* ✅ Login page WITH sidebar */}
+            {/* 🚪 LOGIN & PASSWORD RESET */}
             <Route
               path="/login"
               element={
@@ -66,9 +123,11 @@ export default function App() {
                 </GuestOnlyRoute>
               }
             />
+            
+            <Route path="/forgot-password" element={<ForgotPassword />} />
           </Route>
 
-          {/* 🚫 No routes outside MainLayout */}
+          {/* Catch-all route */}
           <Route path="*" element={<div>Not Found</div>} />
         </Routes>
       </AuthProvider>
