@@ -1,36 +1,190 @@
-// routes/chat.js
+// server/routes/chat.js
 const express = require("express");
 const { OpenAI } = require("openai");
+const { ObjectId } = require("mongodb");
+const jwt = require("jsonwebtoken");
 
 const router = express.Router();
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// POST /api/chat  -> body: { message: "hello" }
+/**
+ * Soft authentication middleware
+ * - Attaches req.user if a valid Bearer token is present.
+ */
+function softAuth(req, _res, next) {
+  const h = req.headers.authorization || "";
+  if (h.startsWith("Bearer ")) {
+    const token = h.split(" ")[1];
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded?.id) req.user = { id: String(decoded.id) };
+    } catch (_) {
+      // ignore invalid tokens → anonymous session continues
+    }
+  }
+  next();
+}
+
+/**
+ * Owner resolution helper
+ * - Logged-in user → { userId }
+ * - Anonymous with sessionId → { sessionId }
+ */
+function getOwner(req) {
+  if (req.user?.id) {
+    return { owner: { userId: String(req.user.id) }, sessionId: null };
+  }
+  const sessionId =
+    (req.body?.sessionId || req.query?.sessionId || "").toString().trim();
+  if (!sessionId) return null;
+  return { owner: { sessionId }, sessionId };
+}
+
+router.use(softAuth);
+
+/**
+ * POST /api/chat
+ * Body: { message, history?, chatId?, sessionId? }
+ */
 router.post("/chat", async (req, res) => {
   try {
-    const userMessage = (req.body?.message || "").toString().trim();
-    const history = Array.isArray(req.body?.history) ? req.body.history : [];
-    if (!userMessage) return res.status(400).json({ error: "message_required" });
+    const db = req.app.locals.db;
+    if (!db) return res.status(500).json({ error: "db_not_initialized" });
 
+    const chats = db.collection("chats");
+    const ownerInfo = getOwner(req);
+    if (!ownerInfo) return res.status(400).json({ error: "missing_owner" });
+    const { owner } = ownerInfo;
+
+    const userMessage = (req.body?.message || "").toString().trim();
+    const rawHistory = Array.isArray(req.body?.history) ? req.body.history : [];
+    if (!userMessage)
+      return res.status(400).json({ error: "message_required" });
+
+    // Clean conversation history
+    const cleanHistory = rawHistory
+      .filter(
+        (m) =>
+          m &&
+          (m.role === "user" || m.role === "assistant") &&
+          typeof m.content === "string" &&
+          m.content.trim()
+      )
+      .map((m) => ({ role: m.role, content: m.content.trim() }))
+      .slice(-8);
+
+    const input = [
+      {
+        role: "system",
+        content:
+          "You are Pick-A-Plate, a friendly food recommender in the Philippines. Include non-Filipino cuisines. Be concise and track context (e.g., 'the second one').",
+      },
+      ...cleanHistory,
+      { role: "user", content: userMessage },
+    ];
+
+    // Call OpenAI
     const r = await openai.responses.create({
-      model: "gpt-4o-mini",                // cheap + fast
-      input: [
-        { role: "system", 
-          content: "You are pick-a-plate, a food recommender specializing in food available in the Philippines (not necessarily filipino food suggest other cuisines too). You are aware of context so if you say something and the user replies, then you should know what they're referring to. Keep responses concise and to the point" },
-      ...history.map(m => ({ role: m.role, content: m.content })), // ✅ use history       
-       { role: "user", content: userMessage }
-      ],
-      max_output_tokens: 300               // keeps responses short, saves cost
+      model: "gpt-4o-mini",
+      input,
+      max_output_tokens: 300,
     });
 
-    return res.json({ reply: r.output_text || "" });
+    const reply = (r?.output_text || "").trim();
+
+    // Create or reuse chatId
+    const chatId =
+      req.body?.chatId && ObjectId.isValid(req.body.chatId)
+        ? new ObjectId(req.body.chatId)
+        : new ObjectId();
+
+    // ⚙️ Upsert chat — remove messages from $setOnInsert to avoid conflicts
+    await chats.updateOne(
+      { _id: chatId, ...owner },
+      {
+        $setOnInsert: {
+          _id: chatId,
+          userId: owner.userId || null,
+          sessionId: owner.sessionId || null,
+          title:
+            cleanHistory[0]?.content?.slice(0, 60) ||
+            userMessage.slice(0, 100) ||
+            "New Chat",
+          archived: false,
+          createdAt: new Date(),
+        },
+        $push: {
+          messages: {
+            $each: [
+              { role: "user", content: userMessage, ts: new Date() },
+              { role: "assistant", content: reply, ts: new Date() },
+            ],
+          },
+        },
+        $set: { updatedAt: new Date() },
+      },
+      { upsert: true }
+    );
+
+    return res.json({ reply, chatId: chatId.toString() });
   } catch (err) {
-    console.error("openai_error:", err?.message || err);
-    // handle common errors nicely
+    console.error("chat_error:", err?.message || err);
     if (String(err?.message || "").includes("429")) {
       return res.status(429).json({ error: "quota_or_rate_limit" });
     }
     return res.status(500).json({ error: "chat_failed" });
+  }
+});
+
+/**
+ * GET /api/chats → list chats for user or session
+ */
+router.get("/chats", async (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    const chats = db.collection("chats");
+
+    const ownerInfo = getOwner(req);
+    if (!ownerInfo) return res.status(400).json({ error: "missing_owner" });
+
+    const list = await chats
+      .find({ ...ownerInfo.owner, archived: false })
+      .project({ messages: 0 })
+      .sort({ updatedAt: -1 })
+      .toArray();
+
+    res.json(list);
+  } catch (e) {
+    console.error("list_chats_error:", e);
+    res.status(500).json({ error: "list_failed" });
+  }
+});
+
+/**
+ * GET /api/chats/:id → single chat with messages
+ */
+router.get("/chats/:id", async (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    const chats = db.collection("chats");
+
+    const ownerInfo = getOwner(req);
+    if (!ownerInfo) return res.status(400).json({ error: "missing_owner" });
+
+    const id = req.params.id;
+    if (!ObjectId.isValid(id))
+      return res.status(400).json({ error: "invalid_id" });
+
+    const chat = await chats.findOne({
+      _id: new ObjectId(id),
+      ...ownerInfo.owner,
+    });
+
+    if (!chat) return res.status(404).json({ error: "not_found" });
+    res.json(chat);
+  } catch (e) {
+    console.error("get_chat_error:", e);
+    res.status(500).json({ error: "get_failed" });
   }
 });
 

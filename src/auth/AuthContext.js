@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { clearChatCache, clearSessionId } from '../utils/session';
 
 const AuthContext = createContext();
 
@@ -43,6 +44,9 @@ export const AuthProvider = ({ children }) => {
       const data = await response.json();
 
       if (data.success) {
+        clearSessionId();
+        clearChatCache();
+        
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         setToken(data.token);
@@ -87,9 +91,14 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('user');
     setToken(null);
     setUser(null);
+
+    clearChatCache();  // remove pp_chats / pp_active
+    clearSessionId();  // remove pp_session (a new anon id will be created next time ChatBot needs one)
   };
 
   const isAuthenticated = !!token && !!user;
+  const authHeaders = () => 
+     isAuthenticated ? { Authorization: `Bearer ${token}` } : {};
 
   console.log('Auth State:', { isAuthenticated, user, token: !!token }); // DEBUG
 
@@ -101,7 +110,8 @@ export const AuthProvider = ({ children }) => {
       signup, 
       logout, 
       isAuthenticated, 
-      loading 
+      loading,
+      authHeaders,
     }}>
       {loading ? (
         <div style={{ 
