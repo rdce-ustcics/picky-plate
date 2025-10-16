@@ -1,6 +1,23 @@
 import React, { useState, useRef, useEffect } from "react";
 import { BookOpen, Plus, Search, Image, User, Send, Sparkles, X, ChevronRight } from "lucide-react";
 
+//API
+const API_BASE = "http://localhost:4000";
+
+async function apiChat(message,history = []) {
+
+  const recent = history.slice(-8).map(m => ({ role: m.role, content: m.content }));
+
+  const res = await fetch(`${API_BASE}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message, history: recent }),
+  });
+  if (!res.ok) throw new Error("Chat API failed");
+  const data = await res.json();
+  return data.reply || "(no reply)";
+}
+
 const brand = {
   primary: "#FFC42D",
   dark: "#FFB400",
@@ -86,6 +103,7 @@ export default function ChatBot() {
         messages: []
       }));
       setChats(initialChats);
+      setActiveChatId(0);
     }
   }, []);
 
@@ -105,11 +123,14 @@ export default function ChatBot() {
     }
   }
 
-  function sendMessage(text = null, chatId = null) {
+  async function sendMessage(text = null, chatId = null) {
     const messageText = text || input.trim();
     const targetChatId = chatId || activeChatId;
     
     if (!messageText) return;
+
+    const targetChat = chats.find(c => c.id === targetChatId);
+    const history = targetChat?.messages || [];
     
     setInput("");
     
@@ -123,35 +144,24 @@ export default function ChatBot() {
       return chat;
     }));
 
-    setTimeout(() => {
-      setChats(prev => prev.map(chat => {
-        if (chat.id === targetChatId) {
-          const aiResponse = generateResponse(messageText);
-          return {
-            ...chat,
-            messages: [...chat.messages, { role: "assistant", content: aiResponse }]
-          };
-        }
-        return chat;
-      }));
-    }, 800);
-  }
+    try {
+      const aiReply = await apiChat(messageText, history);
 
-  function generateResponse(userMessage) {
-    const message = userMessage.toLowerCase();
-    
-    if (message.includes("today")) {
-      return "For today, I'd suggest trying a fresh Greek salad with grilled chicken! It's healthy, filling, and quick to prepare. Would you like the recipe?";
-    } else if (message.includes("tomorrow")) {
-      return "How about some homemade pasta carbonara tomorrow? It's creamy, delicious, and takes only 20 minutes to make!";
-    } else if (message.includes("week")) {
-      return "For the week ahead, I can create a meal plan with variety! Think: Monday - Tacos, Tuesday - Stir-fry, Wednesday - Salmon, Thursday - Pizza night, Friday - BBQ. Sound good?";
-    } else if (message.includes("saturday")) {
-      return "Saturday calls for something special! How about trying a new recipe - maybe some Korean bibimbap or Italian risotto? Perfect for a relaxed weekend cooking session!";
-    } else {
-      return "That's a great question! I can help you decide what to eat based on your preferences, dietary needs, or what you have in the fridge. What sounds good to you?";
-    }
+    setChats(prev => prev.map(chat =>
+      chat.id === targetChatId
+        ? { ...chat, messages: [...chat.messages, { role: "assistant", content: aiReply }] }
+        : chat
+    ));
+  } catch (e) {
+    setChats(prev => prev.map(chat =>
+      chat.id === targetChatId
+        ? { ...chat, messages: [...chat.messages, { role: "assistant", content: "Error talking to server." }] }
+        : chat
+    ));
   }
+}   
+ 
+    
 
   function selectChat(chatId) {
     setActiveChatId(chatId);
@@ -163,6 +173,14 @@ export default function ChatBot() {
       scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
     }
   }, [activeChat?.messages]);
+
+
+
+
+
+
+
+
 
   // Swipe handlers
   const handleTouchStart = (e) => {
@@ -185,6 +203,10 @@ export default function ChatBot() {
     }
   };
 
+
+
+
+  
   return (
     <>
       <style>{`

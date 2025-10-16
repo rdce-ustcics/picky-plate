@@ -3,6 +3,10 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./db/mongo');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+
 
 // Load environment variables
 dotenv.config();
@@ -20,6 +24,18 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// when using CRA proxy, this can be relaxed; keep explicit origin if you call directly from 3000:
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN, // e.g., http://localhost:3000
+    credentials: true,
+  })
+);
+
+// openai chat
+const chatRoute = require('./routes/chat');
+app.use('/api', chatRoute);
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
