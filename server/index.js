@@ -34,6 +34,9 @@ connectDB().then(async() => {
   app.use("/api", require("./routes/chat"));
   app.use("/api/auth", require("./routes/auth"));
 
+  // ✅ ADDED: Places API (New) proxy routes (search/details)
+  app.use("/api/places", require("./routes/places"));
+
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
   const port = process.env.PORT || 4000;
@@ -53,4 +56,3 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 4000;
-
