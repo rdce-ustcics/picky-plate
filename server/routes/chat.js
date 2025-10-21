@@ -188,4 +188,34 @@ router.get("/chats/:id", async (req, res) => {
   }
 });
 
+// DELETE /api/chats/:id  → archive a chat you own
+router.delete("/chats/:id", async (req, res) => {
+  try {
+    const db = req.app.locals.db;
+    if (!db) return res.status(500).json({ error: "db_not_initialized" });
+    const chats = db.collection("chats");
+
+    const ownerInfo = getOwner(req);
+    if (!ownerInfo) return res.status(400).json({ error: "missing_owner" });
+
+    const id = req.params.id;
+    if (!ObjectId.isValid(id)) return res.status(400).json({ error: "invalid_id" });
+
+    // Soft delete by archiving (so lists that filter archived:false won't return it)
+    const r = await chats.updateOne(
+      { _id: new ObjectId(id), ...ownerInfo.owner },
+      { $set: { archived: true, updatedAt: new Date() } }
+    );
+
+    if (r.matchedCount === 0) {
+      return res.status(404).json({ error: "not_found_or_not_owner" });
+    }
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error("delete_chat_error:", e);
+    res.status(500).json({ error: "delete_failed" });
+  }
+});
+
 module.exports = router;

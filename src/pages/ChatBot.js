@@ -62,6 +62,7 @@ export default function ChatBot() {
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
   const scrollerRef = useRef(null);
+  const [isTyping, setIsTyping] = useState(false);
 
   const activeChat = chats.find((c) => c.id === activeChatId);
 
@@ -203,6 +204,10 @@ export default function ChatBot() {
     const history = targetChat?.messages || [];
 
     setInput("");
+
+    setIsTyping(true);
+
+
     // Optimistic user message
     setChats((prev) =>
       prev.map((chat) =>
@@ -241,6 +246,8 @@ export default function ChatBot() {
             : chat
         )
       );
+    } finally {
+      setIsTyping(false);
     }
   }
 
@@ -284,7 +291,7 @@ export default function ChatBot() {
     if (scrollerRef.current) {
       scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
     }
-  }, [activeChat?.messages]);
+  }, [activeChat?.messages, isTyping]);
 
   // Swipe handlers
   const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientX);
@@ -293,6 +300,58 @@ export default function ChatBot() {
     if (touchStart - touchEnd > 75) setShowSidebar(false); // left to close
     if (touchStart - touchEnd < -75 && touchStart < 50) setShowSidebar(true); // right from edge to open
   };
+
+async function deleteChat(chat) {
+  const confirmDelete = window.confirm(`Delete chat "${chat.title}"?`);
+  if (!confirmDelete) return;
+
+  try {
+    // Figure out which id to use on the server.
+    // When loaded from server, chat.id === chat.chatId. For new (unsaved) chats, chat.chatId is null.
+    const serverId = chat.chatId || (typeof chat.id === "string" ? chat.id : null);
+
+    if (serverId) {
+      // Auth-aware URL and headers
+      const url = isAuthenticated
+        ? `${API_BASE}/api/chats/${serverId}`
+        : `${API_BASE}/api/chats/${serverId}?sessionId=${encodeURIComponent(SESSION_ID)}`;
+
+      const res = await fetch(url, {
+        method: "DELETE",
+        headers: buildHeaders(), // includes Authorization if logged in
+      });
+
+      if (!res.ok) {
+        const t = await res.text();
+        console.error("Delete failed ->", res.status, t);
+        alert("Failed to delete chat on server.");
+        return;
+      }
+    }
+    
+    // Remove locally
+    setChats(prev => {
+      const next = prev.filter(c => c.id !== chat.id);
+      // Persist anon cache so it doesn't reappear on refresh
+      if (!isAuthenticated) saveChatsToLocal(next);
+      return next;
+    });
+
+    // If the active chat was deleted, go back to the logo state
+    if (activeChatId === chat.id) {
+      setActiveChatId(null);
+      // Optional: also clear saved active id if it pointed to this chat
+      const last = loadActiveChatId();
+      if (String(last) === String(chat.id)) {
+        saveActiveChatId(null);
+      }
+    }
+  } catch (e) {
+    console.error("Failed to delete chat:", e);
+    alert("Failed to delete chat. Please try again.");
+  }
+}
+
 
   return (
     <>
@@ -313,6 +372,18 @@ export default function ChatBot() {
           .swipe-indicator { display: flex !important; }
         }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .typing-dot {
+        display: inline-block;
+        font-weight: 700;
+        animation: blink 1s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(2) { animation-delay: .2s; }
+        .typing-dot:nth-child(3) { animation-delay: .4s; }
+
+        @keyframes blink {
+         0%, 80%, 100% { opacity: .2; transform: translateY(0); }
+        40% { opacity: 1; transform: translateY(-2px); }
+        }
       `}</style>
 
       {/* Swipe Indicator - Mobile Only */}
@@ -409,25 +480,57 @@ export default function ChatBot() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {chats.map((chat) => (
-                <button
-                  key={chat.id}
-                  onClick={() => selectChat(chat.id)}
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "8px 12px",
-                    borderRadius: 8,
-                    fontSize: 14,
-                    cursor: "pointer",
-                    background: activeChatId === chat.id ? "#f3f4f6" : "transparent",
-                    color: activeChatId === chat.id ? "#111827" : "#6b7280",
-                    fontWeight: activeChatId === chat.id ? 500 : 400,
-                    border: "none",
-                  }}
-                >
-                  {chat.title}
-                </button>
-              ))}
+           <div
+          key={chat.id}
+         style={{
+         display: "flex",
+         alignItems: "center",
+         justifyContent: "space-between",
+         width: "100%",
+         padding: "6px 8px",
+         borderRadius: 8,
+         background: activeChatId === chat.id ? "#f3f4f6" : "transparent",
+         }}
+        >
+        <button
+        onClick={() => selectChat(chat.id)}
+        style={{
+        flex: 1,
+        textAlign: "left",
+        border: "none",
+        background: "transparent",
+        color: activeChatId === chat.id ? "#111827" : "#6b7280",
+        fontWeight: activeChatId === chat.id ? 500 : 400,
+        fontSize: 14,
+        cursor: "pointer",
+        padding: "8px 6px",
+         }}
+        >
+      {chat.title}
+    </button>
+
+    <button
+      onClick={() => deleteChat(chat)}  // <- we’ll add this function next
+      title="Delete chat"
+      style={{
+        border: "none",
+        background: "transparent",
+        color: "#9ca3af",
+        cursor: "pointer",
+        padding: 6,
+        borderRadius: 6,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+      onMouseOver={(e) => (e.currentTarget.style.background = "#f3f4f6")}
+      onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
+      aria-label={`Delete ${chat.title}`}
+    >
+      <X size={16} />
+    </button>
+  </div>
+))}
             </div>
           </div>
 
@@ -502,31 +605,97 @@ export default function ChatBot() {
               </div>
 
               <div ref={scrollerRef} style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-                {activeChat?.messages?.length ? (
-                  activeChat.messages.map((m, idx) => (
-                    <div key={idx} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}>
-                      <div
-                        style={{
-                          maxWidth: "85%",
-                          borderRadius: 14,
-                          padding: "10px 14px",
-                          fontSize: 14,
-                          lineHeight: 1.5,
-                          background: m.role === "user" ? "#ffffff" : "#FFF7DA",
-                          border: m.role === "user" ? "1px solid #e5e7eb" : "1px solid #FEF3C7",
-                          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-                        }}
-                      >
-                        {m.content}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af" }}>
-                    Start the conversation
-                  </div>
-                )}
-              </div>
+{activeChat?.messages?.length ? (
+  <>
+    {activeChat.messages.map((m, idx) => (
+      <div
+        key={idx}
+        style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}
+      >
+        <div
+          style={{
+            maxWidth: "85%",
+            borderRadius: 14,
+            padding: "10px 14px",
+            fontSize: 14,
+            lineHeight: 1.5,
+            background: m.role === "user" ? "#ffffff" : "#FFF7DA",
+            border: m.role === "user" ? "1px solid #e5e7eb" : "1px solid #FEF3C7",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+          }}
+        >
+          {m.content}
+        </div>
+      </div>
+    ))}
+
+    {/* ⬇️ Typing bubble appears at the end like a new assistant message */}
+    {isTyping && (
+      <div style={{ display: "flex", justifyContent: "flex-start" }}>
+        <div
+          style={{
+            maxWidth: "85%",
+            borderRadius: 14,
+            padding: "10px 14px",
+            fontSize: 14,
+            lineHeight: 1.5,
+            background: "#FFF7DA",
+            border: "1px solid #FEF3C7",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6
+          }}
+        >
+          <span className="typing-dot">•</span>
+          <span className="typing-dot">•</span>
+          <span className="typing-dot">•</span>
+        </div>
+      </div>
+    )}
+  </>
+) : (
+  // No messages yet
+  <>
+    {isTyping ? (
+      // ⬇️ Show typing bubble instead of "Start the conversation"
+      <div style={{ display: "flex", justifyContent: "flex-start" }}>
+        <div
+          style={{
+            maxWidth: "85%",
+            borderRadius: 14,
+            padding: "10px 14px",
+            fontSize: 14,
+            lineHeight: 1.5,
+            background: "#FFF7DA",
+            border: "1px solid #FEF3C7",
+            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6
+          }}
+        >
+          <span className="typing-dot">•</span>
+          <span className="typing-dot">•</span>
+          <span className="typing-dot">•</span>
+        </div>
+      </div>
+    ) : (
+      <div
+        style={{
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#9ca3af",
+        }}
+      >
+        Start the conversation
+      </div>
+    )}
+  </>
+)}              </div>
+
 
               <div style={{ padding: "12px 16px", borderTop: "1px solid #e5e7eb" }}>
                 <div style={{ position: "relative", maxWidth: 768, margin: "0 auto" }}>
@@ -547,7 +716,7 @@ export default function ChatBot() {
                     placeholder="Type your message…"
                   />
                   <button
-                    onClick={() => sendMessage()}
+                    onClick={() => sendMessage()} disabled={isTyping}
                     style={{
                       position: "absolute",
                       right: 8,
