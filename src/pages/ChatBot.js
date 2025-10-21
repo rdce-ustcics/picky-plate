@@ -64,6 +64,12 @@ export default function ChatBot() {
   const scrollerRef = useRef(null);
   const [isTyping, setIsTyping] = useState(false);
 
+  useEffect(() => {
+  // wipe current in-memory UI so we always start at the logo
+  setActiveChatId(null);
+  setChats([]);
+}, [isAuthenticated]);
+
   const activeChat = chats.find((c) => c.id === activeChatId);
 
   // CHANGE: helper to build headers/payload per auth state
@@ -134,12 +140,7 @@ export default function ChatBot() {
           }));
           setChats(uiChats);
           const last = loadActiveChatId();
-          if (last && uiChats.some((c) => String(c.id) === String(last))) {
-            setActiveChatId(last);
-          } else {
-            setActiveChatId(uiChats[0]?.id || null);
-          }
-          // Optional: keep a tiny local cache for quick sidebar render.
+          setActiveChatId(null);
           saveChatsToLocal(uiChats);
           return;
         }
@@ -148,7 +149,7 @@ export default function ChatBot() {
         const cached = loadChatsFromLocal();
         if (!isAuthenticated && Array.isArray(cached) && cached.length) {
           setChats(cached.map((c) => ({ ...c, messages: c.messages || [] })));
-          setActiveChatId(loadActiveChatId() || cached[0]?.id || null);
+          setActiveChatId(null);
           return;
         }
 
@@ -351,7 +352,6 @@ async function deleteChat(chat) {
     alert("Failed to delete chat. Please try again.");
   }
 }
-
 
   return (
     <>
