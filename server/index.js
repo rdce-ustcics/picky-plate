@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
 const connectDB = require('./db/mongo');
 const mongoose = require("mongoose");
+const recipesRoutes = require("./routes/recipes");
 
 // Load environment variables
 dotenv.config();
@@ -18,6 +19,10 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+
+app.use(express.json({ limit: '25mb' }));                 // ⬅️ increase limits
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // Connect to MongoDB
 // ✅ Connect Mongo and expose it to routes
@@ -39,6 +44,8 @@ connectDB().then(async() => {
 
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
+  app.use("/api/recipes", recipesRoutes);
+
   const port = process.env.PORT || 4000;
   app.listen(port, () => console.log(`🚀 API running on http://localhost:${port}`));
 }).catch((err) => {
@@ -54,5 +61,6 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
+
 
 const PORT = process.env.PORT || 4000;

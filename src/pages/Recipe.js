@@ -1,218 +1,182 @@
-import React, { useState } from "react";
+// client/src/pages/CommunityRecipes.js
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Plus, Clock, TrendingUp, X, ChefHat, Users } from "lucide-react";
+import {
+  Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle
+} from "lucide-react";
+import { useAuth } from "../auth/AuthContext";
+
+const API_BASE = "http://localhost:4000";
+
+const TAG_OPTIONS = [
+  "filipino","american","italian","japanese","korean","chinese","thai","indian",
+  "burger","pizza","pasta","ramen","sushi","bbq","seafood","vegan","vegetarian",
+  "dessert","breakfast","lunch","dinner","snack","spicy","noodles","rice"
+];
+
+const ALLERGENS = [
+  "peanut","tree nut","egg","milk","dairy","fish","shellfish","soy","wheat","gluten","sesame"
+];
+
+const PREP_TIME_OPTIONS = [
+  "5-10 min","10-15 min","15-20 min","20-30 min","30-45 min","45-60 min","1-2 hours","2+ hours"
+];
+
+const COOK_TIME_OPTIONS = [
+  "10-20 min","20-30 min","30-40 min","40-50 min","50-60 min",
+  "1-2 hours","2-3 hours","3+ hours"
+];
+
+const SERVING_SIZE_OPTIONS = ["1","1-2","3-4","5-6","7-8","9+"];
 
 export default function CommunityRecipes() {
+  const { isAuthenticated, authHeaders } = useAuth();
+
+  const tagMenuRef = useRef(null);
+  const allergenMenuRef = useRef(null);
+
   const [selectedRecipe, setSelectedRecipe] = useState(null);
 
-  const recipes = [
-    {
-      id: 1,
-      title: "Spaghetti Carbonara",
-      author: "marcus.smith",
-      prepTime: "20min",
-      cookTime: "15min",
-      difficulty: "Easy",
-      image: "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=500&h=300&fit=crop",
-      description: "A classic Italian pasta dish with a creamy egg-based sauce, crispy pancetta, and Parmesan cheese. Simple yet elegant.",
-      ingredients: [
-        "400g spaghetti",
-        "200g pancetta or guanciale, diced",
-        "4 large eggs",
-        "100g Parmesan cheese, grated",
-        "2 cloves garlic, minced",
-        "Salt and black pepper to taste",
-        "Fresh parsley for garnish"
-      ],
-      instructions: [
-        "Bring a large pot of salted water to boil and cook spaghetti according to package instructions.",
-        "While pasta cooks, fry pancetta in a large pan over medium heat until crispy (about 5-7 minutes).",
-        "In a bowl, whisk together eggs, Parmesan cheese, and a generous amount of black pepper.",
-        "Reserve 1 cup of pasta water, then drain the spaghetti.",
-        "Remove pan from heat and add the hot pasta to the pancetta.",
-        "Quickly pour in the egg mixture, tossing constantly. Add pasta water gradually to create a creamy sauce.",
-        "Serve immediately with extra Parmesan and black pepper."
-      ],
-      servings: "4 servings",
-      notes: "The key is to work quickly off the heat so the eggs don't scramble. The residual heat from the pasta will cook the eggs perfectly into a silky sauce."
-    },
-    {
-      id: 2,
-      title: "Chicken Tikka Masala",
-      author: "jonathan.tyler",
-      prepTime: "30min",
-      cookTime: "40min",
-      difficulty: "Medium",
-      image: "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=500&h=300&fit=crop",
-      description: "Tender marinated chicken in a rich, creamy tomato-based sauce with aromatic spices. A beloved Indian restaurant favorite.",
-      ingredients: [
-        "800g chicken breast, cubed",
-        "1 cup yogurt",
-        "2 tbsp tikka masala spice blend",
-        "3 tbsp vegetable oil",
-        "1 large onion, diced",
-        "4 cloves garlic, minced",
-        "1 tbsp ginger, grated",
-        "400g crushed tomatoes",
-        "1 cup heavy cream",
-        "2 tsp garam masala",
-        "1 tsp cumin",
-        "Fresh cilantro",
-        "Salt to taste"
-      ],
-      instructions: [
-        "Mix chicken with yogurt, 1 tbsp tikka masala, and salt. Marinate for at least 2 hours or overnight.",
-        "Heat oil in a large pan and cook marinated chicken until browned. Set aside.",
-        "In the same pan, sauté onion until golden (8-10 minutes).",
-        "Add garlic and ginger, cook for 1 minute until fragrant.",
-        "Stir in remaining tikka masala, garam masala, and cumin. Cook for 30 seconds.",
-        "Add crushed tomatoes and simmer for 10 minutes.",
-        "Blend the sauce until smooth (optional for creamier texture).",
-        "Return chicken to pan, add cream, and simmer for 15 minutes.",
-        "Garnish with cilantro and serve with rice or naan."
-      ],
-      servings: "6 servings",
-      notes: "Marinating the chicken overnight enhances the flavor significantly. This dish tastes even better the next day!"
-    },
-    {
-      id: 3,
-      title: "Vegetable Stir-Fry",
-      author: "ryan.gosling",
-      prepTime: "15min",
-      cookTime: "10min",
-      difficulty: "Easy",
-      image: "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=500&h=300&fit=crop",
-      description: "A colorful, healthy mix of fresh vegetables cooked quickly over high heat with a savory Asian-inspired sauce.",
-      ingredients: [
-        "2 cups broccoli florets",
-        "1 red bell pepper, sliced",
-        "1 yellow bell pepper, sliced",
-        "2 carrots, julienned",
-        "200g snap peas",
-        "3 cloves garlic, minced",
-        "1 tbsp ginger, grated",
-        "3 tbsp soy sauce",
-        "1 tbsp sesame oil",
-        "2 tbsp vegetable oil",
-        "1 tsp cornstarch",
-        "Sesame seeds for garnish"
-      ],
-      instructions: [
-        "Mix soy sauce, sesame oil, cornstarch, and 2 tbsp water in a small bowl. Set aside.",
-        "Heat vegetable oil in a wok or large pan over high heat.",
-        "Add garlic and ginger, stir-fry for 30 seconds.",
-        "Add carrots and broccoli first, stir-fry for 3 minutes.",
-        "Add bell peppers and snap peas, stir-fry for another 3 minutes.",
-        "Pour in the sauce and toss everything together for 1-2 minutes until vegetables are crisp-tender and coated.",
-        "Garnish with sesame seeds and serve immediately over rice or noodles."
-      ],
-      servings: "4 servings",
-      notes: "The key to a great stir-fry is high heat and constant movement. Don't overcook the vegetables - they should retain some crunch!"
-    },
-    {
-      id: 4,
-      title: "Blueberry Muffins",
-      author: "kurt.peter",
-      prepTime: "15min",
-      cookTime: "25min",
-      difficulty: "Easy",
-      image: "https://images.unsplash.com/photo-1426869884541-df7117556757?w=500&h=300&fit=crop",
-      description: "Moist, fluffy muffins bursting with fresh blueberries. Perfect for breakfast or a sweet afternoon snack.",
-      ingredients: [
-        "2 cups all-purpose flour",
-        "3/4 cup sugar",
-        "2 tsp baking powder",
-        "1/2 tsp salt",
-        "1/3 cup vegetable oil",
-        "1 large egg",
-        "1 cup milk",
-        "1 tsp vanilla extract",
-        "1.5 cups fresh blueberries",
-        "2 tbsp sugar for topping"
-      ],
-      instructions: [
-        "Preheat oven to 375°F (190°C). Line a 12-cup muffin tin with paper liners.",
-        "In a large bowl, whisk together flour, sugar, baking powder, and salt.",
-        "In another bowl, mix oil, egg, milk, and vanilla until well combined.",
-        "Pour wet ingredients into dry ingredients and stir until just combined (don't overmix).",
-        "Gently fold in blueberries.",
-        "Divide batter evenly among muffin cups (about 3/4 full).",
-        "Sprinkle tops with remaining sugar.",
-        "Bake for 22-25 minutes until golden and a toothpick comes out clean.",
-        "Cool in pan for 5 minutes, then transfer to a wire rack."
-      ],
-      servings: "12 muffins",
-      notes: "Toss blueberries in a tablespoon of flour before adding to prevent them from sinking. Frozen blueberries work too - no need to thaw!"
-    },
-    {
-      id: 5,
-      title: "Tomahawk Steak",
-      author: "thomas.anderson",
-      prepTime: "10min",
-      cookTime: "30min",
-      difficulty: "Medium",
-      image: "https://images.unsplash.com/photo-1558030006-450675393462?w=500&h=300&fit=crop",
-      description: "An impressive, bone-in ribeye steak with a long rib bone. Perfectly seared and finished to your desired doneness.",
-      ingredients: [
-        "1 tomahawk steak (about 1.5-2 kg)",
-        "3 tbsp olive oil",
-        "4 cloves garlic, crushed",
-        "4 sprigs fresh rosemary",
-        "4 sprigs fresh thyme",
-        "Coarse sea salt",
-        "Freshly ground black pepper",
-        "4 tbsp butter"
-      ],
-      instructions: [
-        "Remove steak from refrigerator 1 hour before cooking to bring to room temperature.",
-        "Preheat oven to 400°F (200°C).",
-        "Pat steak completely dry with paper towels and season generously with salt and pepper on all sides.",
-        "Heat a large cast-iron skillet over high heat until smoking hot.",
-        "Add olive oil and sear steak for 3-4 minutes per side until a dark crust forms.",
-        "Add butter, garlic, and herbs to the pan. Transfer to oven.",
-        "Roast for 15-20 minutes for medium-rare (internal temp 130°F/54°C).",
-        "Remove from oven, baste with pan juices, and let rest for 10 minutes before slicing.",
-        "Slice against the grain and serve with pan drippings."
-      ],
-      servings: "2-3 servings",
-      notes: "Use a meat thermometer for perfect results. The bone helps with heat distribution and adds incredible flavor. Don't skip the resting time!"
-    },
-    {
-      id: 6,
-      title: "Sinigang na Baboy",
-      author: "samantha.morgue",
-      prepTime: "20min",
-      cookTime: "90min",
-      difficulty: "Medium",
-      image: "https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?w=500&h=300&fit=crop",
-      description: "A beloved Filipino sour soup with tender pork ribs, fresh vegetables, and a distinctive tamarind-based broth. Comfort food at its finest.",
-      ingredients: [
-        "1 kg pork ribs or belly, cut into pieces",
-        "2 medium tomatoes, quartered",
-        "1 large onion, quartered",
-        "2 cups taro root (gabi), cubed",
-        "1 bunch kangkong (water spinach)",
-        "2 pieces long green chili (siling haba)",
-        "1 medium radish (labanos), sliced",
-        "1 pack sinigang mix or fresh tamarind",
-        "8 cups water",
-        "Fish sauce (patis) to taste",
-        "Salt and pepper to taste"
-      ],
-      instructions: [
-        "In a large pot, bring water to boil and add pork ribs. Skim off any scum that rises.",
-        "Add onions and tomatoes. Simmer for 1 hour until pork is tender.",
-        "Add taro root and radish, cook for 10 minutes until vegetables are tender.",
-        "Stir in sinigang mix (or tamarind juice) to achieve desired sourness.",
-        "Add long green chilies and cook for 2 minutes.",
-        "Season with fish sauce, salt, and pepper to taste.",
-        "Turn off heat and add kangkong. Let it wilt in the residual heat.",
-        "Serve hot with steamed white rice."
-      ],
-      servings: "6-8 servings",
-      notes: "This is a traditional Filipino dish that's especially comforting on rainy days. The sourness level can be adjusted to preference. Some regions use other souring agents like guava or green mango. Best enjoyed with family!"
+  // list state
+  const [items, setItems] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  // filters
+  const [search, setSearch] = useState("");
+  const [selectedTags, setSelectedTags] = useState([]);
+
+  const [excludeAllergens, setExcludeAllergens] = useState([]);
+  const [excludeTerms, setExcludeTerms] = useState([]);
+  const [excludeInput, setExcludeInput] = useState("");
+
+  const [prepFilter, setPrepFilter] = useState("");
+  const [cookFilter, setCookFilter] = useState("");
+  const [difficultyFilter, setDifficultyFilter] = useState("");
+  const [servingsFilter, setServingsFilter] = useState("");
+
+  const [showTagMenu, setShowTagMenu] = useState(false);
+  const [showAllergenMenu, setShowAllergenMenu] = useState(false);
+
+  // close menus on outside click
+  useEffect(() => {
+    function onDocClick(e) {
+      if (showTagMenu && tagMenuRef.current && !tagMenuRef.current.contains(e.target)) {
+        setShowTagMenu(false);
+      }
+      if (showAllergenMenu && allergenMenuRef.current && !allergenMenuRef.current.contains(e.target)) {
+        setShowAllergenMenu(false);
+      }
     }
-  ];
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [showTagMenu, showAllergenMenu]);
+
+  // build query string
+  const query = useMemo(() => {
+    const q = new URLSearchParams();
+    if (search.trim()) q.set("search", search.trim());
+    if (selectedTags.length) q.set("tags", selectedTags.join(","));
+
+    const excludeMerged = [...excludeAllergens, ...excludeTerms];
+    if (excludeMerged.length) q.set("exclude", excludeMerged.join(","));
+
+    if (prepFilter) q.set("prep", prepFilter);
+    if (cookFilter) q.set("cook", cookFilter);
+    if (difficultyFilter) q.set("diff", difficultyFilter);
+    if (servingsFilter) q.set("servings", servingsFilter);
+
+    q.set("page", String(page));
+    q.set("limit", "20");
+    return q.toString();
+  }, [
+    search, selectedTags,
+    excludeAllergens, excludeTerms,
+    prepFilter, cookFilter, difficultyFilter, servingsFilter,
+    page
+  ]);
+
+  // fetch
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/recipes?${query}`, {
+          headers: isAuthenticated ? authHeaders() : {},
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setItems(data.items || []);
+          setTotal(data.total || 0);
+          setPages(data.pages || 1);
+        } else {
+          console.error("recipes_list_error:", data);
+          setItems([]); setTotal(0); setPages(1);
+        }
+      } catch (e) {
+        console.error("recipes_list_error:", e);
+        setItems([]); setTotal(0); setPages(1);
+      }
+    })();
+  }, [query, isAuthenticated, authHeaders]);
+
+  // toggles
+  const toggleTag = (tag) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    );
+    setPage(1);
+  };
+  const removeTagChip = (tag) => {
+    setSelectedTags((prev) => prev.filter((t) => t !== tag));
+    setPage(1);
+  };
+
+  const toggleExcludeAllergen = (a) => {
+    const t = a.toLowerCase();
+    setExcludeAllergens((prev) =>
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+    );
+    setPage(1);
+  };
+  const removeAllergenChip = (a) => {
+    setExcludeAllergens((prev) => prev.filter((x) => x !== a));
+    setPage(1);
+  };
+
+  const addExcludeTerm = () => {
+    const clean = excludeInput.trim().toLowerCase();
+    if (!clean) return;
+    if (!excludeTerms.includes(clean)) {
+      setExcludeTerms((p) => [...p, clean]);
+      setPage(1);
+    }
+    setExcludeInput("");
+  };
+  const removeExcludeTermChip = (term) => {
+    setExcludeTerms((p) => p.filter((t) => t !== term));
+    setPage(1);
+  };
+  const onExcludeInputKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addExcludeTerm();
+    }
+  };
+
+  // reset all
+  const resetFilters = () => {
+    setSearch("");
+    setSelectedTags([]);
+    setExcludeAllergens([]);
+    setExcludeTerms([]);
+    setExcludeInput("");
+    setPrepFilter("");
+    setCookFilter("");
+    setDifficultyFilter("");
+    setServingsFilter("");
+    setPage(1);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -220,8 +184,10 @@ export default function CommunityRecipes() {
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800">Community Recipes</h1>
-            <Link 
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800">
+              Community Recipes
+            </h1>
+            <Link
               to="/recipes/upload"
               className="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-500 text-white font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-full flex items-center justify-center gap-2 transition shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
             >
@@ -229,146 +195,423 @@ export default function CommunityRecipes() {
               Upload Recipe
             </Link>
           </div>
+
+          {/* Filters */}
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <input
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              className="border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-yellow-400"
+              placeholder="Search title, description, ingredients…"
+            />
+
+            {/* TAG PICKER */}
+            <div className="relative" ref={tagMenuRef}>
+              <button
+                onClick={() => setShowTagMenu((s) => !s)}
+                className="w-full border rounded-xl px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50"
+              >
+                <span>Select tags</span>
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              </button>
+              {showTagMenu && (
+                <div className="absolute z-20 mt-2 w-full bg-white border rounded-xl shadow-lg p-2 max-h-72 overflow-auto">
+                  <div className="flex flex-wrap gap-2">
+                    {TAG_OPTIONS.map((tag) => {
+                      const active = selectedTags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => toggleTag(tag)}
+                          className={`px-3 py-1 rounded-full text-sm border transition
+                            ${active ? "bg-yellow-500 text-white border-yellow-500"
+                                     : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"}`}
+                        >
+                          #{tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ALLERGEN PICKER */}
+            <div className="relative" ref={allergenMenuRef}>
+              <button
+                onClick={() => setShowAllergenMenu((s) => !s)}
+                className="w-full border rounded-xl px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50"
+              >
+                <span>Exclude allergens</span>
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              </button>
+              {showAllergenMenu && (
+                <div className="absolute z-20 mt-2 w-full bg-white border rounded-xl shadow-lg p-2 max-h-72 overflow-auto">
+                  <div className="flex flex-wrap gap-2">
+                    {ALLERGENS.map((a) => {
+                      const active = excludeAllergens.includes(a);
+                      return (
+                        <button
+                          key={a}
+                          type="button"
+                          onClick={() => toggleExcludeAllergen(a)}
+                          className={`px-3 py-1 rounded-full text-sm border transition
+                            ${active ? "bg-red-500 text-white border-red-500"
+                                     : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"}`}
+                        >
+                          {a}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* EXTRA EXCLUDE TERMS → chips */}
+            <div className="flex gap-2">
+              <input
+                value={excludeInput}
+                onChange={(e) => setExcludeInput(e.target.value)}
+                onKeyDown={onExcludeInputKeyDown}
+                className="flex-1 border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-yellow-400"
+                placeholder="Add exclude term…"
+              />
+              <button
+                type="button"
+                onClick={addExcludeTerm}
+                className="px-3 py-2.5 border rounded-xl text-sm hover:bg-gray-50 flex items-center gap-1"
+                title="Add exclude term"
+              >
+                <PlusCircle className="w-4 h-4" /> Add
+              </button>
+            </div>
+          </div>
+
+
+          {/* Secondary filter row: prep, cook, difficulty, servings + reset */}
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-5 gap-3">
+            <select
+              value={prepFilter}
+              onChange={(e) => { setPrepFilter(e.target.value); setPage(1); }}
+              className="border rounded-xl px-3 py-2.5 text-sm bg-white"
+            >
+              <option value="">Prep time (any)</option>
+              {PREP_TIME_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+            <select
+              value={cookFilter}
+              onChange={(e) => { setCookFilter(e.target.value); setPage(1); }}
+              className="border rounded-xl px-3 py-2.5 text-sm bg-white"
+            >
+              <option value="">Cook time (any)</option>
+              {COOK_TIME_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+            <select
+              value={difficultyFilter}
+              onChange={(e) => { setDifficultyFilter(e.target.value); setPage(1); }}
+              className="border rounded-xl px-3 py-2.5 text-sm bg-white"
+            >
+              <option value="">Difficulty (any)</option>
+              <option>Easy</option>
+              <option>Medium</option>
+              <option>Hard</option>
+            </select>
+            <select
+              value={servingsFilter}
+              onChange={(e) => { setServingsFilter(e.target.value); setPage(1); }}
+              className="border rounded-xl px-3 py-2.5 text-sm bg-white"
+            >
+              <option value="">Servings (any)</option>
+              {SERVING_SIZE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+
+            
+
+            <button onClick={resetFilters} className="border rounded-xl px-4 py-2.5 text-sm hover:bg-gray-50">
+              Clear all filters
+            </button>
+          </div>
+
+                    {/* Selected chips row */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {selectedTags.map((tag) => (
+              <span key={`tag-${tag}`} className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 border border-yellow-200">
+                #{tag}
+                <button className="ml-1" onClick={() => removeTagChip(tag)} aria-label={`Remove tag ${tag}`}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+            {excludeAllergens.map((a) => (
+              <span key={`alg-${a}`} className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-red-100 text-red-800 border border-red-200">
+                exclude: {a}
+                <button className="ml-1" onClick={() => removeAllergenChip(a)} aria-label={`Remove allergen ${a}`}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+            {excludeTerms.map((t) => (
+              <span key={`ext-${t}`} className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">
+                exclude: {t}
+                <button className="ml-1" onClick={() => removeExcludeTermChip(t)} aria-label={`Remove exclude term ${t}`}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+
+
+          {/* Stats */}
+          <div className="mt-3 text-sm text-gray-500">
+            {total} recipe{total === 1 ? "" : "s"} • Page {page} of {pages}
+          </div>
         </div>
       </div>
 
       {/* Recipe Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-          {recipes.map((recipe) => (
-            <div 
-              key={recipe.id} 
-              className="bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition cursor-pointer group"
-              onClick={() => setSelectedRecipe(recipe)}
-            >
-              <div className="relative overflow-hidden">
-                <img 
-                  src={recipe.image} 
-                  alt={recipe.title}
-                  className="w-full h-48 sm:h-56 object-cover group-hover:scale-110 transition duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition"></div>
-              </div>
-              
-              <div className="p-4 sm:p-5">
-                <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 group-hover:text-yellow-500 transition">
-                  {recipe.title}
-                </h3>
-                <p className="text-xs sm:text-sm text-gray-500 mb-3">
-                  By <span className="text-gray-700 font-medium">{recipe.author}</span>
-                </p>
-                <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span>Prep: {recipe.prepTime}</span>
-                  </div>
-                  <span>•</span>
-                  <div className="flex items-center gap-1">
-                    <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span>{recipe.difficulty}</span>
+        {items.length === 0 ? (
+          <div className="text-center text-gray-500 py-16">
+            No recipes found. Try different filters, or{" "}
+            <Link to="/recipes/upload" className="text-yellow-600 font-semibold">
+              add one
+            </Link>
+            .
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            {items.map((recipe) => (
+              <div
+                key={recipe._id}
+                className="bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition cursor-pointer group"
+                onClick={() => setSelectedRecipe(recipe)}
+              >
+                <div className="relative overflow-hidden">
+                  <img
+                    src={recipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
+                    alt={recipe.title}
+                    className="w-full h-48 sm:h-56 object-cover group-hover:scale-110 transition duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
+                </div>
+
+                <div className="p-4 sm:p-5">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 group-hover:text-yellow-500 transition">
+                    {recipe.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-500 mb-3">
+                    By{" "}
+                    <span className="text-gray-700 font-medium">
+                      {recipe.author || "anonymous"}
+                    </span>
+                  </p>
+
+                  {/* tags */}
+                  {recipe.tags?.length ? (
+                    <div className="mb-3 flex flex-wrap gap-2">
+                      {recipe.tags.slice(0, 6).map((t, i) => (
+                        <span
+                          key={i}
+                          className="text-[11px] px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200"
+                        >
+                          #{t}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span>Prep: {recipe.prepTime || "—"}</span>
+                    </div>
+                    <span>•</span>
+                    <div className="flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span>{recipe.difficulty || "Easy"}</span>
+                    </div>
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {pages > 1 && (
+          <div className="mt-6 flex items-center justify-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="px-3 py-2 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <div className="text-sm text-gray-600">
+              Page {page} / {pages}
             </div>
-          ))}
-        </div>
+            <button
+              onClick={() => setPage((p) => Math.min(pages, p + 1))}
+              disabled={page >= pages}
+              className="px-3 py-2 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Recipe Modal */}
       {selectedRecipe && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto" onClick={() => setSelectedRecipe(null)}>
-          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl my-4" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto"
+          onClick={() => setSelectedRecipe(null)}
+        >
+          <div
+            className="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl my-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal Header with Image */}
             <div className="relative h-48 sm:h-64">
-              <img 
-                src={selectedRecipe.image} 
+              <img
+                src={selectedRecipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
                 alt={selectedRecipe.title}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent"></div>
-              <button 
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+              <button
                 onClick={() => setSelectedRecipe(null)}
                 className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-white/90 hover:bg-white rounded-full p-2 transition"
               >
                 <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-800" />
               </button>
               <div className="absolute bottom-3 sm:bottom-4 left-4 sm:left-6 right-4">
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1 sm:mb-2">{selectedRecipe.title}</h2>
-                <p className="text-sm sm:text-base text-white/90">By {selectedRecipe.author}</p>
+                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1 sm:mb-2">
+                  {selectedRecipe.title}
+                </h2>
+                <p className="text-sm sm:text-base text-white/90">
+                  By {selectedRecipe.author || "anonymous"}
+                </p>
               </div>
             </div>
 
             {/* Modal Content */}
             <div className="p-4 sm:p-6 md:p-8">
               {/* Description */}
-              <div className="mb-4 sm:mb-6">
-                <p className="text-gray-700 text-sm sm:text-base md:text-lg leading-relaxed">{selectedRecipe.description}</p>
-              </div>
+              {selectedRecipe.description && (
+                <div className="mb-4 sm:mb-6">
+                  <p className="text-gray-700 text-sm sm:text-base md:text-lg leading-relaxed">
+                    {selectedRecipe.description}
+                  </p>
+                </div>
+              )}
 
               {/* Quick Info */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8 p-3 sm:p-4 bg-yellow-50 rounded-xl">
                 <div className="text-center">
                   <Clock className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Prep Time</p>
-                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.prepTime}</p>
+                  <p className="text-sm font-semibold text-gray-800">
+                    {selectedRecipe.prepTime || "—"}
+                  </p>
                 </div>
                 <div className="text-center">
                   <Clock className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Cook Time</p>
-                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.cookTime}</p>
+                  <p className="text-sm font-semibold text-gray-800">
+                    {selectedRecipe.cookTime || "—"}
+                  </p>
                 </div>
                 <div className="text-center">
                   <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Difficulty</p>
-                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.difficulty}</p>
+                  <p className="text-sm font-semibold text-gray-800">
+                    {selectedRecipe.difficulty || "Easy"}
+                  </p>
                 </div>
                 <div className="text-center">
                   <Users className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Servings</p>
-                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.servings}</p>
+                  <p className="text-sm font-semibold text-gray-800">
+                    {selectedRecipe.servings || "—"}
+                  </p>
                 </div>
               </div>
 
-              {/* Ingredients */}
-              <div className="mb-6 sm:mb-8">
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
-                  <ChefHat className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
-                  Ingredients
-                </h3>
-                <div className="bg-gray-50 rounded-xl p-4 sm:p-6">
-                  <ul className="space-y-2">
-                    {selectedRecipe.ingredients.map((ingredient, index) => (
-                      <li key={index} className="flex items-start gap-2 sm:gap-3">
-                        <span className="text-yellow-500 mt-1">•</span>
-                        <span className="text-sm sm:text-base text-gray-700">{ingredient}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-
-              {/* Instructions */}
-              <div className="mb-6 sm:mb-8">
-                <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">Step-by-Step Instructions</h3>
-                <div className="space-y-3 sm:space-y-4">
-                  {selectedRecipe.instructions.map((instruction, index) => (
-                    <div key={index} className="flex gap-3 sm:gap-4">
-                      <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-yellow-400 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-base">
-                        {index + 1}
-                      </div>
-                      <p className="text-sm sm:text-base text-gray-700 pt-0.5 sm:pt-1">{instruction}</p>
-                    </div>
+              {/* Tags */}
+              {selectedRecipe.tags?.length ? (
+                <div className="mb-6 flex flex-wrap gap-2">
+                  {selectedRecipe.tags.map((t, i) => (
+                    <span
+                      key={i}
+                      className="text-[11px] px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200"
+                    >
+                      #{t}
+                    </span>
                   ))}
                 </div>
-              </div>
+              ) : null}
+
+              {/* Ingredients */}
+              {selectedRecipe.ingredients?.length ? (
+                <div className="mb-6 sm:mb-8">
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
+                    <ChefHat className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
+                    Ingredients
+                  </h3>
+                  <div className="bg-gray-50 rounded-xl p-4 sm:p-6">
+                    <ul className="space-y-2">
+                      {selectedRecipe.ingredients.map((ingredient, index) => (
+                        <li key={index} className="flex items-start gap-2 sm:gap-3">
+                          <span className="text-yellow-500 mt-1">•</span>
+                          <span className="text-sm sm:text-base text-gray-700">{ingredient}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Instructions */}
+              {selectedRecipe.instructions?.length ? (
+                <div className="mb-6 sm:mb-8">
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">
+                    Step-by-Step Instructions
+                  </h3>
+                  <div className="space-y-3 sm:space-y-4">
+                    {selectedRecipe.instructions.map((instruction, index) => (
+                      <div key={index} className="flex gap-3 sm:gap-4">
+                        <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-yellow-400 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-base">
+                          {index + 1}
+                        </div>
+                        <p className="text-sm sm:text-base text-gray-700 pt-0.5 sm:pt-1">
+                          {instruction}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               {/* Notes */}
-              {selectedRecipe.notes && (
+              {selectedRecipe.notes ? (
                 <div className="bg-blue-50 border-l-4 border-blue-400 p-4 sm:p-6 rounded-r-xl">
-                  <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-2">💡 Chef's Notes</h3>
-                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed">{selectedRecipe.notes}</p>
+                  <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-2">
+                    💡 Chef's Notes
+                  </h3>
+                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                    {selectedRecipe.notes}
+                  </p>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
