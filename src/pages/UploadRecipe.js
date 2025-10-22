@@ -118,7 +118,6 @@ export default function UploadRecipe() {
       difficulty,
       notes: personalNotes.trim(),
       servings,          // dropdown value
-      author: "anonymous",
       tags: selectedTags,
       allergens: selectedAllergens
     };
