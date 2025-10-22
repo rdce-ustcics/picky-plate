@@ -188,6 +188,10 @@ export default function ChatBot() {
       chatId: null,
     };
     setChats((prev) => [newChat, ...prev]);
+    if (!isAuthenticated) {
+      const next = [newChat, ...chats];
+      saveChatsToLocal(next);
+      }
     setActiveChatId(newChat.id);
     setShowSidebar(false);
     if (initialMessage) {
@@ -249,6 +253,12 @@ export default function ChatBot() {
       );
     } finally {
       setIsTyping(false);
+      // save locally
+      if (!isAuthenticated) {
+        setTimeout(() => {
+          saveChatsToLocal(chats);
+        }, 300);
+      }
     }
   }
 

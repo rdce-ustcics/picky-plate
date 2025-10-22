@@ -5,7 +5,10 @@ const ACTIVE_CHAT_KEY = "pp_active";
 export function getSessionId() {
   let s = localStorage.getItem(SESSION_KEY);
   if (!s) {
-    s = (crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
+    const gen = (crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2);
+    s = gen;
     localStorage.setItem(SESSION_KEY, s);
   }
   return s;
@@ -30,23 +33,13 @@ export function clearSessionId() {
 }
 
 export function saveChatsToLocal(chats) {
-  const compact = chats.map(c => ({
-    id: c.id,
-    title: c.title,
-    chatId: c.chatId || null,
-  }));
-  localStorage.setItem(CHATS_KEY, JSON.stringify(compact));
+  localStorage.setItem(CHATS_KEY, JSON.stringify(chats));
 }
 
 export function loadChatsFromLocal() {
-  try {
-    const raw = localStorage.getItem(CHATS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  const d = localStorage.getItem(CHATS_KEY);
+  return d ? JSON.parse(d) : [];
 }
-
 export function saveActiveChatId(id) {
   if (id != null) localStorage.setItem(ACTIVE_CHAT_KEY, String(id));
 }
