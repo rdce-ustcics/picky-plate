@@ -18,6 +18,7 @@ import { AuthProvider } from "./auth/AuthContext";
 import RoleRoute, { GuestOnlyRoute } from "./auth/RoleRoute";
 import "./index.css";
 import CommunityRecipes from "./pages/Recipe";
+import Calendar from "./pages/Calendar";
 
 export default function App() {
   return (
@@ -58,6 +59,15 @@ export default function App() {
                 </RoleRoute>
               }
             />
+
+            <Route
+             path="/calendar"
+             element={
+               <RoleRoute allow={["user", "admin"]}>
+                <Calendar />
+              </RoleRoute>
+           }
+          />
 
             <Route
               path="/explorer"
