@@ -5,6 +5,41 @@ import {
   Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
+
+// ===== PDF MODE CSS (injected once) =====
+const pdfModeStyles = `
+  /* Clean rasterization */
+  .pdf-mode * {
+    animation: none !important;
+    transition: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Hide buttons/controls while capturing */
+  .pdf-mode .no-pdf { display: none !important; }
+
+  /* Hide lucide SVGs in PDF capture; we'll keep text centered */
+  .pdf-mode .svg-only { display: none !important; }
+
+  /* Perfect centering for numbered circles */
+  .circle-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1 !important;
+    border-radius: 9999px;
+  }
+
+  /* Chip text vertically centered */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.2;
+  }
+`;
 
 const API_BASE = "http://localhost:4000";
 
@@ -34,6 +69,7 @@ export default function CommunityRecipes() {
 
   const tagMenuRef = useRef(null);
   const allergenMenuRef = useRef(null);
+  const modalRef = useRef(null);
 
   const [selectedRecipe, setSelectedRecipe] = useState(null);
 
@@ -58,6 +94,17 @@ export default function CommunityRecipes() {
 
   const [showTagMenu, setShowTagMenu] = useState(false);
   const [showAllergenMenu, setShowAllergenMenu] = useState(false);
+
+  // Inject pdf mode CSS once
+  useEffect(() => {
+    const id = "pdf-mode-styles";
+    if (!document.getElementById(id)) {
+      const style = document.createElement("style");
+      style.id = id;
+      style.innerHTML = pdfModeStyles;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   // close menus on outside click
   useEffect(() => {
@@ -178,6 +225,82 @@ export default function CommunityRecipes() {
     setPage(1);
   };
 
+  // ===== PDF helpers =====
+  async function captureToPdfBlob() {
+    if (!modalRef.current || !selectedRecipe) return null;
+    const node = modalRef.current;
+
+    node.classList.add("pdf-mode");
+    const prevBg = node.style.background;
+    node.style.background = "#ffffff";
+
+    const scale = window.devicePixelRatio ? Math.min(3, window.devicePixelRatio) : 2;
+
+    try {
+      const canvas = await html2canvas(node, {
+        scale,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: node.scrollWidth,
+        windowHeight: node.scrollHeight,
+      });
+
+      const imgData = canvas.toDataURL("image/png", 0.95);
+      const pdf = new jsPDF("p", "pt", "a4");
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      const imgWidth = pageWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      if (imgHeight <= pageHeight) {
+        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      } else {
+        let yShift = 0;
+        let remaining = imgHeight;
+        while (remaining > 0) {
+          pdf.addImage(imgData, "PNG", 0, yShift, imgWidth, imgHeight);
+          remaining -= pageHeight;
+          if (remaining > 0) {
+            pdf.addPage();
+            yShift -= pageHeight;
+          }
+        }
+      }
+
+      return pdf;
+    } catch (err) {
+      console.error("PDF generation failed:", err);
+      return null;
+    } finally {
+      node.classList.remove("pdf-mode");
+      node.style.background = prevBg;
+    }
+  }
+
+  // Download (hide buttons while capturing via .pdf-mode .no-pdf)
+  const downloadRecipePdf = async () => {
+    const pdf = await captureToPdfBlob();
+    if (!pdf) return;
+    pdf.save(`${selectedRecipe?.title?.trim() || "recipe"}.pdf`);
+  };
+
+  // Preview (open in new window)
+  const previewRecipePdf = async () => {
+    const pdf = await captureToPdfBlob();
+    if (!pdf) return;
+    // Try blob URL first for better reliability
+    try {
+      const blobUrl = pdf.output("bloburl");
+      window.open(blobUrl, "_blank", "noopener,noreferrer");
+    } catch {
+      // Fallback
+      pdf.output("dataurlnewwindow");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -289,7 +412,6 @@ export default function CommunityRecipes() {
             </div>
           </div>
 
-
           {/* Secondary filter row: prep, cook, difficulty, servings + reset */}
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-5 gap-3">
             <select
@@ -333,17 +455,15 @@ export default function CommunityRecipes() {
               ))}
             </select>
 
-            
-
             <button onClick={resetFilters} className="border rounded-xl px-4 py-2.5 text-sm hover:bg-gray-50">
               Clear all filters
             </button>
           </div>
 
-                    {/* Selected chips row */}
+          {/* Selected chips row */}
           <div className="mt-3 flex flex-wrap gap-2">
             {selectedTags.map((tag) => (
-              <span key={`tag-${tag}`} className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 border border-yellow-200">
+              <span key={`tag-${tag}`} className="chip inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 border border-yellow-200">
                 #{tag}
                 <button className="ml-1" onClick={() => removeTagChip(tag)} aria-label={`Remove tag ${tag}`}>
                   <X className="w-3 h-3" />
@@ -351,7 +471,7 @@ export default function CommunityRecipes() {
               </span>
             ))}
             {excludeAllergens.map((a) => (
-              <span key={`alg-${a}`} className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-red-100 text-red-800 border border-red-200">
+              <span key={`alg-${a}`} className="chip inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-red-100 text-red-800 border border-red-200">
                 exclude: {a}
                 <button className="ml-1" onClick={() => removeAllergenChip(a)} aria-label={`Remove allergen ${a}`}>
                   <X className="w-3 h-3" />
@@ -359,7 +479,7 @@ export default function CommunityRecipes() {
               </span>
             ))}
             {excludeTerms.map((t) => (
-              <span key={`ext-${t}`} className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">
+              <span key={`ext-${t}`} className="chip inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">
                 exclude: {t}
                 <button className="ml-1" onClick={() => removeExcludeTermChip(t)} aria-label={`Remove exclude term ${t}`}>
                   <X className="w-3 h-3" />
@@ -367,7 +487,6 @@ export default function CommunityRecipes() {
               </span>
             ))}
           </div>
-
 
           {/* Stats */}
           <div className="mt-3 text-sm text-gray-500">
@@ -396,6 +515,7 @@ export default function CommunityRecipes() {
               >
                 <div className="relative overflow-hidden">
                   <img
+                    crossOrigin="anonymous"
                     src={recipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
                     alt={recipe.title}
                     className="w-full h-48 sm:h-56 object-cover group-hover:scale-110 transition duration-500"
@@ -420,7 +540,7 @@ export default function CommunityRecipes() {
                       {recipe.tags.slice(0, 6).map((t, i) => (
                         <span
                           key={i}
-                          className="text-[11px] px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200"
+                          className="chip text-[11px] px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200"
                         >
                           #{t}
                         </span>
@@ -476,15 +596,17 @@ export default function CommunityRecipes() {
           onClick={() => setSelectedRecipe(null)}
         >
           <div
+            ref={modalRef}
             className="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl my-4"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header with Image */}
             <div className="relative h-48 sm:h-64">
               <img
+                crossOrigin="anonymous"
                 src={selectedRecipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
                 alt={selectedRecipe.title}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-center"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
               <button
@@ -493,7 +615,7 @@ export default function CommunityRecipes() {
               >
                 <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-800" />
               </button>
-              <div className="absolute bottom-3 sm:bottom-4 left-4 sm:left-6 right-4">
+              <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 text-center w-[90%]">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1 sm:mb-2">
                   {selectedRecipe.title}
                 </h2>
@@ -508,51 +630,46 @@ export default function CommunityRecipes() {
               {/* Description */}
               {selectedRecipe.description && (
                 <div className="mb-4 sm:mb-6">
-                  <p className="text-gray-700 text-sm sm:text-base md:text-lg leading-relaxed">
+                  <p className="text-gray-700 text-sm sm:text-base md:text-lg leading-relaxed text-center">
                     {selectedRecipe.description}
                   </p>
                 </div>
               )}
 
-              {/* Quick Info */}
+              {/* Quick Info (icons hidden in PDF, text remains centered) */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8 p-3 sm:p-4 bg-yellow-50 rounded-xl">
                 <div className="text-center">
-                  <Clock className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
+                  <Clock className="svg-only w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Prep Time</p>
-                  <p className="text-sm font-semibold text-gray-800">
-                    {selectedRecipe.prepTime || "—"}
-                  </p>
+                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.prepTime || "—"}</p>
                 </div>
+
                 <div className="text-center">
-                  <Clock className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
+                  <Clock className="svg-only w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Cook Time</p>
-                  <p className="text-sm font-semibold text-gray-800">
-                    {selectedRecipe.cookTime || "—"}
-                  </p>
+                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.cookTime || "—"}</p>
                 </div>
+
                 <div className="text-center">
-                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
+                  <TrendingUp className="svg-only w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Difficulty</p>
-                  <p className="text-sm font-semibold text-gray-800">
-                    {selectedRecipe.difficulty || "Easy"}
-                  </p>
+                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.difficulty || "Easy"}</p>
                 </div>
+
                 <div className="text-center">
-                  <Users className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
+                  <Users className="svg-only w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Servings</p>
-                  <p className="text-sm font-semibold text-gray-800">
-                    {selectedRecipe.servings || "—"}
-                  </p>
+                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.servings || "—"}</p>
                 </div>
               </div>
 
               {/* Tags */}
               {selectedRecipe.tags?.length ? (
-                <div className="mb-6 flex flex-wrap gap-2">
+                <div className="mb-6 flex flex-wrap gap-2 justify-center">
                   {selectedRecipe.tags.map((t, i) => (
                     <span
                       key={i}
-                      className="text-[11px] px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200"
+                      className="chip text-[11px] px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200"
                     >
                       #{t}
                     </span>
@@ -563,7 +680,7 @@ export default function CommunityRecipes() {
               {/* Ingredients */}
               {selectedRecipe.ingredients?.length ? (
                 <div className="mb-6 sm:mb-8">
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center justify-center gap-2">
                     <ChefHat className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
                     Ingredients
                   </h3>
@@ -583,16 +700,16 @@ export default function CommunityRecipes() {
               {/* Instructions */}
               {selectedRecipe.instructions?.length ? (
                 <div className="mb-6 sm:mb-8">
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4">
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4 text-center">
                     Step-by-Step Instructions
                   </h3>
                   <div className="space-y-3 sm:space-y-4">
                     {selectedRecipe.instructions.map((instruction, index) => (
-                      <div key={index} className="flex gap-3 sm:gap-4">
-                        <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 bg-yellow-400 rounded-full flex items-center justify-center font-bold text-white text-sm sm:text-base">
+                      <div key={index} className="flex gap-3 sm:gap-4 items-start">
+                        <div className="circle-badge rounded-full w-7 h-7 sm:w-8 sm:h-8 bg-yellow-400 text-white font-bold text-sm sm:text-base leading-none">
                           {index + 1}
                         </div>
-                        <p className="text-sm sm:text-base text-gray-700 pt-0.5 sm:pt-1">
+                        <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
                           {instruction}
                         </p>
                       </div>
@@ -603,7 +720,7 @@ export default function CommunityRecipes() {
 
               {/* Notes */}
               {selectedRecipe.notes ? (
-                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 sm:p-6 rounded-r-xl">
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 sm:p-6 rounded-r-xl mb-6">
                   <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-2">
                     💡 Chef's Notes
                   </h3>
@@ -612,6 +729,22 @@ export default function CommunityRecipes() {
                   </p>
                 </div>
               ) : null}
+
+              {/* PDF Actions (hidden while capturing) */}
+              <div className="no-pdf flex justify-center gap-3 mt-6 mb-4">
+                <button
+                  onClick={previewRecipePdf}
+                  className="bg-white border border-yellow-500 text-yellow-700 hover:bg-yellow-50 font-semibold px-6 py-2 rounded-full shadow-sm transition"
+                >
+                  Preview PDF
+                </button>
+                <button
+                  onClick={downloadRecipePdf}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-6 py-2 rounded-full shadow transition"
+                >
+                  Download PDF
+                </button>
+              </div>
             </div>
           </div>
         </div>
