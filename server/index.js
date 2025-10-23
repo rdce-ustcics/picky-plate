@@ -46,6 +46,10 @@ connectDB().then(async() => {
 
   app.use("/api/recipes", recipesRoutes);
 
+  app.use("/api/mealplans", require("./routes/mealPlans"));
+
+  app.use("/api/ai", require("./routes/ai"));
+
   const port = process.env.PORT || 4000;
   app.listen(port, () => console.log(`🚀 API running on http://localhost:${port}`));
 }).catch((err) => {

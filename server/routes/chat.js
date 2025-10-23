@@ -1,11 +1,10 @@
 // server/routes/chat.js
 const express = require("express");
-const { OpenAI } = require("openai");
 const { ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 
 const router = express.Router();
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = require("../openaiClient");
 
 /**
  * Soft authentication middleware
