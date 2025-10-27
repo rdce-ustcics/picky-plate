@@ -10,35 +10,11 @@ import { jsPDF } from "jspdf";
 
 // ===== PDF MODE CSS (injected once) =====
 const pdfModeStyles = `
-  /* Clean rasterization */
-  .pdf-mode * {
-    animation: none !important;
-    transition: none !important;
-    box-shadow: none !important;
-  }
-
-  /* Hide buttons/controls while capturing */
+  .pdf-mode * { animation: none !important; transition: none !important; box-shadow: none !important; }
   .pdf-mode .no-pdf { display: none !important; }
-
-  /* Hide lucide SVGs in PDF capture; we'll keep text centered */
   .pdf-mode .svg-only { display: none !important; }
-
-  /* Perfect centering for numbered circles */
-  .circle-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1 !important;
-    border-radius: 9999px;
-  }
-
-  /* Chip text vertically centered */
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    line-height: 1.2;
-  }
+  .circle-badge { display: inline-flex; align-items: center; justify-content: center; line-height: 1 !important; border-radius: 9999px; }
+  .chip { display: inline-flex; align-items: center; justify-content: center; line-height: 1.2; }
 `;
 
 const API_BASE = "http://localhost:4000";
@@ -67,6 +43,12 @@ const SERVING_SIZE_OPTIONS = ["1","1-2","3-4","5-6","7-8","9+"];
 export default function CommunityRecipes() {
   const { isAuthenticated, authHeaders } = useAuth();
 
+  // Identify active user (used for "My Recipes")
+  const activeUserId = (() => {
+    try { return localStorage.getItem("pap:activeUserId") || "global"; }
+    catch { return "global"; }
+  })();
+
   const tagMenuRef = useRef(null);
   const allergenMenuRef = useRef(null);
   const modalRef = useRef(null);
@@ -94,6 +76,9 @@ export default function CommunityRecipes() {
 
   const [showTagMenu, setShowTagMenu] = useState(false);
   const [showAllergenMenu, setShowAllergenMenu] = useState(false);
+
+  // NEW: “My Recipes” toggle
+  const [showMine, setShowMine] = useState(false);
 
   // Inject pdf mode CSS once
   useEffect(() => {
@@ -134,6 +119,9 @@ export default function CommunityRecipes() {
     if (difficultyFilter) q.set("diff", difficultyFilter);
     if (servingsFilter) q.set("servings", servingsFilter);
 
+    // NEW: limit to authorId when toggled
+    if (showMine && activeUserId) q.set("authorId", activeUserId);
+
     q.set("page", String(page));
     q.set("limit", "20");
     return q.toString();
@@ -141,16 +129,19 @@ export default function CommunityRecipes() {
     search, selectedTags,
     excludeAllergens, excludeTerms,
     prepFilter, cookFilter, difficultyFilter, servingsFilter,
+    showMine, activeUserId,
     page
   ]);
 
-  // fetch
+  // fetch recipes
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/recipes?${query}`, {
-          headers: isAuthenticated ? authHeaders() : {},
-        });
+        const headers = isAuthenticated ? authHeaders() : {};
+        // Send x-user-id to match your server pattern (useful for /mine and auth)
+        headers["x-user-id"] = activeUserId;
+
+        const res = await fetch(`${API_BASE}/api/recipes?${query}`, { headers });
         const data = await res.json();
         if (res.ok) {
           setItems(data.items || []);
@@ -165,7 +156,7 @@ export default function CommunityRecipes() {
         setItems([]); setTotal(0); setPages(1);
       }
     })();
-  }, [query, isAuthenticated, authHeaders]);
+  }, [query, isAuthenticated, authHeaders, activeUserId]);
 
   // toggles
   const toggleTag = (tag) => {
@@ -222,6 +213,7 @@ export default function CommunityRecipes() {
     setCookFilter("");
     setDifficultyFilter("");
     setServingsFilter("");
+    setShowMine(false); // also reset "Mine"
     setPage(1);
   };
 
@@ -280,23 +272,19 @@ export default function CommunityRecipes() {
     }
   }
 
-  // Download (hide buttons while capturing via .pdf-mode .no-pdf)
   const downloadRecipePdf = async () => {
     const pdf = await captureToPdfBlob();
     if (!pdf) return;
     pdf.save(`${selectedRecipe?.title?.trim() || "recipe"}.pdf`);
   };
 
-  // Preview (open in new window)
   const previewRecipePdf = async () => {
     const pdf = await captureToPdfBlob();
     if (!pdf) return;
-    // Try blob URL first for better reliability
     try {
       const blobUrl = pdf.output("bloburl");
       window.open(blobUrl, "_blank", "noopener,noreferrer");
     } catch {
-      // Fallback
       pdf.output("dataurlnewwindow");
     }
   };
@@ -310,13 +298,29 @@ export default function CommunityRecipes() {
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800">
               Community Recipes
             </h1>
-            <Link
-              to="/recipes/upload"
-              className="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-500 text-white font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-full flex items-center justify-center gap-2 transition shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
-            >
-              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-              Upload Recipe
-            </Link>
+
+            <div className="flex items-center gap-2">
+              {/* NEW: Mine toggle */}
+              <button
+                onClick={() => { setShowMine((v) => !v); setPage(1); }}
+                className={`px-4 py-2 rounded-full border text-sm transition ${
+                  showMine
+                    ? "bg-yellow-400 text-white border-yellow-400"
+                    : "bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
+                }`}
+                title="Show only recipes you uploaded"
+              >
+                {showMine ? "Showing: My Recipes" : "Show: My Recipes"}
+              </button>
+
+              <Link
+                to="/recipes/upload"
+                className="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-500 text-white font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-full flex items-center justify-center gap-2 transition shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
+              >
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                Upload Recipe
+              </Link>
+            </div>
           </div>
 
           {/* Filters */}
@@ -636,7 +640,7 @@ export default function CommunityRecipes() {
                 </div>
               )}
 
-              {/* Quick Info (icons hidden in PDF, text remains centered) */}
+              {/* Quick Info */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8 p-3 sm:p-4 bg-yellow-50 rounded-xl">
                 <div className="text-center">
                   <Clock className="svg-only w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />

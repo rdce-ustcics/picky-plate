@@ -7,43 +7,36 @@ import {
   saveActiveChatId,
   loadActiveChatId,
 } from "../utils/session";
-// CHANGE: import useAuth so we can branch between logged-in vs anonymous
 import { useAuth } from "../auth/AuthContext";
 
-const API_BASE = "http://localhost:4000";
+// Public image path (CRA): /public/images/PickAPlate.png
+const BOT_PNG = `${process.env.PUBLIC_URL || ""}/images/PickAPlate.png`;
 
-// Keep an anon session id available for anonymous users.
-// When you log in, AuthContext.login() already clears pp_session and pp_chats.
+const API_BASE = "http://localhost:4000";
 const SESSION_ID = getSessionId();
 
 const brand = {
   primary: "#FFC42D",
-  dark: "#FFB400",
   text: "#2b2b2b",
   bg: "#F6F6F7",
 };
 
+// --- Landing logo (exact PNG from /public) ---
 function BotLogo() {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, userSelect: "none" }}>
-      <div style={{ position: "relative" }}>
-        <div style={{ width: 80, height: 80, background: brand.primary, borderRadius: "50%", margin: "0 auto" }} className="bot-logo-circle" />
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-            <div style={{ display: "flex", gap: 14, marginBottom: 6 }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "black" }} className="bot-eye" />
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "black" }} className="bot-eye" />
-            </div>
-            <div style={{ width: 32, height: 12, borderRadius: "0 0 16px 16px", background: "black", marginTop: 3 }} className="bot-mouth" />
-          </div>
-        </div>
-        <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: brand.primary }} className="bot-antenna" />
-          <div style={{ width: 3, height: 14, background: brand.dark }} className="bot-antenna-stick" />
-        </div>
-      </div>
+      <img
+        src={BOT_PNG}
+        alt="PickAPlate"
+        style={{
+          width: 160,
+          height: 160,
+          objectFit: "contain",
+          filter: "drop-shadow(0 0 30px rgba(255,196,45,.65))",
+        }}
+      />
       <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: "2rem", fontWeight: 800, letterSpacing: "-0.02em", color: brand.text }} className="bot-title">
+        <div style={{ fontSize: "2rem", fontWeight: 800, letterSpacing: "-0.02em", color: brand.text }}>
           Pick<span style={{ color: brand.primary }}>A</span>Plate<span style={{ color: brand.primary }}>.</span>
         </div>
       </div>
@@ -51,28 +44,149 @@ function BotLogo() {
   );
 }
 
+/** Small bot avatar beside messages - thinks then talks */
+function SmallBotAvatar({ mode }) {
+  // mode: "thinking" or "talking"
+  return (
+    <div
+      style={{
+        width: 72,
+        height: 72,
+        position: "relative",
+        flexShrink: 0,
+      }}
+    >
+      {/* Avatar face */}
+      <img
+        src={BOT_PNG}
+        alt=""
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "block",
+          objectFit: "contain",
+          filter: "drop-shadow(0 2px 4px rgba(0,0,0,.15))",
+        }}
+      />
+
+      {/* Patch the static PNG mouth */}
+      <div
+        style={{
+          "--face": "#FFE39B",
+          position: "absolute",
+          left: "50%",
+          top: "58%",
+          transform: "translate(-50%,-50%)",
+          width: "22%",
+          height: "11%",
+          background: "var(--face)",
+          borderRadius: 8,
+          boxShadow: "0 0 0 1px var(--face)",
+        }}
+      />
+
+      {/* Animated mouth - only moves when talking */}
+      <div
+        className={`small-mouth ${mode === "talking" ? "talking" : ""}`}
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "58%",
+          transform: "translate(-50%,-50%)",
+          width: "18%",
+          height: "8%",
+          background: "#111",
+          borderRadius: "0 0 8px 8px",
+          transformOrigin: "top center",
+        }}
+      />
+
+      {/* Thinking hand - moves to head when thinking */}
+      {mode === "thinking" && (
+        <div
+          className="thinking-hand"
+          style={{
+            position: "absolute",
+            left: "65%",
+            top: "35%",
+            width: "28%",
+            height: "28%",
+            transformOrigin: "bottom center",
+          }}
+        >
+          {/* Arm */}
+          <div style={{
+            position: "absolute",
+            bottom: "15%",
+            left: "50%",
+            transform: "translateX(-50%) rotate(-25deg)",
+            width: "28%",
+            height: "45%",
+            background: "linear-gradient(to bottom, #FFD700, #FFA500)",
+            borderRadius: "6px",
+          }} />
+          {/* Hand */}
+          <div style={{
+            position: "absolute",
+            top: "5%",
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "50%",
+            height: "50%",
+            background: "#FFD700",
+            borderRadius: "40%",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+          }} />
+          {/* Thinking emoji/indicator on hand */}
+          <div style={{
+            position: "absolute",
+            top: "-5%",
+            left: "55%",
+            fontSize: "14px",
+          }}>💭</div>
+        </div>
+      )}
+
+      {/* Thinking dots indicator */}
+      {mode === "thinking" && (
+        <div
+          className="thinking-dots"
+          style={{
+            position: "absolute",
+            top: -12,
+            right: -12,
+            background: "white",
+            borderRadius: 12,
+            padding: "4px 8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+            display: "flex",
+            gap: 3,
+          }}
+        >
+          <span className="dot">•</span>
+          <span className="dot">•</span>
+          <span className="dot">•</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 export default function ChatBot() {
-  // CHANGE: we use auth state to switch between flows
   const { isAuthenticated, authHeaders } = useAuth();
 
   const [input, setInput] = useState("");
-  const [chats, setChats] = useState([]); // [{ id, chatId, title, messages: [...] }]
+  const [chats, setChats] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
   const [showSidebar, setShowSidebar] = useState(false);
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
   const scrollerRef = useRef(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [isTalking, setIsTalking] = useState(false);
 
-  useEffect(() => {
-  // wipe current in-memory UI so we always start at the logo
-  setActiveChatId(null);
-  setChats([]);
-}, [isAuthenticated]);
-
-  const activeChat = chats.find((c) => c.id === activeChatId);
-
-  // CHANGE: helper to build headers/payload per auth state
+  // Helpers that depend on auth
   function buildHeaders() {
     return isAuthenticated
       ? { "Content-Type": "application/json", ...authHeaders() }
@@ -83,18 +197,30 @@ export default function ChatBot() {
       ? { message, history, chatId }
       : { message, history, chatId, sessionId: SESSION_ID };
   }
-  function chatsListUrl() {
-    return isAuthenticated
-      ? `${API_BASE}/api/chats`
-      : `${API_BASE}/api/chats?sessionId=${encodeURIComponent(SESSION_ID)}`;
-  }
   function oneChatUrl(serverId) {
     return isAuthenticated
       ? `${API_BASE}/api/chats/${serverId}`
       : `${API_BASE}/api/chats/${serverId}?sessionId=${encodeURIComponent(SESSION_ID)}`;
   }
 
-  // --- API: send message (auth-aware) ---
+  // ✅ Memoized URL + headers for the loader effect (fixes ESLint warning)
+  const chatsListUrlStr = React.useMemo(
+    () =>
+      isAuthenticated
+        ? `${API_BASE}/api/chats`
+        : `${API_BASE}/api/chats?sessionId=${encodeURIComponent(SESSION_ID)}`,
+    [isAuthenticated]
+  );
+  const headersForList = React.useMemo(() => (isAuthenticated ? authHeaders() : {}), [isAuthenticated, authHeaders]);
+
+  useEffect(() => {
+    // reset UI when auth flips
+    setActiveChatId(null);
+    setChats([]);
+  }, [isAuthenticated]);
+
+  const activeChat = chats.find((c) => c.id === activeChatId);
+
   async function apiChat({ message, history = [], chatId = null }) {
     const recent = history
       .filter((m) => m && typeof m.content === "string" && m.content.trim())
@@ -103,16 +229,8 @@ export default function ChatBot() {
 
     const res = await fetch(`${API_BASE}/api/chat`, {
       method: "POST",
-      headers: {
-              "Content-Type": "application/json",
-      ...authHeaders(), // adds Authorization header if logged in
-      },                       // CHANGE: add Authorization when logged in
-      body: JSON.stringify(buildPayload({            // CHANGE: include sessionId only when anonymous
-        message,
-        history: recent,
-        chatId,
-        ...(isAuthenticated ? {} : { sessionId: SESSION_ID }),
-      })),
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(buildPayload({ message, history: recent, chatId })),
     });
 
     if (!res.ok) {
@@ -123,29 +241,27 @@ export default function ChatBot() {
     return res.json(); // { reply, chatId }
   }
 
-  // Load chats on mount AND whenever auth state flips (login/logout)
+  // Loader (now depends on memoized values)
   useEffect(() => {
     (async function loadChats() {
       try {
-        const res = await fetch(chatsListUrl(), { headers: isAuthenticated ? authHeaders() : {} }); // CHANGE
+        const res = await fetch(chatsListUrlStr, { headers: headersForList });
         if (!res.ok) throw new Error(await res.text());
         const list = await res.json();
 
         if (Array.isArray(list) && list.length) {
           const uiChats = list.map((doc) => ({
-            id: doc._id,        // keep UI id == server id so it persists across refresh
-            chatId: doc._id,    // server chat id
+            id: doc._id,
+            chatId: doc._id,
             title: doc.title || "Chat",
-            messages: [],       // load lazily when clicked
+            messages: [],
           }));
           setChats(uiChats);
-          const last = loadActiveChatId();
           setActiveChatId(null);
           saveChatsToLocal(uiChats);
           return;
         }
 
-        // No server chats — try local cache (only meaningful for anonymous)
         const cached = loadChatsFromLocal();
         if (!isAuthenticated && Array.isArray(cached) && cached.length) {
           setChats(cached.map((c) => ({ ...c, messages: c.messages || [] })));
@@ -157,7 +273,6 @@ export default function ChatBot() {
         setActiveChatId(null);
       } catch (e) {
         console.error("Failed to load chats:", e);
-        // fallback to local cache only for anonymous
         const cached = !isAuthenticated ? loadChatsFromLocal() : [];
         if (Array.isArray(cached) && cached.length) {
           setChats(cached.map((c) => ({ ...c, messages: c.messages || [] })));
@@ -168,12 +283,10 @@ export default function ChatBot() {
         }
       }
     })();
-    // CHANGE: depend on isAuthenticated so it reloads when you log in/out
-  }, [isAuthenticated]); 
+  }, [chatsListUrlStr, headersForList, isAuthenticated]);
 
-  // Persist simple chat list & active tab locally (anonymous convenience only)
   useEffect(() => {
-    if (!isAuthenticated) saveChatsToLocal(chats); // CHANGE: don't store logged-in users' tabs locally
+    if (!isAuthenticated) saveChatsToLocal(chats);
   }, [chats, isAuthenticated]);
 
   useEffect(() => {
@@ -181,39 +294,26 @@ export default function ChatBot() {
   }, [activeChatId]);
 
   function createNewChat(initialMessage = null) {
-    const newChat = {
-      id: Date.now(), // temporary UI id; server id will come back as chatId after first send
-      title: initialMessage || "New Chat",
-      messages: [],
-      chatId: null,
-    };
+    const newChat = { id: Date.now(), title: initialMessage || "New Chat", messages: [], chatId: null };
     setChats((prev) => [newChat, ...prev]);
-    if (!isAuthenticated) {
-      const next = [newChat, ...chats];
-      saveChatsToLocal(next);
-      }
+    if (!isAuthenticated) saveChatsToLocal([newChat, ...chats]);
     setActiveChatId(newChat.id);
     setShowSidebar(false);
-    if (initialMessage) {
-      sendMessage(initialMessage, newChat.id);
-    }
+    if (initialMessage) sendMessage(initialMessage, newChat.id);
   }
 
   async function sendMessage(text = null, chatLocalId = null) {
     const messageText = (text ?? input).trim();
     const targetChatId = chatLocalId ?? activeChatId;
-
     if (!messageText || !targetChatId) return;
 
     const targetChat = chats.find((c) => c.id === targetChatId);
     const history = targetChat?.messages || [];
 
     setInput("");
-
     setIsTyping(true);
 
-
-    // Optimistic user message
+    // optimistic user message
     setChats((prev) =>
       prev.map((chat) =>
         chat.id === targetChatId
@@ -236,7 +336,7 @@ export default function ChatBot() {
           chat.id === targetChatId
             ? {
                 ...chat,
-                chatId: chat.chatId || persistedId || null, // store server chat id once received
+                chatId: chat.chatId || persistedId || null,
                 messages: [...chat.messages, { role: "assistant", content: aiText }],
               }
             : chat
@@ -253,12 +353,9 @@ export default function ChatBot() {
       );
     } finally {
       setIsTyping(false);
-      // save locally
-      if (!isAuthenticated) {
-        setTimeout(() => {
-          saveChatsToLocal(chats);
-        }, 300);
-      }
+      setIsTalking(true);
+      setTimeout(() => setIsTalking(false), 3000); // Talk for 3 seconds
+      if (!isAuthenticated) setTimeout(() => saveChatsToLocal(chats), 300);
     }
   }
 
@@ -269,12 +366,11 @@ export default function ChatBot() {
     const chat = chats.find((c) => c.id === localId);
     const serverId = chat?.chatId || (typeof localId === "string" ? null : localId);
 
-    // Only fetch if it's server-backed and not yet loaded
     if (serverId && chat && chat.messages.length === 0) {
       try {
-        const res = await fetch(oneChatUrl(serverId), { headers: isAuthenticated ? authHeaders() : {} }); // CHANGE
+        const res = await fetch(oneChatUrl(serverId), { headers: isAuthenticated ? authHeaders() : {} });
         if (!res.ok) throw new Error(await res.text());
-        const full = await res.json(); // { _id, messages, title, ... }
+        const full = await res.json();
 
         setChats((prev) =>
           prev.map((c) =>
@@ -297,106 +393,126 @@ export default function ChatBot() {
     }
   }
 
-  // auto-scroll on new messages
   useEffect(() => {
-    if (scrollerRef.current) {
-      scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
-    }
+    if (scrollerRef.current) scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
   }, [activeChat?.messages, isTyping]);
 
-  // Swipe handlers
   const handleTouchStart = (e) => setTouchStart(e.targetTouches[0].clientX);
   const handleTouchMove = (e) => setTouchEnd(e.targetTouches[0].clientX);
   const handleTouchEnd = () => {
-    if (touchStart - touchEnd > 75) setShowSidebar(false); // left to close
-    if (touchStart - touchEnd < -75 && touchStart < 50) setShowSidebar(true); // right from edge to open
+    if (touchStart - touchEnd > 75) setShowSidebar(false);
+    if (touchStart - touchEnd < -75 && touchStart < 50) setShowSidebar(true);
   };
 
-async function deleteChat(chat) {
-  const confirmDelete = window.confirm(`Delete chat "${chat.title}"?`);
-  if (!confirmDelete) return;
-
-  try {
-    // Figure out which id to use on the server.
-    // When loaded from server, chat.id === chat.chatId. For new (unsaved) chats, chat.chatId is null.
-    const serverId = chat.chatId || (typeof chat.id === "string" ? chat.id : null);
-
-    if (serverId) {
-      // Auth-aware URL and headers
-      const url = isAuthenticated
-        ? `${API_BASE}/api/chats/${serverId}`
-        : `${API_BASE}/api/chats/${serverId}?sessionId=${encodeURIComponent(SESSION_ID)}`;
-
-      const res = await fetch(url, {
-        method: "DELETE",
-        headers: buildHeaders(), // includes Authorization if logged in
+  async function deleteChat(chat) {
+    const confirmDelete = window.confirm(`Delete chat "${chat.title}"?`);
+    if (!confirmDelete) return;
+    try {
+      const serverId = chat.chatId || (typeof chat.id === "string" ? chat.id : null);
+      if (serverId) {
+        const url = isAuthenticated
+          ? `${API_BASE}/api/chats/${serverId}`
+          : `${API_BASE}/api/chats/${serverId}?sessionId=${encodeURIComponent(SESSION_ID)}`;
+        const res = await fetch(url, { method: "DELETE", headers: buildHeaders() });
+        if (!res.ok) {
+          const t = await res.text();
+          console.error("Delete failed ->", res.status, t);
+          alert("Failed to delete chat on server.");
+          return;
+        }
+      }
+      setChats((prev) => {
+        const next = prev.filter((c) => c.id !== chat.id);
+        if (!isAuthenticated) saveChatsToLocal(next);
+        return next;
       });
-
-      if (!res.ok) {
-        const t = await res.text();
-        console.error("Delete failed ->", res.status, t);
-        alert("Failed to delete chat on server.");
-        return;
+      if (activeChatId === chat.id) {
+        setActiveChatId(null);
+        const last = loadActiveChatId();
+        if (String(last) === String(chat.id)) saveActiveChatId(null);
       }
+    } catch (e) {
+      console.error("Failed to delete chat:", e);
+      alert("Failed to delete chat. Please try again.");
     }
-    
-    // Remove locally
-    setChats(prev => {
-      const next = prev.filter(c => c.id !== chat.id);
-      // Persist anon cache so it doesn't reappear on refresh
-      if (!isAuthenticated) saveChatsToLocal(next);
-      return next;
-    });
-
-    // If the active chat was deleted, go back to the logo state
-    if (activeChatId === chat.id) {
-      setActiveChatId(null);
-      // Optional: also clear saved active id if it pointed to this chat
-      const last = loadActiveChatId();
-      if (String(last) === String(chat.id)) {
-        saveActiveChatId(null);
-      }
-    }
-  } catch (e) {
-    console.error("Failed to delete chat:", e);
-    alert("Failed to delete chat. Please try again.");
   }
-}
 
   return (
     <>
       <style>{`
-        @media (min-width: 769px) {
-          .bot-logo-circle { width: 120px !important; height: 120px !important; }
-          .bot-eye { width: 12px !important; height: 12px !important; }
-          .bot-mouth { width: 48px !important; height: 16px !important; }
-          .bot-antenna { width: 12px !important; height: 12px !important; }
-          .bot-antenna-stick { width: 4px !important; height: 20px !important; }
-          .bot-title { font-size: 3rem !important; }
-          .swipe-indicator { display: none !important; }
-        }
+        @media (min-width: 769px) { .swipe-indicator { display: none !important; } }
         @media (max-width: 768px) {
           .chat-sidebar { position: fixed !important; left: -100% !important; top: 0 !important; z-index: 1000 !important; transition: left 0.3s ease !important; }
-          .chat-sidebar.show { left: 0 !important; box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3) !important; }
+          .chat-sidebar.show { left: 0 !important; box-shadow: 4px 0 20px rgba(0,0,0,0.3) !important; }
           .sidebar-overlay { display: block !important; }
           .swipe-indicator { display: flex !important; }
         }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-        .typing-dot {
-        display: inline-block;
-        font-weight: 700;
-        animation: blink 1s infinite ease-in-out;
-        }
-        .typing-dot:nth-child(2) { animation-delay: .2s; }
-        .typing-dot:nth-child(3) { animation-delay: .4s; }
 
+        /* pulse for swipe indicator */
+        @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.6 } }
+
+        /* typing dots */
         @keyframes blink {
-         0%, 80%, 100% { opacity: .2; transform: translateY(0); }
-        40% { opacity: 1; transform: translateY(-2px); }
+          0%, 80%, 100% { opacity: .2; transform: translateY(0); }
+          40% { opacity: 1; transform: translateY(-2px); }
         }
+
+                /* Small bot avatar animations */
+        @keyframes mouthTalk {
+          0%   { transform: translate(-50%,-50%) scaleY(0.3); }
+          25%  { transform: translate(-50%,-50%) scaleY(1.0); }
+          50%  { transform: translate(-50%,-50%) scaleY(0.4); }
+          75%  { transform: translate(-50%,-50%) scaleY(0.9); }
+          100% { transform: translate(-50%,-50%) scaleY(0.3); }
+        }
+        .small-mouth.talking { 
+          animation: mouthTalk .35s infinite ease-in-out; 
+        }
+        
+        /* Thinking dots animation */
+        @keyframes thinkingDot {
+          0%, 20%, 100% { transform: translateY(0); opacity: 0.4; }
+          50% { transform: translateY(-4px); opacity: 1; }
+        }
+        .thinking-dots .dot {
+          animation: thinkingDot 1.4s infinite ease-in-out;
+          font-size: 12px;
+          color: #FFC42D;
+        }
+        .thinking-dots .dot:nth-child(1) { animation-delay: 0s; }
+        .thinking-dots .dot:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-dots .dot:nth-child(3) { animation-delay: 0.4s; }        
+        /* Thinking hand gesture animation */
+        @keyframes thinkingHandMove {
+          0%, 100% { 
+            transform: translateY(0px) rotate(-5deg);
+            opacity: 1;
+          }
+          15% { 
+            transform: translateY(-2px) rotate(-8deg);
+          }
+          30% { 
+            transform: translateY(0px) rotate(-5deg);
+          }
+          45% { 
+            transform: translateY(-3px) rotate(-10deg);
+          }
+          60% { 
+            transform: translateY(-1px) rotate(-6deg);
+          }
+          75% { 
+            transform: translateY(-2px) rotate(-8deg);
+          }
+        }
+        .thinking-hand { 
+          animation: thinkingHandMove 2s infinite ease-in-out; 
+        }
+
+
+
       `}</style>
 
-      {/* Swipe Indicator - Mobile Only */}
+      {/* Swipe Indicator - Mobile */}
       <div
         className="swipe-indicator"
         style={{
@@ -433,7 +549,7 @@ async function deleteChat(chat) {
         </div>
       </div>
 
-      {/* Overlay */}
+      {/* Sidebar overlay */}
       {showSidebar && (
         <div
           onClick={() => setShowSidebar(false)}
@@ -450,9 +566,12 @@ async function deleteChat(chat) {
           background: brand.bg,
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        onTouchStart={(e) => setTouchStart(e.targetTouches[0].clientX)}
+        onTouchMove={(e) => setTouchEnd(e.targetTouches[0].clientX)}
+        onTouchEnd={() => {
+          if (touchStart - touchEnd > 75) setShowSidebar(false);
+          if (touchStart - touchEnd < -75 && touchStart < 50) setShowSidebar(true);
+        }}
       >
         {/* Sidebar */}
         <div className={`chat-sidebar ${showSidebar ? "show" : ""}`} style={{ width: 256, minWidth: 256, background: "#fff", borderRight: "1px solid #e5e7eb", display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", position: "sticky", top: 0 }}>
@@ -467,7 +586,7 @@ async function deleteChat(chat) {
             </button>
           </div>
 
-          {/* Nav Buttons */}
+          {/* Nav */}
           <div style={{ padding: "0 12px", display: "flex", flexDirection: "column", gap: 4 }}>
             <button onClick={() => createNewChat()} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 14, cursor: "pointer", background: "transparent", border: "none", fontWeight: 500 }}>
               <Plus size={20} color={brand.primary} />
@@ -490,57 +609,57 @@ async function deleteChat(chat) {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {chats.map((chat) => (
-           <div
-          key={chat.id}
-         style={{
-         display: "flex",
-         alignItems: "center",
-         justifyContent: "space-between",
-         width: "100%",
-         padding: "6px 8px",
-         borderRadius: 8,
-         background: activeChatId === chat.id ? "#f3f4f6" : "transparent",
-         }}
-        >
-        <button
-        onClick={() => selectChat(chat.id)}
-        style={{
-        flex: 1,
-        textAlign: "left",
-        border: "none",
-        background: "transparent",
-        color: activeChatId === chat.id ? "#111827" : "#6b7280",
-        fontWeight: activeChatId === chat.id ? 500 : 400,
-        fontSize: 14,
-        cursor: "pointer",
-        padding: "8px 6px",
-         }}
-        >
-      {chat.title}
-    </button>
+                <div
+                  key={chat.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                    padding: "6px 8px",
+                    borderRadius: 8,
+                    background: activeChatId === chat.id ? "#f3f4f6" : "transparent",
+                  }}
+                >
+                  <button
+                    onClick={() => selectChat(chat.id)}
+                    style={{
+                      flex: 1,
+                      textAlign: "left",
+                      border: "none",
+                      background: "transparent",
+                      color: activeChatId === chat.id ? "#111827" : "#6b7280",
+                      fontWeight: activeChatId === chat.id ? 500 : 400,
+                      fontSize: 14,
+                      cursor: "pointer",
+                      padding: "8px 6px",
+                    }}
+                  >
+                    {chat.title}
+                  </button>
 
-    <button
-      onClick={() => deleteChat(chat)}  // <- we’ll add this function next
-      title="Delete chat"
-      style={{
-        border: "none",
-        background: "transparent",
-        color: "#9ca3af",
-        cursor: "pointer",
-        padding: 6,
-        borderRadius: 6,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-      onMouseOver={(e) => (e.currentTarget.style.background = "#f3f4f6")}
-      onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
-      aria-label={`Delete ${chat.title}`}
-    >
-      <X size={16} />
-    </button>
-  </div>
-))}
+                  <button
+                    onClick={() => deleteChat(chat)}
+                    title="Delete chat"
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      color: "#9ca3af",
+                      cursor: "pointer",
+                      padding: 6,
+                      borderRadius: 6,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.background = "#f3f4f6")}
+                    onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
+                    aria-label={`Delete ${chat.title}`}
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -565,11 +684,7 @@ async function deleteChat(chat) {
                   <input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && input.trim()) {
-                        createNewChat(input);
-                      }
-                    }}
+                    onKeyDown={(e) => { if (e.key === "Enter" && input.trim()) createNewChat(input); }}
                     style={{
                       width: "100%",
                       borderRadius: 16,
@@ -584,9 +699,7 @@ async function deleteChat(chat) {
                     placeholder="Type or Ask anything"
                   />
                   <button
-                    onClick={() => {
-                      if (input.trim()) createNewChat(input);
-                    }}
+                    onClick={() => { if (input.trim()) createNewChat(input); }}
                     style={{
                       position: "absolute",
                       right: 10,
@@ -615,97 +728,40 @@ async function deleteChat(chat) {
               </div>
 
               <div ref={scrollerRef} style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-{activeChat?.messages?.length ? (
-  <>
-    {activeChat.messages.map((m, idx) => (
-      <div
-        key={idx}
-        style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start" }}
-      >
-        <div
-          style={{
-            maxWidth: "85%",
-            borderRadius: 14,
-            padding: "10px 14px",
-            fontSize: 14,
-            lineHeight: 1.5,
-            background: m.role === "user" ? "#ffffff" : "#FFF7DA",
-            border: m.role === "user" ? "1px solid #e5e7eb" : "1px solid #FEF3C7",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-          }}
-        >
-          {m.content}
-        </div>
-      </div>
-    ))}
+                {activeChat?.messages?.length ? (
+                  activeChat.messages.map((m, idx) => (
+                    <div key={idx} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 8 }}>
+                      {m.role === "assistant" && (
+                        <SmallBotAvatar mode={isTalking && idx === activeChat.messages.length - 1 ? "talking" : "idle"} />
+                      )}
+                      <div
+                        style={{
+                          maxWidth: "85%",
+                          borderRadius: 14,
+                          padding: "10px 14px",
+                          fontSize: 14,
+                          lineHeight: 1.5,
+                          background: m.role === "user" ? "#ffffff" : "#FFF7DA",
+                          border: m.role === "user" ? "1px solid #e5e7eb" : "1px solid #FEF3C7",
+                          boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                        }}
+                      >
+                        {m.content}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#9ca3af" }}>
+                    Start the conversation
+                  </div>
+                )}
 
-    {/* ⬇️ Typing bubble appears at the end like a new assistant message */}
-    {isTyping && (
-      <div style={{ display: "flex", justifyContent: "flex-start" }}>
-        <div
-          style={{
-            maxWidth: "85%",
-            borderRadius: 14,
-            padding: "10px 14px",
-            fontSize: 14,
-            lineHeight: 1.5,
-            background: "#FFF7DA",
-            border: "1px solid #FEF3C7",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6
-          }}
-        >
-          <span className="typing-dot">•</span>
-          <span className="typing-dot">•</span>
-          <span className="typing-dot">•</span>
-        </div>
-      </div>
-    )}
-  </>
-) : (
-  // No messages yet
-  <>
-    {isTyping ? (
-      // ⬇️ Show typing bubble instead of "Start the conversation"
-      <div style={{ display: "flex", justifyContent: "flex-start" }}>
-        <div
-          style={{
-            maxWidth: "85%",
-            borderRadius: 14,
-            padding: "10px 14px",
-            fontSize: 14,
-            lineHeight: 1.5,
-            background: "#FFF7DA",
-            border: "1px solid #FEF3C7",
-            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6
-          }}
-        >
-          <span className="typing-dot">•</span>
-          <span className="typing-dot">•</span>
-          <span className="typing-dot">•</span>
-        </div>
-      </div>
-    ) : (
-      <div
-        style={{
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#9ca3af",
-        }}
-      >
-        Start the conversation
-      </div>
-    )}
-  </>
-)}              </div>
-
+                {isTyping && (
+                  <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "flex-start", gap: 8 }}>
+                    <SmallBotAvatar mode="thinking" />
+                  </div>
+                )}
+              </div>
 
               <div style={{ padding: "12px 16px", borderTop: "1px solid #e5e7eb" }}>
                 <div style={{ position: "relative", maxWidth: 768, margin: "0 auto" }}>
@@ -726,7 +782,8 @@ async function deleteChat(chat) {
                     placeholder="Type your message…"
                   />
                   <button
-                    onClick={() => sendMessage()} disabled={isTyping}
+                    onClick={() => sendMessage()}
+                    disabled={isTyping}
                     style={{
                       position: "absolute",
                       right: 8,
@@ -740,7 +797,10 @@ async function deleteChat(chat) {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      opacity: isTyping ? 0.8 : 1,
                     }}
+                    aria-label="Send"
+                    title={isTyping ? "Sending…" : "Send"}
                   >
                     <Send size={16} color="white" />
                   </button>
@@ -750,6 +810,9 @@ async function deleteChat(chat) {
           )}
         </div>
       </div>
+
+      {/* Big talking bot overlay on the right */}
+      
     </>
   );
 }

@@ -5,6 +5,10 @@ import { Search, Heart, Calendar, Users, BookOpen } from "lucide-react";
 export default function Dashboard() {
   const location = useLocation();
 
+  // API base: if you have a proxy in client package.json, leave empty string.
+  // OR set REACT_APP_API_BASE=http://localhost:4000
+  const API = process.env.REACT_APP_API_BASE || "";
+
   // Identify active user (email set in Login.js)
   const activeUserId = (() => {
     try {
@@ -19,7 +23,6 @@ export default function Dashboard() {
 
   // Triggers set by Login.js (state, query, session/local flags)
   const routeFlag = Boolean(location.state && location.state.showOnboarding);
-
   const searchParams = new URLSearchParams(location.search || "");
   const qp = (searchParams.get("newUser") || "").toLowerCase();
   const queryFlag = qp === "1" || qp === "true";
@@ -37,7 +40,6 @@ export default function Dashboard() {
   const [showWelcomeModal, setShowWelcomeModal] = useState(() => {
     try {
       const alreadyDone = localStorage.getItem(ONB_KEY) === "1";
-      // If we came from signup and 'force' is set, show regardless of previous completion
       if (cameFromSignup && forceFlag) return true;
       return cameFromSignup && !alreadyDone;
     } catch {
@@ -48,12 +50,10 @@ export default function Dashboard() {
   // Cleanup one-time triggers and URL on mount
   useEffect(() => {
     if (!cameFromSignup) return;
-
     try {
       sessionStorage.removeItem("pap:onboardingTrigger");
       localStorage.removeItem("pap:onboardingForce");
     } catch {}
-
     try {
       const url = new URL(window.location.href);
       if (url.searchParams.has("newUser")) {
@@ -76,37 +76,82 @@ export default function Dashboard() {
     } catch {}
   }, [ONB_KEY]);
 
-  // Onboarding state
+  // Onboarding state (4 steps)
   const [currentStep, setCurrentStep] = useState(1);
-  const [selectedCuisines, setSelectedCuisines] = useState([]);
-  const [selectedDislikes, setSelectedDislikes] = useState([]);
-  const [selectedFavorites, setSelectedFavorites] = useState([]);
+  const [selectedCuisines, setSelectedCuisines] = useState([]);   // -> likes
+  const [selectedDislikes, setSelectedDislikes] = useState([]);   // -> dislikes
+  const [selectedDiets, setSelectedDiets] = useState([]);         // -> diets
+  const [selectedAllergens, setSelectedAllergens] = useState([]); // -> allergens
 
-  function completeOnboarding() {
+  const [savingOnboarding, setSavingOnboarding] = useState(false);
+  const [onboardingError, setOnboardingError] = useState("");
+
+  // Persist to backend (IDs are sent to DB)
+  async function persistOnboarding() {
+    setSavingOnboarding(true);
+    setOnboardingError("");
     try {
-      localStorage.setItem(ONB_KEY, "1");
-      localStorage.removeItem("pap:onboardingForce");
-    } catch {}
-    setShowWelcomeModal(false);
+      const payload = {
+        userId: activeUserId,
+        likes: selectedCuisines,
+        dislikes: selectedDislikes,
+        diets: selectedDiets,
+        allergens: selectedAllergens,
+        onboardingDone: true
+      };
+
+      const res = await fetch(`${API}/api/preferences/me`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-id": activeUserId
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || "Failed to save onboarding preferences");
+      }
+
+      try {
+        localStorage.setItem(ONB_KEY, "1");
+      } catch {}
+      setShowWelcomeModal(false);
+    } catch (e) {
+      setOnboardingError(e.message || "Could not save your preferences. You can update them in Profile anytime.");
+      try {
+        localStorage.setItem(ONB_KEY, "1");
+      } catch {}
+      setShowWelcomeModal(false);
+    } finally {
+      setSavingOnboarding(false);
+    }
   }
 
-  const handleNext = () => {
-    if (currentStep < 3) setCurrentStep((s) => s + 1);
-    else completeOnboarding();
-  };
-  const handleSkip = () => completeOnboarding();
-
-  const toggleSelection = (id, type) => {
-    if (type === "cuisine") {
-      setSelectedCuisines((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-    } else if (type === "dislike") {
-      setSelectedDislikes((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  const handleNext = async () => {
+    if (currentStep < 4) {
+      setCurrentStep((s) => s + 1);
     } else {
-      setSelectedFavorites((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+      await persistOnboarding();
     }
   };
 
-  // Data
+  const handleSkip = async () => {
+    await persistOnboarding();
+  };
+
+  const toggleSelection = (id, type) => {
+    const toggle = (setter) =>
+      setter((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+    if (type === "cuisine") toggle(setSelectedCuisines);
+    else if (type === "dislike") toggle(setSelectedDislikes);
+    else if (type === "diet") toggle(setSelectedDiets);
+    else if (type === "allergen") toggle(setSelectedAllergens);
+  };
+
+  // -------- Option Data (IDs are what get saved) --------
   const cuisineOptions = [
     { id: "filipino", name: "Filipino", image: "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=400&h=300&fit=crop" },
     { id: "japanese", name: "Japanese", image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=300&fit=crop" },
@@ -125,19 +170,30 @@ export default function Dashboard() {
     { id: "meat", name: "Meat", image: "https://images.unsplash.com/photo-1588168333986-5078d3ae3976?w=400&h=300&fit=crop" },
     { id: "dairy", name: "Dairy", image: "https://images.unsplash.com/photo-1628088062854-d1870b4553da?w=400&h=300&fit=crop" },
     { id: "gluten", name: "Gluten", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=300&fit=crop" },
-    { id: "nuts", name: "Nuts", image: "https://images.unsplash.com/photo-1508747703725-719777637510?w=400&h=300&fit=crop" },
+    { id: "nuts", name: "Tree Nuts/Peanuts", image: "https://images.unsplash.com/photo-1508747703725-719777637510?w=400&h=300&fit=crop" },
     { id: "eggs", name: "Eggs", image: "https://images.unsplash.com/photo-1582169296194-e4d644c48063?w=400&h=300&fit=crop" },
   ];
 
-  const favoriteOptions = [
-    { id: "steak", name: "Steak", image: "https://images.unsplash.com/photo-1558030006-450675393462?w=400&h=300&fit=crop" },
-    { id: "sushi", name: "Sushi", image: "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400&h=300&fit=crop" },
-    { id: "pizza", name: "Pizza", image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop" },
-    { id: "burger", name: "Burger", image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop" },
-    { id: "pasta", name: "Pasta", image: "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=300&fit=crop" },
-    { id: "ramen", name: "Ramen", image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=300&fit=crop" },
-    { id: "tacos", name: "Tacos", image: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&h=300&fit=crop" },
-    { id: "desserts", name: "Desserts", image: "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&h=300&fit=crop" },
+  const dietOptions = [
+    { id: "omnivore", name: "Omnivore", image: "https://images.unsplash.com/photo-1543339494-b4cd7c3e0911?w=400&h=300&fit=crop" },
+    { id: "vegetarian", name: "Vegetarian", image: "https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=300&fit=crop" },
+    { id: "vegan", name: "Vegan", image: "https://images.unsplash.com/photo-1526318472351-c75fcf070305?w=400&h=300&fit=crop" },
+    { id: "pescetarian", name: "Pescetarian", image: "https://images.unsplash.com/photo-1546549039-49f2d4b63a36?w=400&h=300&fit=crop" },
+    { id: "keto", name: "Keto", image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=300&fit=crop" },
+    { id: "low-carb", name: "Low Carb", image: "https://images.unsplash.com/photo-1568600891621-2b1a1b1c7c3d?w=400&h=300&fit=crop" },
+    { id: "halal", name: "Halal", image: "https://images.unsplash.com/photo-1612927601669-9fffb0f7f7b6?w=400&h=300&fit=crop" },
+    { id: "kosher", name: "Kosher", image: "https://images.unsplash.com/photo-1551022370-0b9d3f8883ba?w=400&h=300&fit=crop" },
+  ];
+
+  const allergenOptions = [
+    { id: "peanuts", name: "Peanuts", image: "https://images.unsplash.com/photo-1601004890684-d8cbf643f5f2?w=400&h=300&fit=crop" },
+    { id: "tree-nuts", name: "Tree Nuts", image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=300&fit=crop" },
+    { id: "eggs", name: "Eggs", image: "https://images.unsplash.com/photo-1582169296194-e4d644c48063?w=400&h=300&fit=crop" },
+    { id: "dairy", name: "Dairy", image: "https://images.unsplash.com/photo-1628088062854-d1870b4553da?w=400&h=300&fit=crop" },
+    { id: "gluten", name: "Gluten/Wheat", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&h=300&fit=crop" },
+    { id: "soy", name: "Soy", image: "https://images.unsplash.com/photo-1546456073-6712f79251bb?w=400&h=300&fit=crop" },
+    { id: "fish", name: "Fish", image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop" },
+    { id: "shellfish", name: "Shellfish", image: "https://images.unsplash.com/photo-1604908554036-6c5bba61915f?w=400&h=300&fit=crop" },
   ];
 
   const [favoritesMap, setFavoritesMap] = useState({});
@@ -199,18 +255,20 @@ export default function Dashboard() {
               <h2 className="text-3xl font-bold mb-2">
                 {currentStep === 1 && "Welcome To Pick-A-Plate, Username!"}
                 {currentStep === 2 && "Any food you dislike or can't eat?"}
-                {currentStep === 3 && "Favorite foods"}
+                {currentStep === 3 && "Choose your diet"}
+                {currentStep === 4 && "Any allergens we should avoid?"}
               </h2>
 
               <p className="text-yellow-50">
-                {currentStep === 1 && "Personalize your experience by telling us about your food preferences"}
-                {currentStep === 2 && "Let us know what to avoid in your recommendations"}
-                {currentStep === 3 && "Tell us about your all-time favorite dishes"}
+                {currentStep === 1 && "Tell us what cuisines you like to get better suggestions."}
+                {currentStep === 2 && "Let us know what to avoid in your recommendations."}
+                {currentStep === 3 && "Pick the diet that best fits you."}
+                {currentStep === 4 && "Select allergens to always exclude."}
               </p>
 
               {/* Step Indicator */}
               <div className="flex items-center justify-center gap-2 mt-6">
-                {[1, 2, 3].map((step) => (
+                {[1, 2, 3, 4].map((step) => (
                   <div
                     key={step}
                     className={`h-2 rounded-full transition-all ${step === currentStep ? "w-8 bg-white" : "w-2 bg-yellow-200"}`}
@@ -224,8 +282,15 @@ export default function Dashboard() {
               <h3 className="text-xl font-bold text-gray-800 mb-4">
                 {currentStep === 1 && "What cuisine are you in the mood for?"}
                 {currentStep === 2 && "Select any foods you want to avoid"}
-                {currentStep === 3 && "Pick your favorite dishes"}
+                {currentStep === 3 && "Pick your diet"}
+                {currentStep === 4 && "Select your allergens"}
               </h3>
+
+              {onboardingError && (
+                <div className="mb-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+                  {onboardingError}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {currentStep === 1 &&
@@ -283,20 +348,47 @@ export default function Dashboard() {
                   ))}
 
                 {currentStep === 3 &&
-                  favoriteOptions.map((option) => (
+                  dietOptions.map((option) => (
                     <div
                       key={option.id}
-                      onClick={() => toggleSelection(option.id, "favorite")}
+                      onClick={() => toggleSelection(option.id, "diet")}
                       className={`relative rounded-xl overflow-hidden cursor-pointer transition-all ${
-                        selectedFavorites.includes(option.id) ? "ring-4 ring-yellow-400 scale-95" : "hover:scale-105"
+                        selectedDiets.includes(option.id) ? "ring-4 ring-yellow-400 scale-95" : "hover:scale-105"
                       }`}
                     >
                       <img src={option.image} alt={option.name} className="w-full h-32 object-cover" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent flex items-end p-3">
                         <span className="text-white font-bold text-sm">{option.name}</span>
                       </div>
-                      {selectedFavorites.includes(option.id) && (
+                      {selectedDiets.includes(option.id) && (
                         <div className="absolute top-2 right-2 bg-yellow-400 rounded-full p-1">
+                          <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                              fillRule="evenodd"
+                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                {currentStep === 4 &&
+                  allergenOptions.map((option) => (
+                    <div
+                      key={option.id}
+                      onClick={() => toggleSelection(option.id, "allergen")}
+                      className={`relative rounded-xl overflow-hidden cursor-pointer transition-all ${
+                        selectedAllergens.includes(option.id) ? "ring-4 ring-red-400 scale-95" : "hover:scale-105"
+                      }`}
+                    >
+                      <img src={option.image} alt={option.name} className="w-full h-32 object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent flex items-end p-3">
+                        <span className="text-white font-bold text-sm">{option.name}</span>
+                      </div>
+                      {selectedAllergens.includes(option.id) && (
+                        <div className="absolute top-2 right-2 bg-red-500 rounded-full p-1">
                           <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                             <path
                               fillRule="evenodd"
@@ -313,14 +405,19 @@ export default function Dashboard() {
 
             {/* Footer */}
             <div className="bg-gray-50 p-6 flex items-center justify-between border-t">
-              <button onClick={handleSkip} className="px-6 py-2 text-gray-600 hover:text-gray-800 font-semibold transition">
-                Skip for now
+              <button
+                onClick={handleSkip}
+                className="px-6 py-2 text-gray-600 hover:text-gray-800 font-semibold transition"
+                disabled={savingOnboarding}
+              >
+                {savingOnboarding ? "Saving…" : "Skip for now"}
               </button>
               <button
                 onClick={handleNext}
-                className="px-8 py-3 bg-yellow-400 hover:bg-yellow-500 text-white font-bold rounded-xl transition transform hover:scale-105 shadow-lg"
+                className="px-8 py-3 bg-yellow-400 hover:bg-yellow-500 text-white font-bold rounded-xl transition transform hover:scale-105 shadow-lg disabled:opacity-70"
+                disabled={savingOnboarding}
               >
-                {currentStep === 3 ? "Get Started" : "Next"}
+                {currentStep === 4 ? (savingOnboarding ? "Saving…" : "Get Started") : "Next"}
               </button>
             </div>
           </div>
@@ -371,7 +468,13 @@ export default function Dashboard() {
           <div className="mb-6 sm:mb-8">
             <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Features</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-              {features.map((feature, index) => (
+              {[
+                { icon: Users, label: "Community Recipes", color: "text-yellow-500" },
+                { icon: Users, label: "Barkada Vote", color: "text-yellow-500" },
+                { icon: Users, label: "AI Chat Bot", color: "text-yellow-500" },
+                { icon: BookOpen, label: "AI Food and Recipe", color: "text-yellow-500" },
+                { icon: Calendar, label: "Calendar", color: "text-yellow-500" },
+              ].map((feature, index) => (
                 <div key={index} className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center hover:shadow-lg transition cursor-pointer">
                   <div className="bg-yellow-50 rounded-full w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center mx-auto mb-2 sm:mb-3">
                     <feature.icon className={`w-6 h-6 sm:w-8 sm:h-8 ${feature.color}`} />

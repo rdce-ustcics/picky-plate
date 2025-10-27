@@ -1,62 +1,83 @@
+// server/index.js
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
+const mongoose = require('mongoose');
+
 const connectDB = require('./db/mongo');
-const mongoose = require("mongoose");
-const recipesRoutes = require("./routes/recipes");
+const recipesRoutes = require('./routes/recipes');
 
-// Load environment variables
-dotenv.config();
-
+// ──────────────────────────────────────────────────────────────
+// App setup
+// ──────────────────────────────────────────────────────────────
 const app = express();
 
-// CORS
+// CORS (allow localhost:3000 & 127.0.0.1:3000 by default)
+const allowed = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://127.0.0.1:3000')
+  .split(',')
+  .map(s => s.trim());
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: (origin, cb) => {
+    // allow no-origin (mobile apps, curl) or listed origins
+    if (!origin || allowed.includes(origin)) return cb(null, true);
+    return cb(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// Body parsers (single, with limits)
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(cookieParser());
 
+// Health (works even before DB is up)
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
-app.use(express.json({ limit: '25mb' }));                 // ⬅️ increase limits
-app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+// ──────────────────────────────────────────────────────────────
+// Connect DB, then mount routes that need it
+// ──────────────────────────────────────────────────────────────
+connectDB()
+  .then(async () => {
+    // Expose native db if you need raw collections
+    app.locals.db = mongoose.connection.db;
 
-// Connect to MongoDB
-// ✅ Connect Mongo and expose it to routes
-connectDB().then(async() => {
-  // ✅ This line makes your DB accessible in all routes
-  app.locals.db = mongoose.connection.db;
+    // Example index creation
+    try {
+      await app.locals.db
+        .collection('chats')
+        .createIndex({ userId: 1, sessionId: 1, updatedAt: -1 });
+    } catch (_) {}
 
-  // Ensure chats index exists
-  await app.locals.db.collection("chats")
-    .createIndex({ userId: 1, sessionId: 1, updatedAt: -1 })
-    .catch(() => {});
+    // Your existing routes
+    app.use('/api', require('./routes/chat'));
+    app.use('/api/auth', require('./routes/auth'));
+    app.use('/api/places', require('./routes/places'));
+    app.use('/api/recipes', recipesRoutes);
+    app.use('/api/mealplans', require('./routes/mealPlans'));
+    app.use('/api/ai', require('./routes/ai'));
 
-  // ✅ Register routes after DB is ready
-  app.use("/api", require("./routes/chat"));
-  app.use("/api/auth", require("./routes/auth"));
+    // ✅ Preferences (aggregates 4 collections: likes, dislikes, diets, allergens)
+    //   - GET  /api/preferences/me   (?userId=... or header x-user-id)
+    //   - PUT  /api/preferences/me   { likes, dislikes, diets, allergens }
+    app.use('/api/preferences', require('./routes/preferences'));
 
-  // ✅ ADDED: Places API (New) proxy routes (search/details)
-  app.use("/api/places", require("./routes/places"));
+    const port = process.env.PORT || 4000;
+    app.listen(port, () =>
+      console.log(`🚀 API running on http://localhost:${port}`)
+    );
+  })
+  .catch((err) => {
+    console.error('❌ Failed to connect MongoDB:', err);
+    process.exit(1);
+  });
 
-  app.get("/api/health", (_req, res) => res.json({ ok: true }));
-
-  app.use("/api/recipes", recipesRoutes);
-
-  app.use("/api/mealplans", require("./routes/mealPlans"));
-
-  app.use("/api/ai", require("./routes/ai"));
-
-  const port = process.env.PORT || 4000;
-  app.listen(port, () => console.log(`🚀 API running on http://localhost:${port}`));
-}).catch((err) => {
-  console.error("❌ Failed to connect MongoDB:", err);
-});
-
-// Error handling middleware
+// ──────────────────────────────────────────────────────────────
+// Error handler
+// ──────────────────────────────────────────────────────────────
+/* eslint-disable no-unused-vars */
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
@@ -65,6 +86,4 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
-
-
-const PORT = process.env.PORT || 4000;
+/* eslint-enable no-unused-vars */
