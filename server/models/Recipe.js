@@ -26,8 +26,10 @@ const RecipeSchema = new mongoose.Schema(
 
     // 🔹 Admin controls (soft-delete + reporting)
     isDeleted: { type: Boolean, default: false, index: true },
-    reportCount: { type: Number, default: 0, index: true },
-    lastReportedAt: { type: Date, index: true }
+    lastReportedAt: { type: Date, index: true },
+
+    reportCount: { type: Number, default: 0, index: true },     // 7-day active
+    reportTotal: { type: Number, default: 0, index: true },     // lifetime
   },
   { timestamps: true }
 );
