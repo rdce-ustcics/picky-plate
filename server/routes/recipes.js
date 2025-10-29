@@ -1,13 +1,63 @@
 // server/routes/recipes.js
 const express = require("express");
+const mongoose = require("mongoose");
 const Recipe = require("../models/Recipe");
 const RecipeReport = require("../models/RecipeReport");
 const { protect } = require("../middleware/auth");
 
 const router = express.Router();
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+function sevenDaysAgo() {
+  return new Date(Date.now() - WEEK_MS);
+}
+
+/**
+ * Helper: recompute counts & possibly delist a recipe
+ * - reportCount  = active (last 7 days, excluding dismissed)
+ * - lifetime     = total (excluding dismissed)
+ * - Delist if active>=5 OR lifetime>=20
+ * Returns { activeCount, lifetimeCount, delisted }
+ */
+async function recomputeReportsAndMaybeDelist(recipeId) {
+  const [activeCount, lifetimeCount] = await Promise.all([
+    RecipeReport.countDocuments({
+      recipeId,
+      status: { $ne: "dismissed" },
+      createdAt: { $gte: sevenDaysAgo() },
+    }),
+    RecipeReport.countDocuments({
+      recipeId,
+      status: { $ne: "dismissed" },
+    }),
+  ]);
+
+  const shouldDelist = activeCount >= 5 || lifetimeCount >= 20;
+
+  await Recipe.updateOne(
+    { _id: recipeId },
+    {
+      $set: {
+        reportCount: activeCount,
+        lastReportedAt: new Date(),
+        ...(shouldDelist ? { isDeleted: true } : {}),
+      },
+    }
+  );
+
+  return { activeCount, lifetimeCount, delisted: shouldDelist };
+}
+
 /**
  * GET /api/recipes
+ * Query:
+ *  - search, tags, page, limit
+ *  - exclude (CSV)
+ *  - prep, cook, diff, servings
+ *  - authorId (optional, for "My Recipes")
+ *
+ * Always hides delisted/soft-deleted recipes (isDeleted: false).
  */
 router.get("/", async (req, res) => {
   try {
@@ -21,23 +71,17 @@ router.get("/", async (req, res) => {
       cook = "",
       diff = "",
       servings = "",
-      // admin can optionally pass ?includeDeleted=1 to see delisted
-      includeDeleted = "0",
+      authorId = "",
     } = req.query;
 
-    const q = {};
-    if (includeDeleted !== "1") {
-      q.isDeleted = false; // ⬅️ hide delisted by default
-    }
+    const q = { isDeleted: false };
 
     if (search) {
-      const rx = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-      q.$or = [
-        { title: rx },
-        { description: rx },
-        { ingredients: rx },
-        { instructions: rx },
-      ];
+      const rx = new RegExp(
+        search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+        "i"
+      );
+      q.$or = [{ title: rx }, { description: rx }, { ingredients: rx }, { instructions: rx }];
     }
 
     if (tags) {
@@ -53,7 +97,11 @@ router.get("/", async (req, res) => {
     if (diff) q.difficulty = diff;
     if (servings) q.servings = servings;
 
-    // Exclusions
+    if (authorId && mongoose.isValidObjectId(authorId)) {
+      q.createdBy = new mongoose.Types.ObjectId(authorId);
+    }
+
+    // Exclusions (allergens/terms)
     const excludes = String(exclude)
       .split(",")
       .map((a) => a.trim().toLowerCase())
@@ -102,8 +150,9 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const doc = await Recipe.findById(req.params.id);
-    if (!doc) return res.status(404).json({ success: false, error: "not_found" });
-    // Hide delisted to non-admin callers if you want; for now we just return it.
+    if (!doc || doc.isDeleted) {
+      return res.status(404).json({ success: false, error: "not_found" });
+    }
     res.json({ success: true, recipe: doc });
   } catch (e) {
     console.error("get_recipe_error:", e);
@@ -113,7 +162,7 @@ router.get("/:id", async (req, res) => {
 
 /**
  * POST /api/recipes
- * (unchanged from your version)
+ * Requires auth
  */
 router.post("/", protect, async (req, res) => {
   try {
@@ -168,77 +217,89 @@ router.post("/", protect, async (req, res) => {
 });
 
 /**
+ * GET /api/recipes/:id/report-status
+ * Auth required — returns if THIS user can report (7-day lockout).
+ *
+ * Response:
+ * { canReport: boolean, alreadyReported: boolean, windowEndsAt?: ISOString, activeCount: number }
+ */
+router.get("/:id/report-status", protect, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const last = await RecipeReport.findOne({
+      recipeId: id,
+      reportedBy: req.user.id,
+      status: { $ne: "dismissed" },
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const activeCount = await RecipeReport.countDocuments({
+      recipeId: id,
+      status: { $ne: "dismissed" },
+      createdAt: { $gte: sevenDaysAgo() },
+    });
+
+    if (!last) {
+      return res.json({ canReport: true, alreadyReported: false, activeCount });
+    }
+
+    const windowEndsAt = new Date(last.createdAt.getTime() + WEEK_MS);
+    const canReport = Date.now() >= windowEndsAt.getTime();
+
+    res.json({
+      canReport,
+      alreadyReported: !canReport, // "already" within window
+      windowEndsAt: windowEndsAt.toISOString(),
+      activeCount,
+    });
+  } catch (e) {
+    console.error("report_status_error:", e);
+    res.status(500).json({ error: "report_status_failed" });
+  }
+});
+
+/**
  * POST /api/recipes/:id/report
- * - Logged-in only (protect)
- * - Creates a 7-day expiring report (TTL)
- * - Updates weekly active count and lifetime total on Recipe
- * - Delists when (weekly >=5) OR (lifetime >=20)
+ * Auth required — creates a report if user hasn't reported in the last 7 days.
+ * Returns { ok: true, duplicate?: true, activeCount, lifetimeCount, delisted }
  */
 router.post("/:id/report", protect, async (req, res) => {
   try {
     const { id } = req.params;
     const { reason = "", notes = "" } = req.body || {};
 
-    // verify recipe exists
-    const recipe = await Recipe.findById(id).select("_id");
+    // verify recipe exists and is not already delisted
+    const recipe = await Recipe.findById(id).select("_id isDeleted");
     if (!recipe) return res.status(404).json({ error: "recipe_not_found" });
+    if (recipe.isDeleted) return res.status(410).json({ error: "recipe_delisted" });
 
-    // Try to create a new pending report (unique guard avoids duplicates while pending)
-    let report;
-    try {
-      report = await RecipeReport.create({
-        recipeId: id,
-        reportedBy: req.user.id || req.user._id, // ensure protect sets one of these
-        reason: String(reason).slice(0, 200),
-        notes: String(notes || "").slice(0, 500),
-        status: "pending",
-        // expiresAt is auto-set by model default (+7 days)
-      });
-    } catch (err) {
-      // Duplicate pending by same user (until it expires or is actioned)
-      if (err?.code === 11000) {
-        const existing = await RecipeReport.findOne({
-          recipeId: id,
-          reportedBy: req.user.id || req.user._id,
-          status: "pending",
-        }).lean();
-        return res.status(200).json({ ok: true, duplicate: true, reportId: existing?._id });
-      }
-      throw err;
-    }
-
-    // Recompute rolling 7-day active count (use createdAt; TTL will drop old docs)
-    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const weeklyActive = await RecipeReport.countDocuments({
+    // 7-day lockout check
+    const last = await RecipeReport.findOne({
       recipeId: id,
-      createdAt: { $gte: since },
-      status: "pending",
-    });
+      reportedBy: req.user.id,
+      status: { $ne: "dismissed" },
+    })
+      .sort({ createdAt: -1 })
+      .lean();
 
-    // Increment lifetime total (denormalized, never decreases)
-    // And update lastReportedAt + 7-day active counter atomically
-    const updated = await Recipe.findByIdAndUpdate(
-      id,
-      {
-        $inc: { reportTotal: 1 },
-        $set: { reportCount: weeklyActive, lastReportedAt: new Date() },
-      },
-      { new: true }
-    ).lean();
-
-    // Delist rules
-    const shouldDelist = (weeklyActive >= 5) || ((updated?.reportTotal || 0) >= 20);
-    if (shouldDelist && !updated?.isDeleted) {
-      await Recipe.updateOne({ _id: id }, { $set: { isDeleted: true } });
+    if (last && last.createdAt > sevenDaysAgo()) {
+      return res.status(200).json({ ok: true, duplicate: true });
     }
 
-    return res.status(201).json({
-      ok: true,
-      reportId: report._id,
-      weeklyActive,
-      reportTotal: (updated?.reportTotal || 0),
-      delisted: shouldDelist,
+    // Create report
+    await RecipeReport.create({
+      recipeId: id,
+      reportedBy: req.user.id,
+      reason: String(reason).slice(0, 200),
+      notes: String(notes || "").slice(0, 500),
     });
+
+    // Recompute & maybe delist
+    const { activeCount, lifetimeCount, delisted } = await recomputeReportsAndMaybeDelist(id);
+
+    return res.status(201).json({ ok: true, activeCount, lifetimeCount, delisted });
   } catch (e) {
     console.error("report_error:", e);
     return res.status(500).json({ error: "report_failed" });

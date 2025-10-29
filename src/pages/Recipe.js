@@ -2,13 +2,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle, Flag, AlertTriangle
+  Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle, Flag, AlertTriangle,
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 
-// ===== PDF MODE CSS (injected once) =====
+// ===== Styles used by PDF capture (still here if you keep your recipe modal PDF) =====
 const pdfModeStyles = `
   .pdf-mode * { animation: none !important; transition: none !important; box-shadow: none !important; }
   .pdf-mode .no-pdf { display: none !important; }
@@ -40,23 +40,16 @@ const COOK_TIME_OPTIONS = [
 
 const SERVING_SIZE_OPTIONS = ["1","1-2","3-4","5-6","7-8","9+"];
 
-// Quick reason presets
 const REPORT_REASONS = [
   "Inaccurate or misleading",
   "Inappropriate content",
   "Spam / promotional",
   "Copyright/trademark concern",
-  "Other"
+  "Other",
 ];
 
 export default function CommunityRecipes() {
   const { isAuthenticated, authHeaders } = useAuth();
-
-  // Identify active user (used for "My Recipes")
-  const activeUserId = (() => {
-    try { return localStorage.getItem("pap:activeUserId") || "global"; }
-    catch { return "global"; }
-  })();
 
   const tagMenuRef = useRef(null);
   const allergenMenuRef = useRef(null);
@@ -73,7 +66,6 @@ export default function CommunityRecipes() {
   // filters
   const [search, setSearch] = useState("");
   const [selectedTags, setSelectedTags] = useState([]);
-
   const [excludeAllergens, setExcludeAllergens] = useState([]);
   const [excludeTerms, setExcludeTerms] = useState([]);
   const [excludeInput, setExcludeInput] = useState("");
@@ -86,18 +78,20 @@ export default function CommunityRecipes() {
   const [showTagMenu, setShowTagMenu] = useState(false);
   const [showAllergenMenu, setShowAllergenMenu] = useState(false);
 
-  // “My Recipes” toggle
   const [showMine, setShowMine] = useState(false);
 
   // ===== Report modal state =====
-  const [reportFor, setReportFor] = useState(null);        // the recipe object being reported
+  const [reportFor, setReportFor] = useState(null);
   const [reportReason, setReportReason] = useState("");
   const [reportNotes, setReportNotes] = useState("");
   const [reporting, setReporting] = useState(false);
   const [reportDoneMsg, setReportDoneMsg] = useState("");
-  const [reportedIds, setReportedIds] = useState(() => new Set()); // prevent duplicates
 
-  // Inject pdf mode CSS once
+  // DB-backed report status per recipe (for current logged-in user)
+  // map: recipeId -> { canReport, alreadyReported, windowEndsAt?, activeCount }
+  const [reportStatuses, setReportStatuses] = useState({});
+
+  // inject styles for PDF (safe to leave; no effect on normal view)
   useEffect(() => {
     const id = "pdf-mode-styles";
     if (!document.getElementById(id)) {
@@ -108,21 +102,7 @@ export default function CommunityRecipes() {
     }
   }, []);
 
-  // close menus on outside click
-  useEffect(() => {
-    function onDocClick(e) {
-      if (showTagMenu && tagMenuRef.current && !tagMenuRef.current.contains(e.target)) {
-        setShowTagMenu(false);
-      }
-      if (showAllergenMenu && allergenMenuRef.current && !allergenMenuRef.current.contains(e.target)) {
-        setShowAllergenMenu(false);
-      }
-    }
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, [showTagMenu, showAllergenMenu]);
-
-  // build query string
+  // build query
   const query = useMemo(() => {
     const q = new URLSearchParams();
     if (search.trim()) q.set("search", search.trim());
@@ -136,27 +116,32 @@ export default function CommunityRecipes() {
     if (difficultyFilter) q.set("diff", difficultyFilter);
     if (servingsFilter) q.set("servings", servingsFilter);
 
-    if (showMine && activeUserId) q.set("authorId", activeUserId);
+    // Optional: show only my recipes (if your backend expects createdBy)
+    if (showMine && localStorage.getItem("pap:activeUserId")) {
+      q.set("authorId", localStorage.getItem("pap:activeUserId"));
+    }
 
     q.set("page", String(page));
     q.set("limit", "20");
     return q.toString();
   }, [
-    search, selectedTags,
-    excludeAllergens, excludeTerms,
-    prepFilter, cookFilter, difficultyFilter, servingsFilter,
-    showMine, activeUserId,
-    page
+    search,
+    selectedTags,
+    excludeAllergens,
+    excludeTerms,
+    prepFilter,
+    cookFilter,
+    difficultyFilter,
+    servingsFilter,
+    showMine,
+    page,
   ]);
 
-  // fetch recipes
+  // fetch list
   useEffect(() => {
     (async () => {
       try {
         const headers = isAuthenticated ? authHeaders() : {};
-        // keep your x-user-id header
-        headers["x-user-id"] = activeUserId;
-
         const res = await fetch(`${API_BASE}/api/recipes?${query}`, { headers });
         const data = await res.json();
         if (res.ok) {
@@ -165,16 +150,53 @@ export default function CommunityRecipes() {
           setPages(data.pages || 1);
         } else {
           console.error("recipes_list_error:", data);
-          setItems([]); setTotal(0); setPages(1);
+          setItems([]);
+          setTotal(0);
+          setPages(1);
         }
       } catch (e) {
         console.error("recipes_list_error:", e);
-        setItems([]); setTotal(0); setPages(1);
+        setItems([]);
+        setTotal(0);
+        setPages(1);
       }
     })();
-  }, [query, isAuthenticated, authHeaders, activeUserId]);
+  }, [query, isAuthenticated, authHeaders]);
 
-  // toggles
+  // after items load, if logged in, load report-status from DB for each recipe
+  useEffect(() => {
+    if (!isAuthenticated || items.length === 0) {
+      setReportStatuses({});
+      return;
+    }
+    let canceled = false;
+
+    (async () => {
+      const headers = authHeaders();
+      const nextStatuses = {};
+      for (const r of items) {
+        try {
+          const resp = await fetch(
+            `${API_BASE}/api/recipes/${r._id}/report-status`,
+            { headers }
+          );
+          if (resp.ok) {
+            const s = await resp.json();
+            nextStatuses[r._id] = s || {};
+          }
+        } catch (e) {
+          // ignore failures per-item
+        }
+      }
+      if (!canceled) setReportStatuses(nextStatuses);
+    })();
+
+    return () => {
+      canceled = true;
+    };
+  }, [items, isAuthenticated, authHeaders]);
+
+  // === Filter helpers ===
   const toggleTag = (tag) => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
@@ -218,7 +240,6 @@ export default function CommunityRecipes() {
     }
   };
 
-  // reset all
   const resetFilters = () => {
     setSearch("");
     setSelectedTags([]);
@@ -233,9 +254,9 @@ export default function CommunityRecipes() {
     setPage(1);
   };
 
-  // ===== Report handlers =====
+  // ===== Report UI handlers =====
   const openReport = (e, recipe) => {
-    e.stopPropagation(); // don't open the recipe modal
+    e.stopPropagation();
     if (!isAuthenticated) {
       alert("Please log in to report a recipe.");
       return;
@@ -256,25 +277,55 @@ export default function CommunityRecipes() {
     try {
       const headers = authHeaders();
       headers["Content-Type"] = "application/json";
-      headers["x-user-id"] = activeUserId;
 
       const body = {
-        reason: reportReason === "Other" ? reportNotes.trim() : reportReason || reportNotes.trim()
+        reason: reportReason === "Other" ? reportNotes.trim() : reportReason || reportNotes.trim(),
       };
 
       const res = await fetch(`${API_BASE}/api/recipes/${reportFor._id}/report`, {
         method: "POST",
         headers,
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
+        if (data?.error === "recipe_delisted") {
+          // It was delisted while we were reporting — just remove it
+          setItems((prev) => prev.filter((r) => r._id !== reportFor._id));
+          setReportFor(null);
+          return;
+        }
         console.error("report_failed", data);
         alert(data?.error || "Failed to submit report.");
       } else {
-        setReportDoneMsg("Thanks! Your report was submitted.");
-        setReportedIds(prev => new Set(prev).add(reportFor._id));
-        // auto-close a bit later
+        // success or duplicate
+        if (data.duplicate) {
+          setReportDoneMsg("You already reported this in the last 7 days.");
+        } else {
+          setReportDoneMsg("Thanks! Your report was submitted.");
+        }
+
+        // Refresh that recipe's status from DB
+        try {
+          const sRes = await fetch(
+            `${API_BASE}/api/recipes/${reportFor._id}/report-status`,
+            { headers: authHeaders() }
+          );
+          if (sRes.ok) {
+            const s = await sRes.json();
+            setReportStatuses((prev) => ({ ...prev, [reportFor._id]: s }));
+          }
+        } catch {}
+
+        // If backend says it's delisted now, remove it from UI immediately
+        if (data.delisted) {
+          setItems((prev) => prev.filter((r) => r._id !== reportFor._id));
+          setTimeout(() => setReportFor(null), 250);
+          return;
+        }
+
+        // Auto-close modal after short delay
         setTimeout(() => {
           setReportFor(null);
           setReportDoneMsg("");
@@ -288,7 +339,7 @@ export default function CommunityRecipes() {
     }
   };
 
-  // ===== PDF helpers =====
+  // ===== Optional PDF helpers (unchanged) =====
   async function captureToPdfBlob() {
     if (!modalRef.current || !selectedRecipe) return null;
     const node = modalRef.current;
@@ -343,12 +394,6 @@ export default function CommunityRecipes() {
     }
   }
 
-  const downloadRecipePdf = async () => {
-    const pdf = await captureToPdfBlob();
-    if (!pdf) return;
-    pdf.save(`${selectedRecipe?.title?.trim() || "recipe"}.pdf`);
-  };
-
   const previewRecipePdf = async () => {
     const pdf = await captureToPdfBlob();
     if (!pdf) return;
@@ -358,6 +403,11 @@ export default function CommunityRecipes() {
     } catch {
       pdf.output("dataurlnewwindow");
     }
+  };
+  const downloadRecipePdf = async () => {
+    const pdf = await captureToPdfBlob();
+    if (!pdf) return;
+    pdf.save(`${selectedRecipe?.title?.trim() || "recipe"}.pdf`);
   };
 
   return (
@@ -371,7 +421,6 @@ export default function CommunityRecipes() {
             </h1>
 
             <div className="flex items-center gap-2">
-              {/* Mine toggle */}
               <button
                 onClick={() => { setShowMine((v) => !v); setPage(1); }}
                 className={`px-4 py-2 rounded-full border text-sm transition ${
@@ -583,7 +632,17 @@ export default function CommunityRecipes() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {items.map((recipe) => {
-              const alreadyReported = reportedIds.has(recipe._id);
+              const status = reportStatuses[recipe._id] || {};
+              const disabled = isAuthenticated
+                ? status.alreadyReported === true || status.canReport === false
+                : false; // if not logged in, we still show active button but will prompt to login
+
+              const label = !isAuthenticated
+                ? "Report"
+                : disabled
+                ? "Reported"
+                : "Report";
+
               return (
                 <div
                   key={recipe._id}
@@ -602,16 +661,16 @@ export default function CommunityRecipes() {
                     {/* Report button on card */}
                     <button
                       onClick={(e) => openReport(e, recipe)}
-                      disabled={alreadyReported}
-                      className={`absolute top-2 right-2 px-3 py-1.5 rounded-full text-sm shadow
-                        ${alreadyReported
-                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                          : "bg-white/90 hover:bg-white text-red-600 border border-red-200"}
-                      `}
-                      title={alreadyReported ? "Already reported" : "Report this recipe"}
+                      disabled={!!disabled}
+                      className={`absolute top-2 right-2 px-3 py-1.5 rounded-full text-sm shadow border ${
+                        disabled
+                          ? "bg-gray-200 text-gray-500 cursor-not-allowed border-gray-200"
+                          : "bg-white/90 hover:bg-white text-red-600 border-red-200"
+                      }`}
+                      title={!isAuthenticated ? "Login to report" : disabled ? "You reported this in the last 7 days" : "Report this recipe"}
                     >
                       <div className="flex items-center gap-1">
-                        <Flag className="w-4 h-4" /> {alreadyReported ? "Reported" : "Report"}
+                        <Flag className="w-4 h-4" /> {label}
                       </div>
                     </button>
                   </div>
@@ -621,13 +680,9 @@ export default function CommunityRecipes() {
                       {recipe.title}
                     </h3>
                     <p className="text-xs sm:text-sm text-gray-500 mb-3">
-                      By{" "}
-                      <span className="text-gray-700 font-medium">
-                        {recipe.author || "anonymous"}
-                      </span>
+                      By <span className="text-gray-700 font-medium">{recipe.author || "anonymous"}</span>
                     </p>
 
-                    {/* tags */}
                     {recipe.tags?.length ? (
                       <div className="mb-3 flex flex-wrap gap-2">
                         {recipe.tags.slice(0, 6).map((t, i) => (
@@ -711,15 +766,24 @@ export default function CommunityRecipes() {
               </button>
 
               {/* Report button inside modal header */}
-              {isAuthenticated && (
-                <button
-                  onClick={() => openReport({ stopPropagation: () => {} }, selectedRecipe)}
-                  className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-white/90 hover:bg-white text-red-600 border border-red-200 rounded-full px-3 py-1.5 flex items-center gap-1"
-                  title="Report this recipe"
-                >
-                  <Flag className="w-4 h-4" /> Report
-                </button>
-              )}
+              <button
+                onClick={(e) => openReport(e, selectedRecipe)}
+                className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-white/90 hover:bg-white text-red-600 border border-red-200 rounded-full px-3 py-1.5 flex items-center gap-1"
+                title="Report this recipe"
+                disabled={
+                  isAuthenticated
+                    ? (reportStatuses[selectedRecipe._id]?.alreadyReported ||
+                       reportStatuses[selectedRecipe._id]?.canReport === false)
+                    : false
+                }
+              >
+                <Flag className="w-4 h-4" />
+                {isAuthenticated &&
+                (reportStatuses[selectedRecipe._id]?.alreadyReported ||
+                 reportStatuses[selectedRecipe._id]?.canReport === false)
+                  ? "Reported"
+                  : "Report"}
+              </button>
 
               <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 text-center w-[90%]">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1 sm:mb-2">
@@ -733,7 +797,6 @@ export default function CommunityRecipes() {
 
             {/* Modal Content */}
             <div className="p-4 sm:p-6 md:p-8">
-              {/* Description */}
               {selectedRecipe.description && (
                 <div className="mb-4 sm:mb-6">
                   <p className="text-gray-700 text-sm sm:text-base md:text-lg leading-relaxed text-center">
@@ -749,19 +812,16 @@ export default function CommunityRecipes() {
                   <p className="text-xs text-gray-600 mb-1">Prep Time</p>
                   <p className="text-sm font-semibold text-gray-800">{selectedRecipe.prepTime || "—"}</p>
                 </div>
-
                 <div className="text-center">
                   <Clock className="svg-only w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Cook Time</p>
                   <p className="text-sm font-semibold text-gray-800">{selectedRecipe.cookTime || "—"}</p>
                 </div>
-
                 <div className="text-center">
                   <TrendingUp className="svg-only w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Difficulty</p>
                   <p className="text-sm font-semibold text-gray-800">{selectedRecipe.difficulty || "Easy"}</p>
                 </div>
-
                 <div className="text-center">
                   <Users className="svg-only w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
                   <p className="text-xs text-gray-600 mb-1">Servings</p>
@@ -824,19 +884,16 @@ export default function CommunityRecipes() {
                 </div>
               ) : null}
 
-              {/* Notes */}
               {selectedRecipe.notes ? (
                 <div className="bg-blue-50 border-l-4 border-blue-400 p-4 sm:p-6 rounded-r-xl mb-6">
-                  <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-2">
-                    💡 Chef's Notes
-                  </h3>
+                  <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-2">💡 Chef's Notes</h3>
                   <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
                     {selectedRecipe.notes}
                   </p>
                 </div>
               ) : null}
 
-              {/* PDF Actions (hidden while capturing) */}
+              {/* Optional PDF buttons */}
               <div className="no-pdf flex justify-center gap-3 mt-6 mb-4">
                 <button
                   onClick={previewRecipePdf}
@@ -858,7 +915,10 @@ export default function CommunityRecipes() {
 
       {/* ===== Report Modal ===== */}
       {reportFor && (
-        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-3" onClick={() => setReportFor(null)}>
+        <div
+          className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-3"
+          onClick={() => setReportFor(null)}
+        >
           <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2 mb-3">
               <AlertTriangle className="w-5 h-5 text-red-600" />
@@ -875,10 +935,16 @@ export default function CommunityRecipes() {
               className="w-full border rounded-xl px-3 py-2 mb-3 text-sm bg-white"
             >
               <option value="">Select a reason…</option>
-              {REPORT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+              {REPORT_REASONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
             </select>
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Notes (optional)
+            </label>
             <textarea
               value={reportNotes}
               onChange={(e) => setReportNotes(e.target.value)}
@@ -888,7 +954,9 @@ export default function CommunityRecipes() {
             />
 
             {reportDoneMsg ? (
-              <div className="mt-4 p-3 rounded-xl bg-green-50 text-green-800 text-sm">{reportDoneMsg}</div>
+              <div className="mt-4 p-3 rounded-xl bg-green-50 text-green-800 text-sm">
+                {reportDoneMsg}
+              </div>
             ) : null}
 
             <div className="mt-5 flex items-center justify-end gap-2">
