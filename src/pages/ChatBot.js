@@ -293,14 +293,30 @@ export default function ChatBot() {
     if (activeChatId) saveActiveChatId(activeChatId);
   }, [activeChatId]);
 
-  function createNewChat(initialMessage = null) {
-    const newChat = { id: Date.now(), title: initialMessage || "New Chat", messages: [], chatId: null };
-    setChats((prev) => [newChat, ...prev]);
-    if (!isAuthenticated) saveChatsToLocal([newChat, ...chats]);
-    setActiveChatId(newChat.id);
-    setShowSidebar(false);
-    if (initialMessage) sendMessage(initialMessage, newChat.id);
+function createNewChat(initialMessage = null) {
+  const newChat = {
+    id: Date.now(),             // local id
+    title: initialMessage || "New Chat",
+    messages: [],
+    chatId: null,               // will be filled after first API reply
+  };
+
+  // Update state once and persist local cache in the same step
+  setChats((prev) => {
+    const next = [newChat, ...prev];
+    if (!isAuthenticated) saveChatsToLocal(next);
+    return next;
+  });
+
+  setActiveChatId(newChat.id);
+  setShowSidebar(false);
+
+  // Kick off the initial message if provided
+  if (initialMessage) {
+    sendMessage(initialMessage, newChat.id);
   }
+}
+
 
   async function sendMessage(text = null, chatLocalId = null) {
     const messageText = (text ?? input).trim();
