@@ -8,11 +8,12 @@ import Explorer from "./pages/Explorer";
 import Contact from "./pages/Contact";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
-import AdminPage from "./pages/AdminPage";
 import ChatBot from "./pages/ChatBot";
 import Recipe from "./pages/Recipe";
 import RestaurantLocator from "./pages/RestaurantLocator";
 import UploadRecipe from "./pages/UploadRecipe";
+import AdminRoute from './auth/AdminRoute';
+import AdminDashboard from './pages/admin/AdminDashboard';
 import ForgotPassword from "./pages/ForgotPassword";
 import { AuthProvider } from "./auth/AuthContext";
 import RoleRoute, { GuestOnlyRoute } from "./auth/RoleRoute";
@@ -114,15 +115,14 @@ export default function App() {
               }
             />
 
-            {/* 🔐 ADMIN ONLY */}
-            <Route
-              path="/admin"
-              element={
-                <RoleRoute allow={["admin"]}>
-                  <AdminPage />
-                </RoleRoute>
-              }
-            />
+<Route
+  path="/admin"
+  element={
+    <AdminRoute>
+      <AdminDashboard />
+    </AdminRoute>
+  }
+/>
 
             {/* 🚪 LOGIN & PASSWORD RESET */}
             <Route

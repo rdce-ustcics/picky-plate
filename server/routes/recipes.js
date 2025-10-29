@@ -1,7 +1,9 @@
-// server/routes/recipes.js
 const express = require("express");
 const Recipe = require("../models/Recipe");
-const { protect } = require("../middleware/auth"); // you already have this
+const RecipeReport = require("../models/RecipeReport");
+
+// use the same auth guard you already use for create
+const { protect } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -165,6 +167,39 @@ router.post("/", protect, async (req, res) => {
   } catch (e) {
     console.error("create_recipe_error:", e);
     res.status(500).json({ success: false, error: "create_failed" });
+  }
+});
+
+// Report a recipe
+router.post("/:id/report", protect, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason = "", notes = "" } = req.body || {};
+
+    // verify recipe exists
+    const recipe = await Recipe.findById(id).select("_id");
+    if (!recipe) return res.status(404).json({ error: "recipe_not_found" });
+
+    // prevent duplicate pending report by same user
+    const dup = await RecipeReport.findOne({
+      recipeId: id,
+      reportedBy: req.user.id,
+      status: "pending",
+    }).lean();
+
+    if (dup) return res.status(200).json({ ok: true, duplicate: true, reportId: dup._id });
+
+    const report = await RecipeReport.create({
+      recipeId: id,
+      reportedBy: req.user.id,
+      reason: String(reason).slice(0, 200),
+      notes: String(notes || "").slice(0, 500),
+    });
+
+    return res.status(201).json({ ok: true, reportId: report._id });
+  } catch (e) {
+    console.error("report_error:", e);
+    return res.status(500).json({ error: "report_failed" });
   }
 });
 

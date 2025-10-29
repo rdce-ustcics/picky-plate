@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle
+  Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle, Flag, AlertTriangle
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import html2canvas from "html2canvas";
@@ -39,6 +39,15 @@ const COOK_TIME_OPTIONS = [
 ];
 
 const SERVING_SIZE_OPTIONS = ["1","1-2","3-4","5-6","7-8","9+"];
+
+// Quick reason presets
+const REPORT_REASONS = [
+  "Inaccurate or misleading",
+  "Inappropriate content",
+  "Spam / promotional",
+  "Copyright/trademark concern",
+  "Other"
+];
 
 export default function CommunityRecipes() {
   const { isAuthenticated, authHeaders } = useAuth();
@@ -77,8 +86,16 @@ export default function CommunityRecipes() {
   const [showTagMenu, setShowTagMenu] = useState(false);
   const [showAllergenMenu, setShowAllergenMenu] = useState(false);
 
-  // NEW: “My Recipes” toggle
+  // “My Recipes” toggle
   const [showMine, setShowMine] = useState(false);
+
+  // ===== Report modal state =====
+  const [reportFor, setReportFor] = useState(null);        // the recipe object being reported
+  const [reportReason, setReportReason] = useState("");
+  const [reportNotes, setReportNotes] = useState("");
+  const [reporting, setReporting] = useState(false);
+  const [reportDoneMsg, setReportDoneMsg] = useState("");
+  const [reportedIds, setReportedIds] = useState(() => new Set()); // prevent duplicates
 
   // Inject pdf mode CSS once
   useEffect(() => {
@@ -119,7 +136,6 @@ export default function CommunityRecipes() {
     if (difficultyFilter) q.set("diff", difficultyFilter);
     if (servingsFilter) q.set("servings", servingsFilter);
 
-    // NEW: limit to authorId when toggled
     if (showMine && activeUserId) q.set("authorId", activeUserId);
 
     q.set("page", String(page));
@@ -138,7 +154,7 @@ export default function CommunityRecipes() {
     (async () => {
       try {
         const headers = isAuthenticated ? authHeaders() : {};
-        // Send x-user-id to match your server pattern (useful for /mine and auth)
+        // keep your x-user-id header
         headers["x-user-id"] = activeUserId;
 
         const res = await fetch(`${API_BASE}/api/recipes?${query}`, { headers });
@@ -213,8 +229,63 @@ export default function CommunityRecipes() {
     setCookFilter("");
     setDifficultyFilter("");
     setServingsFilter("");
-    setShowMine(false); // also reset "Mine"
+    setShowMine(false);
     setPage(1);
+  };
+
+  // ===== Report handlers =====
+  const openReport = (e, recipe) => {
+    e.stopPropagation(); // don't open the recipe modal
+    if (!isAuthenticated) {
+      alert("Please log in to report a recipe.");
+      return;
+    }
+    setReportFor(recipe);
+    setReportReason("");
+    setReportNotes("");
+    setReportDoneMsg("");
+  };
+
+  const submitReport = async () => {
+    if (!reportFor || reporting) return;
+    if (!reportReason && !reportNotes.trim()) {
+      alert("Please select a reason or add a short note.");
+      return;
+    }
+    setReporting(true);
+    try {
+      const headers = authHeaders();
+      headers["Content-Type"] = "application/json";
+      headers["x-user-id"] = activeUserId;
+
+      const body = {
+        reason: reportReason === "Other" ? reportNotes.trim() : reportReason || reportNotes.trim()
+      };
+
+      const res = await fetch(`${API_BASE}/api/recipes/${reportFor._id}/report`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        console.error("report_failed", data);
+        alert(data?.error || "Failed to submit report.");
+      } else {
+        setReportDoneMsg("Thanks! Your report was submitted.");
+        setReportedIds(prev => new Set(prev).add(reportFor._id));
+        // auto-close a bit later
+        setTimeout(() => {
+          setReportFor(null);
+          setReportDoneMsg("");
+        }, 900);
+      }
+    } catch (err) {
+      console.error("report_error", err);
+      alert("Network error. Please try again.");
+    } finally {
+      setReporting(false);
+    }
   };
 
   // ===== PDF helpers =====
@@ -300,7 +371,7 @@ export default function CommunityRecipes() {
             </h1>
 
             <div className="flex items-center gap-2">
-              {/* NEW: Mine toggle */}
+              {/* Mine toggle */}
               <button
                 onClick={() => { setShowMine((v) => !v); setPage(1); }}
                 className={`px-4 py-2 rounded-full border text-sm transition ${
@@ -416,7 +487,7 @@ export default function CommunityRecipes() {
             </div>
           </div>
 
-          {/* Secondary filter row: prep, cook, difficulty, servings + reset */}
+          {/* Secondary filter row */}
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-5 gap-3">
             <select
               value={prepFilter}
@@ -511,61 +582,80 @@ export default function CommunityRecipes() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {items.map((recipe) => (
-              <div
-                key={recipe._id}
-                className="bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition cursor-pointer group"
-                onClick={() => setSelectedRecipe(recipe)}
-              >
-                <div className="relative overflow-hidden">
-                  <img
-                    crossOrigin="anonymous"
-                    src={recipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
-                    alt={recipe.title}
-                    className="w-full h-48 sm:h-56 object-cover group-hover:scale-110 transition duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
-                </div>
+            {items.map((recipe) => {
+              const alreadyReported = reportedIds.has(recipe._id);
+              return (
+                <div
+                  key={recipe._id}
+                  className="bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition group"
+                  onClick={() => setSelectedRecipe(recipe)}
+                >
+                  <div className="relative overflow-hidden">
+                    <img
+                      crossOrigin="anonymous"
+                      src={recipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
+                      alt={recipe.title}
+                      className="w-full h-48 sm:h-56 object-cover group-hover:scale-110 transition duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
 
-                <div className="p-4 sm:p-5">
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 group-hover:text-yellow-500 transition">
-                    {recipe.title}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-500 mb-3">
-                    By{" "}
-                    <span className="text-gray-700 font-medium">
-                      {recipe.author || "anonymous"}
-                    </span>
-                  </p>
+                    {/* Report button on card */}
+                    <button
+                      onClick={(e) => openReport(e, recipe)}
+                      disabled={alreadyReported}
+                      className={`absolute top-2 right-2 px-3 py-1.5 rounded-full text-sm shadow
+                        ${alreadyReported
+                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                          : "bg-white/90 hover:bg-white text-red-600 border border-red-200"}
+                      `}
+                      title={alreadyReported ? "Already reported" : "Report this recipe"}
+                    >
+                      <div className="flex items-center gap-1">
+                        <Flag className="w-4 h-4" /> {alreadyReported ? "Reported" : "Report"}
+                      </div>
+                    </button>
+                  </div>
 
-                  {/* tags */}
-                  {recipe.tags?.length ? (
-                    <div className="mb-3 flex flex-wrap gap-2">
-                      {recipe.tags.slice(0, 6).map((t, i) => (
-                        <span
-                          key={i}
-                          className="chip text-[11px] px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200"
-                        >
-                          #{t}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
+                  <div className="p-4 sm:p-5">
+                    <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 group-hover:text-yellow-500 transition">
+                      {recipe.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-500 mb-3">
+                      By{" "}
+                      <span className="text-gray-700 font-medium">
+                        {recipe.author || "anonymous"}
+                      </span>
+                    </p>
 
-                  <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>Prep: {recipe.prepTime || "—"}</span>
-                    </div>
-                    <span>•</span>
-                    <div className="flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>{recipe.difficulty || "Easy"}</span>
+                    {/* tags */}
+                    {recipe.tags?.length ? (
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {recipe.tags.slice(0, 6).map((t, i) => (
+                          <span
+                            key={i}
+                            className="chip text-[11px] px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200"
+                          >
+                            #{t}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span>Prep: {recipe.prepTime || "—"}</span>
+                      </div>
+                      <span>•</span>
+                      <div className="flex items-center gap-1">
+                        <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <span>{recipe.difficulty || "Easy"}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -619,6 +709,18 @@ export default function CommunityRecipes() {
               >
                 <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-800" />
               </button>
+
+              {/* Report button inside modal header */}
+              {isAuthenticated && (
+                <button
+                  onClick={() => openReport({ stopPropagation: () => {} }, selectedRecipe)}
+                  className="absolute top-3 left-3 sm:top-4 sm:left-4 bg-white/90 hover:bg-white text-red-600 border border-red-200 rounded-full px-3 py-1.5 flex items-center gap-1"
+                  title="Report this recipe"
+                >
+                  <Flag className="w-4 h-4" /> Report
+                </button>
+              )}
+
               <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 text-center w-[90%]">
                 <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1 sm:mb-2">
                   {selectedRecipe.title}
@@ -749,6 +851,61 @@ export default function CommunityRecipes() {
                   Download PDF
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== Report Modal ===== */}
+      {reportFor && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-3" onClick={() => setReportFor(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-md p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <h3 className="text-lg font-bold text-gray-800">Report Recipe</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              You’re reporting: <span className="font-semibold">{reportFor.title}</span>
+            </p>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+            <select
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              className="w-full border rounded-xl px-3 py-2 mb-3 text-sm bg-white"
+            >
+              <option value="">Select a reason…</option>
+              {REPORT_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+            <textarea
+              value={reportNotes}
+              onChange={(e) => setReportNotes(e.target.value)}
+              rows={3}
+              className="w-full border rounded-xl px-3 py-2 text-sm"
+              placeholder="Add a short description…"
+            />
+
+            {reportDoneMsg ? (
+              <div className="mt-4 p-3 rounded-xl bg-green-50 text-green-800 text-sm">{reportDoneMsg}</div>
+            ) : null}
+
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setReportFor(null)}
+                disabled={reporting}
+                className="px-4 py-2 rounded-xl border hover:bg-gray-50 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitReport}
+                disabled={reporting}
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm disabled:opacity-60"
+              >
+                {reporting ? "Submitting…" : "Submit Report"}
+              </button>
             </div>
           </div>
         </div>

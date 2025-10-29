@@ -19,13 +19,20 @@ const RecipeSchema = new mongoose.Schema(
     instructions: { type: [String], default: [] },
 
     tags: { type: [String], index: true, default: [] },
-
     allergens: { type: [String], index: true, default: [] },
-    
+
     // who created it (optional)
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+
+    // 🔹 Admin controls (soft-delete + reporting)
+    isDeleted: { type: Boolean, default: false, index: true },
+    reportCount: { type: Number, default: 0, index: true },
+    lastReportedAt: { type: Date, index: true }
   },
   { timestamps: true }
 );
+
+// Helpful compound index for admin lists (optional)
+RecipeSchema.index({ isDeleted: 1, lastReportedAt: -1 });
 
 module.exports = mongoose.model("Recipe", RecipeSchema);

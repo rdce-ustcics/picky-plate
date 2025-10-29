@@ -1,54 +1,44 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: [true, 'Name is required'],
-    trim: true,
-    minlength: [2, 'Name must be at least 2 characters']
-  },
-  email: {
-    type: String,
-    required: [true, 'Email is required'],
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email']
-  },
-  password: {
-    type: String,
-    required: [true, 'Password is required'],
-    minlength: [8, 'Password must be at least 8 characters'],
-    select: false
-  },
-  role: {
-    type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+const UserSchema = new mongoose.Schema(
+  {
+    name: { type: String, default: '' },
+    email: { type: String, required: true, unique: true, index: true, lowercase: true, trim: true },
 
-// Hash password before saving
-userSchema.pre('save', async function(next) {
+    // Store the HASH here. We hide it by default and opt-in via .select('+password')
+    password: { type: String, required: true, select: false },
+
+    // ✅ role for admin gating
+    role: { type: String, enum: ['user', 'admin'], default: 'user', index: true }
+  },
+  { timestamps: true }
+);
+
+// Hash password if modified or new
+UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-  
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
+    return next();
+  } catch (err) {
+    return next(err);
   }
 });
 
-// Method to compare passwords
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
+// Instance method used by your authController
+UserSchema.methods.comparePassword = function (candidatePassword) {
+  // this.password is selected in the login query via .select('+password')
+  return bcrypt.compare(candidatePassword, this.password || '');
 };
 
-module.exports = mongoose.model('User', userSchema);
+// Optional: remove password from JSON responses if it somehow gets selected
+UserSchema.set('toJSON', {
+  transform: (_doc, ret) => {
+    delete ret.password;
+    return ret;
+  }
+});
+
+module.exports = mongoose.model('User', UserSchema);

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { NavLink, Link } from "react-router-dom";
 import {
   FiGrid, FiUser, FiZap, FiUsers, FiGlobe, FiPhoneCall, FiSettings,
-  FiMessageCircle, FiMenu, FiX, FiBookOpen, FiMapPin
+  FiMessageCircle, FiMenu, FiX, FiBookOpen, FiMapPin, FiShield
 } from "react-icons/fi";
 import { useAuth } from "../../auth/AuthContext";
 import "./sidebar.css";
@@ -10,17 +10,21 @@ import "./sidebar.css";
 const items = [
   { to: "/", label: "Dashboard", icon: <FiGrid /> },
   { to: "/chatbot", label: "AI ChatBot", icon: <FiMessageCircle /> },
-  { to: "/recipes", label: "Community Recipes", icon: <FiBookOpen /> },      
+  { to: "/recipes", label: "Community Recipes", icon: <FiBookOpen /> },
   { to: "/profile", label: "Profile", icon: <FiUser /> },
-  { to: "/surprise", label: "Surprise me", icon: <FiZap /> },               
+  { to: "/surprise", label: "Surprise me", icon: <FiZap /> },
   { to: "/barkada-vote", label: "Barkada Vote", icon: <FiUsers /> },
-  { to: "/explorer", label: "Cultural Food Explorer", icon: <FiGlobe /> },    
-  { to: "/restaurants", label: "Restaurant Locator", icon: <FiMapPin /> },   
+  { to: "/explorer", label: "Cultural Food Explorer", icon: <FiGlobe /> },
+  { to: "/restaurants", label: "Restaurant Locator", icon: <FiMapPin /> },
 ];
 
 export default function Sidebar() {
-  const { isAuthenticated, logout } = useAuth();
+  // ✅ Make sure your AuthContext exposes `user` (with .role) in addition to isAuthenticated
+  const { isAuthenticated, logout, user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Public URL-safe path (handles non-root deployments)
+  const logoSrc = `${process.env.PUBLIC_URL || ""}/images/PickAPlate.png`;
 
   useEffect(() => {
     if (isMobileMenuOpen) document.body.classList.add("mobile-menu-open");
@@ -48,14 +52,13 @@ export default function Sidebar() {
       <aside className={`pap-sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
         <Link to="/" className="pap-logo-container" onClick={closeMobileMenu}>
           <div className="pap-logo-image">
-            <div style={{
-              width: 48, height: 48, borderRadius: "50%", background: "#FFC42D",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px"
-            }}>
-              🍽️
-            </div>
+            <img
+              src={logoSrc}
+              alt="PickAPlate"
+              className="pap-logo-img"
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
+            />
           </div>
-
           <div className="pap-logo-text">
             Pick<span className="pap-logo-a">A</span>Plate<span className="pap-dot">.</span>
           </div>
@@ -76,6 +79,19 @@ export default function Sidebar() {
                 <span className="pap-label">{it.label}</span>
               </NavLink>
             ))}
+
+          {/* ✅ Admin link (only visible if user is admin) */}
+          {isAuthenticated && user?.role === "admin" && (
+            <NavLink
+              to="/admin"
+              end
+              className={({ isActive }) => "pap-nav-item" + (isActive ? " is-active" : "")}
+              onClick={closeMobileMenu}
+            >
+              <span className="pap-icon"><FiShield /></span>
+              <span className="pap-label">Admin</span>
+            </NavLink>
+          )}
 
           <NavLink
             to="/contact"
