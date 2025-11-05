@@ -1,33 +1,20 @@
+// src/auth/RoleRoute.js
+import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 
 export default function RoleRoute({ allow = ["user", "admin"], children }) {
-  const { isAuthenticated, user, loading } = useAuth();
-  const loc = useLocation();
-
-  // Wait for auth bootstrap so we don't flash redirects
-  if (loading) return null; // or a spinner
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: loc }} />;
-  }
-  
-  // Get role from user object
-  const role = user?.role;
-  
-  if (!allow.includes(role)) {
-    return <Navigate to="/profile" replace />;
-  }
-  
+  const { user, token, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return null;
+  if (!token || !user) return <Navigate to="/login" replace state={{ from: location }} />;
+  if (allow.length && !allow.includes(user.role)) return <Navigate to="/" replace />;
   return children;
 }
 
 export function GuestOnlyRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
-  
-  // Wait for auth to initialize
+  const { user, token, loading } = useAuth();
   if (loading) return null;
-  
-  // If authenticated, redirect to dashboard
-  return isAuthenticated ? <Navigate to="/" replace /> : children;
+  if (token && user) return <Navigate to="/" replace />;
+  return children;
 }

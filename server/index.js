@@ -1,73 +1,95 @@
 // server/index.js
-require('dotenv').config();
+require('dotenv').config({ override: true });
 
 const express = require('express');
-const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
 
 const connectDB = require('./db/mongo');
 const recipesRoutes = require('./routes/recipes');
 
-// ──────────────────────────────────────────────────────────────
-// App setup
-// ──────────────────────────────────────────────────────────────
 const app = express();
 
-// CORS (allow localhost:3000 & 127.0.0.1:3000 by default)
+// ──────────────────────────────────────────────────────────────
+// CORS — allow multiple origins + requested headers/methods
+// ──────────────────────────────────────────────────────────────
 const allowed = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://127.0.0.1:3000')
   .split(',')
   .map(s => s.trim());
 
-app.use(cors({
-  origin: (origin, cb) => {
-    // allow no-origin (mobile apps, curl) or listed origins
-    if (!origin || allowed.includes(origin)) return cb(null, true);
-    return cb(new Error('Not allowed by CORS'));
-  },
-  credentials: true
-}));
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin || allowed.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Vary', 'Origin');
 
-// Body parsers (single, with limits)
+    // Echo back the headers/methods the browser asked for in the preflight:
+    const reqHeaders = req.headers['access-control-request-headers'];
+    const reqMethod  = req.headers['access-control-request-method'];
+
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Headers',
+      reqHeaders || 'Content-Type,Authorization,X-User-Id'
+    );
+    res.header('Access-Control-Allow-Methods',
+      reqMethod  || 'GET,POST,PUT,PATCH,DELETE,OPTIONS'
+    );
+
+    if (req.method === 'OPTIONS') return res.sendStatus(204); // preflight OK
+    return next();
+  }
+  return next(new Error('Not allowed by CORS'));
+});
+
+// ──────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(cookieParser());
 
 // Health (works even before DB is up)
-app.get('/api/health', (_req, res) => res.json({ ok: true }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, nodeEnv: process.env.NODE_ENV }));
+
+try {
+  const devRouter = require('./routes/dev');
+  app.use('/dev', devRouter);
+  console.log('[dev] routes mounted at /dev (forced)');
+} catch (e) {
+  console.warn('[dev] routes not mounted:', e?.message);
+}
+
+// Optional dev utilities (SMTP test, etc.)
+if (process.env.NODE_ENV !== 'production') {
+  try {
+    app.use('/api/dev', require('./routes/dev'));
+    console.log('[dev] routes mounted at /dev');
+  } catch { /* ignore if not present */ }
+}
 
 // ──────────────────────────────────────────────────────────────
 // Connect DB, then mount routes that need it
 // ──────────────────────────────────────────────────────────────
 connectDB()
   .then(async () => {
-    // Expose native db if you need raw collections
     app.locals.db = mongoose.connection.db;
 
-    // Example index creation
+    // Ensure chats index exists (does nothing if already present)
     try {
       await app.locals.db
         .collection('chats')
         .createIndex({ userId: 1, sessionId: 1, updatedAt: -1 });
     } catch (_) {}
 
-    // Your existing routes
-    app.use('/api', require('./routes/chat'));
-    app.use('/api/auth', require('./routes/auth'));
-    app.use('/api/places', require('./routes/places'));
-    app.use('/api/recipes', recipesRoutes);
-    app.use('/api/mealplans', require('./routes/mealPlans'));
-    app.use('/api/ai', require('./routes/ai'));
-
-    // ✅ Preferences (aggregates 4 collections: likes, dislikes, diets, allergens)
-    //   - GET  /api/preferences/me   (?userId=... or header x-user-id)
-    //   - PUT  /api/preferences/me   { likes, dislikes, diets, allergens }
+    // Routes (keep parity with your old working file)
+    app.use('/api',          require('./routes/chat'));        // /api/chat, /api/chats
+    app.use('/api/auth',     require('./routes/auth'));        // /api/auth/login, /signup, OTP, etc.
+    app.use('/api/places',   require('./routes/places'));      // Google Places proxy
+    app.use('/api/recipes',  recipesRoutes);
+    app.use('/api/mealplans',require('./routes/mealPlans'));
+    app.use('/api/ai',       require('./routes/ai'));
     app.use('/api/preferences', require('./routes/preferences'));
 
     const port = process.env.PORT || 4000;
-    app.listen(port, () =>
-      console.log(`🚀 API running on http://localhost:${port}`)
-    );
+    app.listen(port, () => console.log(`🚀 API running on http://localhost:${port}`));
   })
   .catch((err) => {
     console.error('❌ Failed to connect MongoDB:', err);

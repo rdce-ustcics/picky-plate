@@ -2,137 +2,105 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import { clearChatCache, clearSessionId } from '../utils/session';
 
 const AuthContext = createContext();
-
 const API_URL = 'http://localhost:4000/api/auth';
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser]   = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check authentication on mount
   useEffect(() => {
-    const initAuth = () => {
-      const storedToken = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
-
-      if (storedToken && storedUser) {
-        try {
-          setToken(storedToken);
-          setUser(JSON.parse(storedUser));
-        } catch (error) {
-          console.error('Error parsing stored user:', error);
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-        }
+    try {
+      const t = localStorage.getItem('token');
+      const u = localStorage.getItem('user');
+      if (t && u) {
+        setToken(t);
+        setUser(JSON.parse(u));
       }
-      
-      setLoading(false);
-    };
-
-    initAuth();
+    } catch {}
+    setLoading(false);
   }, []);
 
+  // ⬇️ LOGIN now respects UNVERIFIED from API
   const login = async (email, password) => {
     try {
-      const response = await fetch(`${API_URL}/login`, {
+      const res = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
+      const data = await res.json();
 
-      const data = await response.json();
+      if (!res.ok) {
+        if (data?.code === 'UNVERIFIED') {
+          // tell caller to redirect to OTP screen
+          return { success: false, needsVerification: true, email: data.email, message: data.message };
+        }
+        return { success: false, message: data?.message || 'Login failed' };
+      }
 
-      if (data.success) {
-        clearSessionId();
-        clearChatCache();
-        
+      // success
+      try {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        setToken(data.token);
-        setUser(data.user);
-        return { success: true, message: data.message };
-      }
-      
-      return { success: false, message: data.message };
-    } catch (error) {
-      console.error('Login error:', error);
+      } catch {}
+      setToken(data.token);
+      setUser(data.user);
+
+      // clear any anon chat session
+      clearSessionId();
+      clearChatCache();
+
+      return { success: true, message: data.message, user: data.user, token: data.token };
+    } catch (e) {
+      console.error('Login error:', e);
       return { success: false, message: 'Unable to connect to server' };
     }
   };
 
+  // ⬇️ SIGNUP no longer stores token/user; OTP is required first
   const signup = async (name, email, password) => {
     try {
-      const response = await fetch(`${API_URL}/signup`, {
+      const res = await fetch(`${API_URL}/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password }),
       });
-
-      const data = await response.json();
-
-      if (data.success) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setToken(data.token);
-        setUser(data.user);
-        return { success: true, message: data.message };
+      const data = await res.json();
+      if (!res.ok || data?.success === false) {
+        return { success: false, message: data?.message || 'Signup failed' };
       }
-      
-      return { success: false, message: data.message };
-    } catch (error) {
-      console.error('Signup error:', error);
+      // Do NOT set token/user here
+      return { success: true, message: data.message, email };
+    } catch (e) {
+      console.error('Signup error:', e);
       return { success: false, message: 'Unable to connect to server' };
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    try {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    } catch {}
     setToken(null);
     setUser(null);
-
-    clearChatCache();  // remove pp_chats / pp_active
-    clearSessionId();  // remove pp_session (a new anon id will be created next time ChatBot needs one)
+    clearChatCache();
+    clearSessionId();
   };
 
   const isAuthenticated = !!token && !!user;
-  const authHeaders = () => 
-     isAuthenticated ? { Authorization: `Bearer ${token}` } : {};
-
-  console.log('Auth State:', { isAuthenticated, user, token: !!token }); // DEBUG
+  const authHeaders = () => (isAuthenticated ? { Authorization: `Bearer ${token}` } : {});
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      token,
-      login, 
-      signup, 
-      logout, 
-      isAuthenticated, 
-      loading,
-      authHeaders,
-    }}>
-      {loading ? (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '100vh' 
-        }}>
-          Loading...
-        </div>
-      ) : (
-        children
-      )}
+    <AuthContext.Provider value={{ user, token, login, signup, logout, isAuthenticated, loading, authHeaders }}>
+      {loading ? <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}>Loading...</div> : children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
 };

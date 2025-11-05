@@ -19,6 +19,7 @@ import RoleRoute, { GuestOnlyRoute } from "./auth/RoleRoute";
 import "./index.css";
 import CommunityRecipes from "./pages/Recipe";
 import Calendar from "./pages/Calendar";
+import VerifyOtp from "./pages/VerifyOtp"; // ✅ ADD THIS
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/chatbot" element={<ChatBot />} />
             <Route path="/recipes" element={<CommunityRecipes />} />
+            <Route path="/verify-otp" element={<VerifyOtp />} /> {/* ✅ OTP page */}
 
             {/* 🔒 PROTECTED ROUTES - Login required */}
             <Route
@@ -61,13 +63,13 @@ export default function App() {
             />
 
             <Route
-             path="/calendar"
-             element={
-               <RoleRoute allow={["user", "admin"]}>
-                <Calendar />
-              </RoleRoute>
-           }
-          />
+              path="/calendar"
+              element={
+                <RoleRoute allow={["user", "admin"]}>
+                  <Calendar />
+                </RoleRoute>
+              }
+            />
 
             <Route
               path="/explorer"
@@ -133,7 +135,7 @@ export default function App() {
                 </GuestOnlyRoute>
               }
             />
-            
+
             <Route path="/forgot-password" element={<ForgotPassword />} />
           </Route>
 

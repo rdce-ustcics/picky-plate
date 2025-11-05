@@ -1,9 +1,8 @@
+// src/pages/Login.js
 import React, { useState } from "react";
 import { Mail, Lock, User, Eye, EyeOff, AlertCircle, Loader } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-
-const DASHBOARD_PATH = "/"; // <— change to "/dashboard" if your Dashboard route is /dashboard
 
 export default function Login() {
   const navigate = useNavigate();
@@ -14,13 +13,7 @@ export default function Login() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-
+  const [formData, setFormData] = useState({ name: "", email: "", password: "", confirmPassword: "" });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [apiError, setApiError] = useState("");
@@ -47,7 +40,6 @@ export default function Login() {
   const handleBlur = (field) => {
     setTouched((t) => ({ ...t, [field]: true }));
     const errs = { ...errors };
-
     if (field === "name" && !isLogin) {
       if (!validateName(formData.name)) errs.name = "Name must be at least 2 characters";
       else delete errs.name;
@@ -103,29 +95,33 @@ export default function Login() {
     setIsLoading(true);
     try {
       if (isLogin) {
+        // LOGIN → if UNVERIFIED, go to OTP; else go dashboard
         const result = await authLogin(formData.email, formData.password);
-        if (result?.success === false) throw new Error(result.message || "Login failed");
 
-        // Mark active user so Dashboard can store onboarding per-account
-        try {
-          localStorage.setItem("pap:activeUserId", formData.email);
-        } catch {}
+        if (result?.needsVerification) {
+          try { localStorage.setItem("pap:activeUserId", formData.email); } catch {}
+          setSuccessMessage(result?.message || "Please verify your email.");
+          return navigate("/verify-otp", { replace: true, state: { email: result.email || formData.email } });
+        }
 
+        if (!result?.success) throw new Error(result?.message || "Login failed");
+
+        try { localStorage.setItem("pap:activeUserId", formData.email); } catch {}
         setSuccessMessage(result?.message || "Logged in successfully");
-        navigate(DASHBOARD_PATH, { replace: true });
+        return navigate("/", { replace: true });
       } else {
+        // SIGNUP → do NOT auto-login; go straight to OTP page
         const result = await authSignup(formData.name, formData.email, formData.password);
-        if (result?.success === false) throw new Error(result.message || "Signup failed");
+        if (!result?.success) throw new Error(result?.message || "Signup failed");
 
-        // Set per-account key + all onboarding triggers
         try {
           localStorage.setItem("pap:activeUserId", formData.email);
-          sessionStorage.setItem("pap:onboardingTrigger", "1");  // one-shot trigger
-          localStorage.setItem("pap:onboardingForce", "1");       // force show even if a previous account completed
+          sessionStorage.setItem("pap:onboardingTrigger", "1");
+          localStorage.setItem("pap:onboardingForce", "1");
         } catch {}
 
         setSuccessMessage(result?.message || "Account created successfully");
-        navigate(`${DASHBOARD_PATH}?newUser=1`, { state: { showOnboarding: true }, replace: true });
+        return navigate("/verify-otp", { replace: true, state: { email: formData.email } });
       }
     } catch (err) {
       console.error("Auth error:", err);
@@ -195,6 +191,7 @@ export default function Login() {
                       touched.name && errors.name ? "border-red-500 focus:border-red-500" : "border-gray-200 focus:border-yellow-400"
                     } ${isLoading ? "bg-gray-50 cursor-not-allowed" : ""}`}
                     placeholder="Enter your full name"
+                    autoComplete="name"
                   />
                 </div>
                 {touched.name && errors.name && (
@@ -221,6 +218,7 @@ export default function Login() {
                     touched.email && errors.email ? "border-red-500 focus:border-red-500" : "border-gray-200 focus:border-yellow-400"
                   } ${isLoading ? "bg-gray-50 cursor-not-allowed" : ""}`}
                   placeholder="Enter your email"
+                  autoComplete="email"
                 />
               </div>
               {touched.email && errors.email && (
@@ -246,6 +244,7 @@ export default function Login() {
                     touched.password && errors.password ? "border-red-500 focus:border-red-500" : "border-gray-200 focus:border-yellow-400"
                   } ${isLoading ? "bg-gray-50 cursor-not-allowed" : ""}`}
                   placeholder="Enter your password"
+                  autoComplete={isLogin ? "current-password" : "new-password"}
                 />
                 <button
                   type="button"
@@ -280,6 +279,7 @@ export default function Login() {
                       touched.confirmPassword && errors.confirmPassword ? "border-red-500 focus:border-red-500" : "border-gray-200 focus:border-yellow-400"
                     } ${isLoading ? "bg-gray-50 cursor-not-allowed" : ""}`}
                     placeholder="Confirm your password"
+                    autoComplete="new-password"
                   />
                   <button
                     type="button"
@@ -337,6 +337,19 @@ export default function Login() {
                 {isLogin ? "Sign Up" : "Login"}
               </button>
             </div>
+
+            {!isLogin && (
+              <div className="text-center text-xs text-gray-500 mt-2">
+                <button
+                  type="button"
+                  onClick={() => navigate("/verify-otp", { state: { email: formData.email } })}
+                  className="hover:underline"
+                  disabled={!formData.email}
+                >
+                  Verify email with OTP
+                </button>
+              </div>
+            )}
           </form>
 
           <div className="mt-6 sm:mt-8">
@@ -353,6 +366,7 @@ export default function Login() {
               <button
                 disabled={isLoading}
                 className="flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl hover:border-yellow-400 hover:bg-yellow-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                type="button"
               >
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -366,6 +380,7 @@ export default function Login() {
               <button
                 disabled={isLoading}
                 className="flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl hover:border-yellow-400 hover:bg-yellow-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                type="button"
               >
                 <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="#1877F2" viewBox="0 0 24 24">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
