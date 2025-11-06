@@ -1,43 +1,74 @@
 // server/routes/recipes.js
 const express = require("express");
 const Recipe = require("../models/Recipe");
-const { protect } = require("../middleware/auth"); // you already have this
+const { protect } = require("../middleware/auth");
 
 const router = express.Router();
+
+function devImpersonate(req, _res, next) {
+  if (process.env.NODE_ENV !== "production") {
+    const id = req.headers["x-impersonate-user-id"];
+    if (id && /^[0-9a-fA-F]{24}$/.test(String(id))) {
+      req.user = { ...(req.user || {}), id: String(id), _id: String(id), email: `dev+${String(id).slice(-6)}@local` };
+    }
+  }
+  next();
+}
+
+// ---- Helpers ----
+function calcReportStats(reports) {
+  const arr = Array.isArray(reports) ? reports : [];
+  const lifetime = arr.length;
+  const weekAgoMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+  const weekly = arr.filter((r) => {
+    const t = r?.createdAt ? new Date(r.createdAt).getTime() : 0;
+    return t >= weekAgoMs;
+  }).length;
+
+  return { lifetime, weekly };
+}
+
+function escapeRegExp(str = "") {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /**
  * GET /api/recipes
  * Optional query:
- *  - search: text search across title/description/ingredients
- *  - tags: comma-separated list of tags (matches ANY)
+ *  - search: text search across title/description/ingredients/instructions
+ *  - tags: comma-separated list of tags (ANY)
+ *  - exclude: comma-separated list (exclude allergens/tags/text matches)
+ *  - prep, cook, diff, servings: exact string matches
+ *  - authorId: show “my recipes” (matches createdBy if ObjectId OR author string)
  *  - page, limit
  */
-// server/routes/recipes.js (only the GET / block shown)
 router.get("/", async (req, res) => {
   try {
     const {
       search = "",
       tags = "",
+      exclude = "",
+      prep = "",
+      cook = "",
+      diff = "",
+      servings = "",
+      authorId = "",
       page = 1,
       limit = 20,
-      exclude = "",
-      prep = "",     // NEW
-      cook = "",     // NEW
-      diff = "",     // NEW (difficulty)
-      servings = "", // NEW
     } = req.query;
 
-    const q = {};
+    const q = {
+      state: { $ne: "forReview" }, // Exclude recipes that are marked as "forReview"
+    };
+
+    // Text search across fields
     if (search) {
-      const rx = new RegExp(search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-      q.$or = [
-        { title: rx },
-        { description: rx },
-        { ingredients: rx },
-        { instructions: rx },
-      ];
+      const rx = new RegExp(escapeRegExp(search.trim()), "i");
+      q.$or = [{ title: rx }, { description: rx }, { ingredients: rx }, { instructions: rx }];
     }
 
+    // Tags (ANY)
     if (tags) {
       const list = String(tags)
         .split(",")
@@ -46,13 +77,13 @@ router.get("/", async (req, res) => {
       if (list.length) q.tags = { $in: list };
     }
 
-    // NEW: exact match filters (because we store dropdown values as strings)
+    // Exact-match dropdown filters
     if (prep) q.prepTime = prep;
     if (cook) q.cookTime = cook;
     if (diff) q.difficulty = diff;
     if (servings) q.servings = servings;
 
-    // Exclude allergens/terms
+    // Exclusions (allergens/tags/text)
     const excludes = String(exclude)
       .split(",")
       .map((a) => a.trim().toLowerCase())
@@ -60,28 +91,59 @@ router.get("/", async (req, res) => {
 
     if (excludes.length) {
       const andClauses = excludes.map((al) => {
-        const safe = al.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const safe = escapeRegExp(al);
         const rx = new RegExp(`\\b${safe}\\b`, "i");
         return {
           $nor: [
-            { allergens: al },      // if present in allergens array
-            { tags: al },           // if a tag equals the excluded term
-            { ingredients: rx },    // mention in any ingredient text
-            { description: rx },    // mention in description
-            { title: rx },       // ⬅️ NEW: exclude if title mentions term
+            { allergens: al }, // allergens array exact
+            { tags: al }, // tags array exact
+            { ingredients: rx }, // mention in ingredients text
+            { description: rx }, // mention in description
+            { title: rx }, // mention in title
           ],
         };
       });
       q.$and = (q.$and || []).concat(andClauses);
     }
 
+    // "My Recipes" filter (createdBy ObjectId or author string equals)
+    if (authorId) {
+      const safe = String(authorId).trim();
+      const or = [{ author: new RegExp(`^${escapeRegExp(safe)}$`, "i") }];
+      if (/^[0-9a-fA-F]{24}$/.test(safe)) {
+        or.push({ createdBy: safe });
+      }
+      q.$and = (q.$and || []).concat([{ $or: or }]);
+    }
+
+    // Pagination
     const p = Math.max(parseInt(page, 10) || 1, 1);
     const l = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
 
-    const [items, total] = await Promise.all([
-      Recipe.find(q).sort({ createdAt: -1 }).skip((p - 1) * l).limit(l),
+    // Who is asking (to mark reportedByMe)
+    const userHeaderId = (req.headers["x-user-id"] || "").toString();
+
+    // Query
+    const [rawItems, total] = await Promise.all([
+      Recipe.find(q).sort({ createdAt: -1 }).skip((p - 1) * l).limit(l).lean(),
       Recipe.countDocuments(q),
     ]);
+
+    // Decorate with counters and flags
+    const items = rawItems.map((doc) => {
+      const { lifetime, weekly } = calcReportStats(doc.reports);
+      const reportedByMe =
+        userHeaderId &&
+        Array.isArray(doc.reports) &&
+        doc.reports.some((r) => String(r.user) === userHeaderId);
+
+      return {
+        ...doc,
+        reportsCount: lifetime, // lifetime total
+        weeklyReports: weekly, // last 7 days
+        reportedByMe,
+      };
+    });
 
     res.json({
       items,
@@ -95,15 +157,30 @@ router.get("/", async (req, res) => {
   }
 });
 
-
 /**
  * GET /api/recipes/:id
  */
 router.get("/:id", async (req, res) => {
   try {
-    const doc = await Recipe.findById(req.params.id);
+    const userHeaderId = (req.headers["x-user-id"] || "").toString();
+    const doc = await Recipe.findById(req.params.id).lean();
     if (!doc) return res.status(404).json({ success: false, error: "not_found" });
-    res.json({ success: true, recipe: doc });
+
+    const { lifetime, weekly } = calcReportStats(doc.reports);
+    const reportedByMe =
+      userHeaderId &&
+      Array.isArray(doc.reports) &&
+      doc.reports.some((r) => String(r.user) === userHeaderId);
+
+    res.json({
+      success: true,
+      recipe: {
+        ...doc,
+        reportsCount: lifetime,
+        weeklyReports: weekly,
+        reportedByMe,
+      },
+    });
   } catch (e) {
     console.error("get_recipe_error:", e);
     res.status(500).json({ success: false, error: "get_failed" });
@@ -112,8 +189,7 @@ router.get("/:id", async (req, res) => {
 
 /**
  * POST /api/recipes
- * Body shape mirrors your React structure.
- * Requires auth (remove `protect` if you want public posting).
+ * Requires auth
  */
 router.post("/", protect, async (req, res) => {
   try {
@@ -135,7 +211,6 @@ router.post("/", protect, async (req, res) => {
 
     if (!title) return res.status(400).json({ success: false, error: "title_required" });
 
-    // tags to lowercase, trimmed
     const cleanTags = (Array.isArray(tags) ? tags : String(tags).split(","))
       .map((t) => String(t).trim().toLowerCase())
       .filter(Boolean);
@@ -159,12 +234,59 @@ router.post("/", protect, async (req, res) => {
       tags: cleanTags,
       allergens: cleanAllergens,
       createdBy: req.user?._id || req.user?.id || null,
+      // reports/state default from schema
     });
 
     res.status(201).json({ success: true, recipe: doc });
   } catch (e) {
     console.error("create_recipe_error:", e);
     res.status(500).json({ success: false, error: "create_failed" });
+  }
+});
+
+/**
+ * POST /api/recipes/:id/report
+ * Body: { reason: string, comment?: string }
+ * Requires auth. Each user can report once.
+ * Flags state=forReview if (lifetime >= 20) OR (weekly >= 5).
+ */
+router.post("/:id/report", protect, devImpersonate, async (req, res) => {
+  try {
+    const { reason = "", comment = "" } = req.body || {};
+    const recipe = await Recipe.findById(req.params.id);
+    if (!recipe) return res.status(404).json({ success: false, error: "not_found" });
+
+    const userId = req.user?.id || req.user?._id;
+    if (!userId) return res.status(401).json({ success: false, error: "no_user" });
+
+    const already = (recipe.reports || []).some((r) => String(r.user) === String(userId));
+    if (already) return res.status(409).json({ success: false, error: "already_reported" });
+
+    recipe.reports.push({
+      user: userId,
+      reason: String(reason || "Other"),
+      comment: String(comment || ""),
+      createdAt: new Date(),
+    });
+
+    const { lifetime, weekly } = calcReportStats(recipe.reports);
+
+    if (lifetime >= 20 || weekly >= 5) {
+      recipe.state = "forReview";
+    }
+
+    await recipe.save();
+
+    return res.status(201).json({
+      success: true,
+      state: recipe.state,
+      reportsCount: lifetime,
+      weeklyReports: weekly,
+      message: "reported",
+    });
+  } catch (e) {
+    console.error("report_recipe_error:", e);
+    res.status(500).json({ success: false, error: "report_failed" });
   }
 });
 

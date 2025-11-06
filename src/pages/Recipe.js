@@ -7,6 +7,9 @@ import {
 import { useAuth } from "../auth/AuthContext";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { Flag } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 
 // ===== PDF MODE CSS (injected once) =====
 const pdfModeStyles = `
@@ -39,6 +42,16 @@ const COOK_TIME_OPTIONS = [
 ];
 
 const SERVING_SIZE_OPTIONS = ["1","1-2","3-4","5-6","7-8","9+"];
+
+const REPORT_REASONS = [
+  "Inappropriate content",
+  "Spam / Advertising",
+  "Copyright / Plagiarism",
+  "Offensive language",
+  "Health or safety risk",
+  "Other",
+];
+
 
 export default function CommunityRecipes() {
   const { isAuthenticated, authHeaders } = useAuth();
@@ -79,6 +92,15 @@ export default function CommunityRecipes() {
 
   // NEW: “My Recipes” toggle
   const [showMine, setShowMine] = useState(false);
+
+    // Report modal state
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportComment, setReportComment] = useState("");
+  const [reportLoading, setReportLoading] = useState(false);
+
+  const navigate = useNavigate();
+
 
   // Inject pdf mode CSS once
   useEffect(() => {
@@ -288,6 +310,74 @@ export default function CommunityRecipes() {
       pdf.output("dataurlnewwindow");
     }
   };
+
+  function openReport() {
+  if (!selectedRecipe) return;
+  // if logged out → to login
+  if (!isAuthenticated) {
+    navigate("/login");
+    return;
+  }
+  if (selectedRecipe.reportedByMe) return; // already reported, no-op
+  setReportReason("");
+  setReportComment("");
+  setShowReportModal(true);
+}
+
+function closeReport() {
+  setShowReportModal(false);
+  setReportReason("");
+  setReportComment("");
+}
+
+async function submitReport() {
+  if (!selectedRecipe || !isAuthenticated || !reportReason.trim()) return;
+  setReportLoading(true);
+  try {
+    const headers = { "Content-Type": "application/json", ...(authHeaders ? authHeaders() : {}) };
+    // keep x-user-id header in case your server uses it elsewhere
+    headers["x-user-id"] = (localStorage.getItem("pap:activeUserId") || "global");
+
+    const res = await fetch(`${API_BASE}/api/recipes/${selectedRecipe._id}/report`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ reason: reportReason.trim(), comment: reportComment.trim() }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (data?.error === "already_reported") {
+        // harden UI state
+        setSelectedRecipe((r) => (r ? { ...r, reportedByMe: true } : r));
+        setItems((prev) => prev.map((it) => it._id === selectedRecipe._id ? { ...it, reportedByMe: true } : it));
+        closeReport();
+        return;
+      }
+      console.error("report_failed:", data);
+      alert("Failed to report. Please try again.");
+      return;
+    }
+
+    // success → mark as reported in both modal recipe + grid items
+    setSelectedRecipe((r) => (r ? { ...r, reportedByMe: true, reportsCount: (r.reportsCount || 0) + 1, state: data?.state || r.state } : r));
+    setItems((prev) =>
+      prev.map((it) =>
+        it._id === selectedRecipe._id
+          ? { ...it, reportedByMe: true, reportsCount: (it.reportsCount || 0) + 1, state: data?.state || it.state }
+          : it
+      )
+    );
+
+    closeReport();
+  } catch (e) {
+    console.error("report_error:", e);
+    alert("Failed to report. Please try again.");
+  } finally {
+    setReportLoading(false);
+  }
+}
+
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -735,7 +825,7 @@ export default function CommunityRecipes() {
               ) : null}
 
               {/* PDF Actions (hidden while capturing) */}
-              <div className="no-pdf flex justify-center gap-3 mt-6 mb-4">
+              <div className="no-pdf flex flex-wrap justify-center gap-3 mt-6 mb-4">
                 <button
                   onClick={previewRecipePdf}
                   className="bg-white border border-yellow-500 text-yellow-700 hover:bg-yellow-50 font-semibold px-6 py-2 rounded-full shadow-sm transition"
@@ -748,11 +838,95 @@ export default function CommunityRecipes() {
                 >
                   Download PDF
                 </button>
+
+                {/* Report button */}
+                <button
+                  onClick={openReport}
+                  disabled={!!selectedRecipe?.reportedByMe}
+                  className={`flex items-center gap-2 px-6 py-2 rounded-full shadow-sm transition border
+                    ${selectedRecipe?.reportedByMe
+                      ? "bg-gray-200 border-gray-200 text-gray-500 cursor-not-allowed"
+                      : "bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
+                    }`}
+                  title={selectedRecipe?.reportedByMe ? "You have already reported this recipe" : "Report this recipe"}
+                >
+                  <Flag className="w-4 h-4" />
+                  {selectedRecipe?.reportedByMe ? "Reported" : "Report recipe"}
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
+      {/* Report Modal */}
+      {showReportModal && (
+  <div
+    className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
+    onClick={closeReport}
+  >
+    <div
+      className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-5 sm:p-6"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-9 h-9 rounded-xl bg-yellow-50 border border-yellow-200 flex items-center justify-center">
+          <Flag className="w-4 h-4 text-yellow-600" />
+        </div>
+        <h3 className="text-lg sm:text-xl font-bold text-gray-800">Report recipe</h3>
+      </div>
+
+      <p className="text-sm text-gray-600 mb-4">
+        Help us keep the community healthy. Choose a reason and (optionally) add more details.
+      </p>
+
+      <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+      <select
+        value={reportReason}
+        onChange={(e) => setReportReason(e.target.value)}
+        className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white mb-3 outline-none focus:ring-2 focus:ring-yellow-400"
+      >
+        <option value="">Select a reason…</option>
+        {REPORT_REASONS.map((r) => (
+          <option key={r} value={r}>{r}</option>
+        ))}
+      </select>
+
+      <label className="block text-sm font-medium text-gray-700 mb-1">Additional comment (optional)</label>
+      <textarea
+        value={reportComment}
+        onChange={(e) => setReportComment(e.target.value)}
+        rows={4}
+        className="w-full border rounded-xl px-3 py-2 text-sm mb-4 outline-none focus:ring-2 focus:ring-yellow-400"
+        placeholder="Add more context (optional)…"
+      />
+
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={closeReport}
+          className="px-4 py-2 text-sm rounded-xl border border-gray-200 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={submitReport}
+          disabled={!reportReason || reportLoading}
+          className={`px-4 py-2 text-sm rounded-xl text-white ${
+            (!reportReason || reportLoading)
+              ? "bg-yellow-300 cursor-not-allowed"
+              : "bg-yellow-500 hover:bg-yellow-600"
+          }`}
+        >
+          {reportLoading ? "Submitting…" : "Submit report"}
+        </button>
+      </div>
+
+      <p className="text-[11px] text-gray-500 mt-3">
+        You can report a recipe only once. Reaching 20 total reports (lifetime) or 5 reports in a week flags it for review.
+      </p>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }

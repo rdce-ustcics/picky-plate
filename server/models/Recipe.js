@@ -21,6 +21,24 @@ const RecipeSchema = new mongoose.Schema(
     tags: { type: [String], index: true, default: [] },
 
     allergens: { type: [String], index: true, default: [] },
+
+    // ADD below `allergens: { type: [String], index: true, default: [] },`
+    reports: {
+      type: [
+        {
+          user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+          reason: { type: String, required: true },
+          comment: { type: String, default: "" },
+          createdAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
+    state: {
+      type: String,
+      enum: ["active", "forReview"],
+      default: "active",
+    },
     
     // who created it (optional)
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
