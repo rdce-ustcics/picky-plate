@@ -63,6 +63,8 @@ export default function ChatBot() {
   const [isTyping, setIsTyping] = useState(false);
   const [isTalking, setIsTalking] = useState(false);
 
+  // --- NEW: track previous auth to detect logout exactly
+  const prevAuthRef = useRef(isAuthenticated);
   // Only suppress *LocalStorage fallback* for one cycle after auth flips.
   const suppressLocalLoadRef = useRef(false);
 
@@ -71,6 +73,7 @@ export default function ChatBot() {
       saveChatsToLocal([]);
       saveActiveChatId(null);
       if (window?.localStorage) {
+        // Clear our app keys explicitly
         localStorage.removeItem("pap:chats");
         localStorage.removeItem("pap:activeChatId");
       }
@@ -97,14 +100,28 @@ export default function ChatBot() {
   );
   const headersForList = React.useMemo(() => (isAuthenticated ? authHeaders() : {}), [isAuthenticated, authHeaders]);
 
-  // When auth flips, clear local cache & reset state; DO NOT block server fetch.
+  // --- UPDATED: When auth flips, clear LS immediately. Hard reload on logout.
   useEffect(() => {
-    suppressLocalLoadRef.current = true; // only blocks LS fallback
+    const wasAuth = prevAuthRef.current;
+    const nowAuth = isAuthenticated;
+    prevAuthRef.current = nowAuth;
+
+    suppressLocalLoadRef.current = true; // block LS fallback during the flip
     clearLocalChatStorage();
     setActiveChatId(null);
     setChats([]);
-    // allow LS fallback again in a moment
-    const t = setTimeout(() => { suppressLocalLoadRef.current = false; }, 0);
+
+    if (wasAuth && !nowAuth) {
+      // LOGOUT → ensure nothing lingers by reloading the app cleanly
+      // (keeps same path, avoids caching issues)
+      window.location.replace(window.location.pathname + window.location.search);
+      return; // stop here; page will reload
+    }
+
+    // allow LS fallback again soon (after server fetch runs)
+    const t = setTimeout(() => {
+      suppressLocalLoadRef.current = false;
+    }, 0);
     return () => clearTimeout(t);
   }, [isAuthenticated]);
 
@@ -118,7 +135,7 @@ export default function ChatBot() {
 
     const res = await fetch(`${API_BASE}/api/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...authHeaders() },
+      headers: buildHeaders(), // << use unified headers
       body: JSON.stringify(buildPayload({ message, history: recent, chatId })),
     });
 
@@ -197,7 +214,7 @@ export default function ChatBot() {
   function createNewChat(initialMessage = null) {
     const newChat = { id: Date.now(), title: initialMessage || "New Chat", messages: [], chatId: null };
     setChats((prev) => [newChat, ...prev]);
-    if (!isAuthenticated && !suppressLocalLoadRef.current) saveChatsToLocal([newChat, ...chats]);
+    // NOTE: removed immediate saveChatsToLocal here; rely on the effect above to avoid stale writes
     setActiveChatId(newChat.id);
     setShowSidebar(false);
     if (initialMessage) sendMessage(initialMessage, newChat.id);
@@ -249,7 +266,7 @@ export default function ChatBot() {
       setIsTyping(false);
       setIsTalking(true);
       setTimeout(() => setIsTalking(false), 3000);
-      if (!isAuthenticated && !suppressLocalLoadRef.current) setTimeout(() => saveChatsToLocal(chats), 300);
+      // NOTE: removed manual saveChatsToLocal(chats) here; the effect will sync safely
     }
   }
 
@@ -517,7 +534,7 @@ export default function ChatBot() {
             </div>
           )}
         </div>
-      </div>      
+      </div>
     </>
   );
 }
