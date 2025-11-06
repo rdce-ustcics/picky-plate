@@ -47,3 +47,12 @@ export function saveActiveChatId(id) {
 export function loadActiveChatId() {
   return localStorage.getItem(ACTIVE_CHAT_KEY);
 }
+
+export function clearLocalChats() {
+  try {
+    localStorage.removeItem("pap:chats");         // stored chat list (anon)
+    localStorage.removeItem("pap:activeChatId");  // last selected chat id
+  } catch {
+    // ignore
+  }
+}
