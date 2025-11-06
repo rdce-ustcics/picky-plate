@@ -62,6 +62,9 @@ export default function ChatBot() {
   const scrollerRef = useRef(null);
   const [isTyping, setIsTyping] = useState(false);
   const [isTalking, setIsTalking] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [chatPendingDelete, setChatPendingDelete] = useState(null);
+
 
   // --- NEW: track previous auth to detect logout exactly
   const prevAuthRef = useRef(isAuthenticated);
@@ -305,6 +308,51 @@ export default function ChatBot() {
     if (scrollerRef.current) scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
   }, [activeChat?.messages, isTyping]);
 
+  function openDeleteDialog(chat) {
+  setChatPendingDelete(chat);
+  setConfirmDeleteOpen(true);
+}
+
+async function handleConfirmDelete() {
+  const chat = chatPendingDelete;
+  if (!chat) return;
+
+  try {
+    const serverId = chat.chatId || (typeof chat.id === "string" ? chat.id : null);
+    if (serverId) {
+      const url = isAuthenticated
+        ? `${API_BASE}/api/chats/${serverId}`
+        : `${API_BASE}/api/chats/${serverId}?sessionId=${encodeURIComponent(SESSION_ID)}`;
+      const res = await fetch(url, { method: "DELETE", headers: buildHeaders() });
+      if (!res.ok) {
+        const t = await res.text();
+        console.error("Delete failed ->", res.status, t);
+        alert("Failed to delete chat on server.");
+        return;
+      }
+    }
+
+    setChats((prev) => {
+      const next = prev.filter((c) => c.id !== chat.id);
+      if (!isAuthenticated && !suppressLocalLoadRef.current) saveChatsToLocal(next);
+      return next;
+    });
+
+    if (activeChatId === chat.id) {
+      setActiveChatId(null);
+      const last = loadActiveChatId();
+      if (String(last) === String(chat.id)) saveActiveChatId(null);
+    }
+  } catch (e) {
+    console.error("Failed to delete chat:", e);
+    alert("Failed to delete chat. Please try again.");
+  } finally {
+    setConfirmDeleteOpen(false);
+    setChatPendingDelete(null);
+  }
+}
+
+
   return (
     <>
       <style>{`
@@ -401,40 +449,7 @@ export default function ChatBot() {
                   </button>
 
                   <button
-                    onClick={() => {
-                      const confirmDelete = window.confirm(`Delete chat "${chat.title}"?`);
-                      if (!confirmDelete) return;
-                      const serverId = chat.chatId || (typeof chat.id === "string" ? chat.id : null);
-                      (async () => {
-                        try {
-                          if (serverId) {
-                            const url = isAuthenticated
-                              ? `${API_BASE}/api/chats/${serverId}`
-                              : `${API_BASE}/api/chats/${serverId}?sessionId=${encodeURIComponent(SESSION_ID)}`;
-                            const res = await fetch(url, { method: "DELETE", headers: buildHeaders() });
-                            if (!res.ok) {
-                              const t = await res.text();
-                              console.error("Delete failed ->", res.status, t);
-                              alert("Failed to delete chat on server.");
-                              return;
-                            }
-                          }
-                          setChats((prev) => {
-                            const next = prev.filter((c) => c.id !== chat.id);
-                            if (!isAuthenticated && !suppressLocalLoadRef.current) saveChatsToLocal(next);
-                            return next;
-                          });
-                          if (activeChatId === chat.id) {
-                            setActiveChatId(null);
-                            const last = loadActiveChatId();
-                            if (String(last) === String(chat.id)) saveActiveChatId(null);
-                          }
-                        } catch (e) {
-                          console.error("Failed to delete chat:", e);
-                          alert("Failed to delete chat. Please try again.");
-                        }
-                      })();
-                    }}
+                    onClick={() => openDeleteDialog(chat)}
                     title="Delete chat"
                     style={{ border: "none", background: "transparent", color: "#9ca3af", cursor: "pointer", padding: 6, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}
                     onMouseOver={(e) => (e.currentTarget.style.background = "#f3f4f6")}
@@ -535,6 +550,100 @@ export default function ChatBot() {
           )}
         </div>
       </div>
+      
+      {confirmDeleteOpen && (
+  <div
+    role="dialog"
+    aria-modal="true"
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "rgba(0,0,0,0.5)",
+      zIndex: 1500,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16,
+    }}
+    onClick={(e) => {
+      // close if clicking the dimmed backdrop
+      if (e.target === e.currentTarget) {
+        setConfirmDeleteOpen(false);
+        setChatPendingDelete(null);
+      }
+    }}
+  >
+    <div
+      style={{
+        width: "min(92vw, 420px)",
+        background: "#fff",
+        borderRadius: 16,
+        padding: 20,
+        boxShadow: "0 12px 30px rgba(0,0,0,.2)",
+        border: "1px solid #e5e7eb",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <div
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 10,
+            background: "#FFF7DA",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            border: "1px solid #FEF3C7",
+          }}
+        >
+          <X size={18} color="#ef4444" />
+        </div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>Delete chat?</div>
+      </div>
+
+      <div style={{ fontSize: 14, color: "#6b7280", lineHeight: 1.5, marginBottom: 16 }}>
+        Are you sure you want to delete{" "}
+        <span style={{ fontWeight: 600, color: "#111827" }}>{chatPendingDelete?.title || "this chat"}</span>? This action
+        cannot be undone.
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <button
+          onClick={() => {
+            setConfirmDeleteOpen(false);
+            setChatPendingDelete(null);
+          }}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 10,
+            border: "1px solid #e5e7eb",
+            background: "#fff",
+            fontSize: 14,
+            cursor: "pointer",
+          }}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleConfirmDelete}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 10,
+            border: "none",
+            background: "#ef4444",
+            color: "#fff",
+            fontWeight: 600,
+            fontSize: 14,
+            cursor: "pointer",
+          }}
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </>
   );
 }
