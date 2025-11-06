@@ -94,17 +94,19 @@ export default function Surprise() {
   };
 
   return (
-      <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
-    <div className="w-full max-w-2xl">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-8">
-          Don't Know What to Eat?
-        </h1>
+    <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+      <div className="w-full max-w-4xl">
+        <div className="text-center mb-10">
+          <h1 className="text-5xl font-bold text-gray-800 mb-3" style={{ letterSpacing: '-0.5px' }}>
+            Don't Know What to Eat?
+          </h1>
+          <p className="text-lg text-gray-600 mb-8">
+            Let us surprise you with something delicious
+          </p>
           
-          {/* Surprise Me Button */}
           <button
             onClick={surpriseMe}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold text-xl px-12 py-4 rounded-lg shadow-md transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2 mx-auto"
+            className="bg-yellow-500 hover:bg-yellow-600 font-semibold text-lg px-10 py-3 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105 active:scale-95 inline-flex items-center justify-center gap-2 text-white"
           >
             <RefreshCw className={`w-5 h-5 ${isAnimating ? 'animate-spin' : ''}`} />
             Surprise Me
@@ -112,37 +114,46 @@ export default function Surprise() {
         </div>
 
         {/* Food Card */}
-        <div className={`bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 ${isAnimating ? 'opacity-50 scale-95' : 'opacity-100 scale-100'}`}>
-          {/* Image Container */}
-          <div className="relative">
-            <img
-              src={currentFood.image}
-              alt={currentFood.name}
-              className="w-full h-64 object-cover"
-            />
-            
-            {/* Heart Icon */}
-            <button
-              onClick={toggleLike}
-              className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-md hover:scale-110 transition-transform"
-            >
-              <Heart
-                className={`w-6 h-6 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400'}`}
+        <div 
+          className={`bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 border border-gray-200 ${isAnimating ? 'opacity-50 scale-95' : 'opacity-100 scale-100'}`}
+        >
+          <div className="flex flex-col md:flex-row">
+            {/* Image Container */}
+            <div className="relative md:w-1/2">
+              <img
+                src={currentFood.image}
+                alt={currentFood.name}
+                className="w-full h-80 md:h-full object-cover"
               />
-            </button>
-          </div>
+              
+              {/* Heart Icon */}
+              <button
+                onClick={toggleLike}
+                className="absolute top-4 right-4 bg-white rounded-full p-2 shadow-md hover:scale-110 transition-transform"
+              >
+                <Heart
+                  className={`w-6 h-6 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400'}`}
+                />
+              </button>
+            </div>
 
-          {/* Food Info */}
-          <div className="p-6 text-center">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              {currentFood.name}
-            </h2>
-            <p className="text-gray-500 text-lg mb-3">
-              {currentFood.restaurant}
-            </p>
-            <p className="text-2xl font-bold text-gray-800">
-              {currentFood.price}
-            </p>
+            {/* Food Info */}
+            <div className="md:w-1/2 p-8 flex flex-col justify-center">
+              <div className="mb-2 text-sm font-semibold tracking-wide uppercase text-yellow-600">
+                Recommendation
+              </div>
+              <h2 className="text-3xl font-bold text-gray-800 mb-3">
+                {currentFood.name}
+              </h2>
+              <p className="text-xl text-gray-600 mb-6">
+                {currentFood.restaurant}
+              </p>
+              <div className="pt-4 border-t-2 border-gray-200">
+                <p className="text-3xl font-bold text-yellow-600">
+                  {currentFood.price}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
