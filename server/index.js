@@ -10,8 +10,6 @@ const recipesRoutes = require('./routes/recipes');
 
 const app = express();
 
-console.log("NODE_ENV =", process.env.NODE_ENV);
-
 // ──────────────────────────────────────────────────────────────
 // CORS — allow multiple origins + requested headers/methods
 // ──────────────────────────────────────────────────────────────
