@@ -1,15 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
-import { Search, Heart, Calendar, Users, BookOpen } from "lucide-react";
+import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
+import { Heart, RefreshCw, Users, MessageSquare, Bot, ChefHat, Calendar, MapPin, Utensils, Sparkles, X, Star, Send } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // API base: if you have a proxy in client package.json, leave empty string.
-  // OR set REACT_APP_API_BASE=http://localhost:4000
+  // API base configuration
   const API = process.env.REACT_APP_API_BASE || "";
 
-  // Identify active user (email set in Login.js)
+  // Active user identification
   const activeUserId = (() => {
     try {
       return localStorage.getItem("pap:activeUserId") || "global";
@@ -21,7 +22,7 @@ export default function Dashboard() {
   // Per-account completion key
   const ONB_KEY = useMemo(() => `pap:onboardingDone:${activeUserId}`, [activeUserId]);
 
-  // Triggers set by Login.js (state, query, session/local flags)
+  // Triggers set by Login.js
   const routeFlag = Boolean(location.state && location.state.showOnboarding);
   const searchParams = new URLSearchParams(location.search || "");
   const qp = (searchParams.get("newUser") || "").toLowerCase();
@@ -36,7 +37,7 @@ export default function Dashboard() {
 
   const cameFromSignup = routeFlag || queryFlag || sessionTrigger;
 
-  // Decide initial visibility
+  // Onboarding modal state
   const [showWelcomeModal, setShowWelcomeModal] = useState(() => {
     try {
       const alreadyDone = localStorage.getItem(ONB_KEY) === "1";
@@ -66,8 +67,7 @@ export default function Dashboard() {
         window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
       }
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once
+  }, []);
 
   // If account changes and is already complete, keep hidden
   useEffect(() => {
@@ -78,15 +78,14 @@ export default function Dashboard() {
 
   // Onboarding state (4 steps)
   const [currentStep, setCurrentStep] = useState(1);
-  const [selectedCuisines, setSelectedCuisines] = useState([]);   // -> likes
-  const [selectedDislikes, setSelectedDislikes] = useState([]);   // -> dislikes
-  const [selectedDiets, setSelectedDiets] = useState([]);         // -> diets
-  const [selectedAllergens, setSelectedAllergens] = useState([]); // -> allergens
-
+  const [selectedCuisines, setSelectedCuisines] = useState([]);
+  const [selectedDislikes, setSelectedDislikes] = useState([]);
+  const [selectedDiets, setSelectedDiets] = useState([]);
+  const [selectedAllergens, setSelectedAllergens] = useState([]);
   const [savingOnboarding, setSavingOnboarding] = useState(false);
   const [onboardingError, setOnboardingError] = useState("");
 
-  // Persist to backend (IDs are sent to DB)
+  // Persist to backend
   async function persistOnboarding() {
     setSavingOnboarding(true);
     setOnboardingError("");
@@ -151,7 +150,7 @@ export default function Dashboard() {
     else if (type === "allergen") toggle(setSelectedAllergens);
   };
 
-  // -------- Option Data (IDs are what get saved) --------
+  // Onboarding options data
   const cuisineOptions = [
     { id: "filipino", name: "Filipino", image: "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=400&h=300&fit=crop" },
     { id: "japanese", name: "Japanese", image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=300&fit=crop" },
@@ -196,47 +195,72 @@ export default function Dashboard() {
     { id: "shellfish", name: "Shellfish", image: "https://images.unsplash.com/photo-1604908554036-6c5bba61915f?w=400&h=300&fit=crop" },
   ];
 
-  const [favoritesMap, setFavoritesMap] = useState({});
-  const [showMobileSearch, setShowMobileSearch] = useState(false);
+  // Dashboard states
+  const [showSurprise, setShowSurprise] = useState(false);
+  const [currentFood, setCurrentFood] = useState(null);
+  const [isLiked, setIsLiked] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [greeting, setGreeting] = useState('');
+  const [chatInput, setChatInput] = useState('');
 
-  const popularDishes = [
-    { id: 1, name: "McDonald's Burger", price: 60.0, image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop", rating: 5, discount: "15% Off" },
-    { id: 2, name: "Murakami Ramen", price: 250.0, image: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=300&fit=crop", rating: 4, discount: "15% Off" },
-    { id: 3, name: "Landers Pepperoni Pizza", price: 350.0, image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop", rating: 4, discount: "15% Off" },
+  const foodItems = [
+    { id: 1, name: "Spaghetti Carbonara", restaurant: "Pasta House", price: "₱280.00", image: "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=800&q=80" },
+    { id: 2, name: "Beef Bulgogi Bowl", restaurant: "Korean Kitchen", price: "₱350.00", image: "https://images.unsplash.com/photo-1553163147-622ab57be1c7?w=800&q=80" },
+    { id: 3, name: "Margherita Pizza", restaurant: "Italian Corner", price: "₱420.00", image: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800&q=80" },
+    { id: 4, name: "Chicken Teriyaki", restaurant: "Tokyo Express", price: "₱295.00", image: "https://images.unsplash.com/photo-1580822184713-fc5400e7fe10?w=800&q=80" },
+    { id: 5, name: "Caesar Salad", restaurant: "Green Bistro", price: "₱245.00", image: "https://images.unsplash.com/photo-1546793665-c74683f339c1?w=800&q=80" },
+    { id: 6, name: "Pad Thai", restaurant: "Thai Delights", price: "₱315.00", image: "https://images.unsplash.com/photo-1559314809-0d155014e29e?w=800&q=80" },
+    { id: 7, name: "Beef Burger", restaurant: "Burger Junction", price: "₱380.00", image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&q=80" },
+    { id: 8, name: "Chicken Adobo", restaurant: "Filipino Eats", price: "₱260.00", image: "https://images.unsplash.com/photo-1626804475297-41608ea09aeb?w=800&q=80" },
+    { id: 9, name: "Salmon Sushi Platter", restaurant: "Sushi Bar", price: "₱520.00", image: "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=800&q=80" },
+    { id: 10, name: "Grilled Lamb Chops", restaurant: "Steakhouse Prime", price: "₱680.00", image: "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=800&q=80" }
   ];
 
-  const recommendedForYou = [
-    { id: 7, name: "Bulgogi Bowl", price: 180.0, image: "https://images.unsplash.com/photo-1553621042-f6e147245754?w=400&h=300&fit=crop", rating: 5, restaurant: "Korean BBQ House" },
-    { id: 8, name: "Creamy Carbonara", price: 120.0, image: "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=400&h=300&fit=crop", rating: 4, restaurant: "Pasta Express" },
-    { id: 9, name: "Chicken Inasal", price: 95.0, image: "https://images.unsplash.com/photo-1598103442097-8b74394b95c6?w=400&h=300&fit=crop", rating: 5, restaurant: "Mang Inasal" },
-  ];
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
+    
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting('Good Morning');
+    else if (hour < 18) setGreeting('Good Afternoon');
+    else setGreeting('Hello');
+    
+    return () => clearInterval(timer);
+  }, []);
 
-  const trendingToday = [
-    { id: 10, name: "Milk Tea Combo", price: 150.0, image: "https://images.unsplash.com/photo-1525385444278-fb1c9a81db3e?w=400&h=300&fit=crop", orders: "250+ orders today" },
-    { id: 11, name: "Fried Chicken Bucket", price: 299.0, image: "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=400&h=300&fit=crop", orders: "180+ orders today" },
-    { id: 12, name: "Sushi Platter", price: 450.0, image: "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400&h=300&fit=crop", orders: "120+ orders today" },
-  ];
-
-  const cuisines = [
-    { name: "Filipino", emoji: "🇵🇭", color: "bg-blue-50" },
-    { name: "Japanese", emoji: "🍜", color: "bg-red-50" },
-    { name: "Italian", emoji: "🍕", color: "bg-green-50" },
-    { name: "Korean", emoji: "🍲", color: "bg-pink-50" },
-    { name: "Chinese", emoji: "🥟", color: "bg-yellow-50" },
-    { name: "American", emoji: "🍔", color: "bg-orange-50" },
-  ];
-
-  const features = [
-    { icon: Users, label: "Community Recipes", color: "text-yellow-500" },
-    { icon: Users, label: "Barkada Vote", color: "text-yellow-500" },
-    { icon: Users, label: "AI Chat Bot", color: "text-yellow-500" },
-    { icon: BookOpen, label: "AI Food and Recipe", color: "text-yellow-500" },
-    { icon: Calendar, label: "Calendar", color: "text-yellow-500" },
-  ];
-
-  const toggleFavorite = (id) => {
-    setFavoritesMap((prev) => ({ ...prev, [id]: !prev[id] }));
+  const surpriseMe = () => {
+    setIsAnimating(true);
+    setTimeout(() => {
+      const randomIndex = Math.floor(Math.random() * foodItems.length);
+      setCurrentFood(foodItems[randomIndex]);
+      setIsLiked(false);
+      setIsAnimating(false);
+    }, 300);
   };
+
+  const handleSurpriseClick = () => {
+    if (!showSurprise) {
+      const randomIndex = Math.floor(Math.random() * foodItems.length);
+      setCurrentFood(foodItems[randomIndex]);
+    }
+    setShowSurprise(!showSurprise);
+  };
+
+  const handleChatSubmit = () => {
+    if (chatInput.trim()) {
+      alert(`Redirecting to AI Chat Bot with message: "${chatInput}"`);
+      setChatInput('');
+    }
+  };
+
+  const navigationCards = [
+    { title: "Explorer", description: "Discover and share recipes", icon: Users },
+    { title: "Barkada Vote", description: "Vote on meals together", icon: MessageSquare },
+    { title: "ChatBot", description: "Get instant food advice", icon: Bot },
+    { title: "Recipes", description: "Smart recipe suggestions", icon: ChefHat },
+    { title: "Calendar", description: "Plan your weekly meals", icon: Calendar },
+    { title: "Restaurant Locator", description: "Find places nearby", icon: MapPin }
+  ];
 
   return (
     <>
@@ -244,16 +268,15 @@ export default function Dashboard() {
       {showWelcomeModal && (
         <div className="min-h-screen bg-black bg-opacity-50 flex items-center justify-center p-4 fixed inset-0 z-50">
           <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-            {/* Header */}
             <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 p-6 text-white text-center">
               <div className="flex items-center justify-center mb-4">
                 <div className="bg-white rounded-full w-20 h-20 flex items-center justify-center">
-                  <span className="text-5xl font-bold text-yellow-500">M</span>
+                  <span className="text-5xl font-bold text-yellow-500">P</span>
                 </div>
               </div>
 
               <h2 className="text-3xl font-bold mb-2">
-                {currentStep === 1 && "Welcome To Pick-A-Plate, Username!"}
+                {currentStep === 1 && "Welcome To Pick-A-Plate!"}
                 {currentStep === 2 && "Any food you dislike or can't eat?"}
                 {currentStep === 3 && "Choose your diet"}
                 {currentStep === 4 && "Any allergens we should avoid?"}
@@ -266,7 +289,6 @@ export default function Dashboard() {
                 {currentStep === 4 && "Select allergens to always exclude."}
               </p>
 
-              {/* Step Indicator */}
               <div className="flex items-center justify-center gap-2 mt-6">
                 {[1, 2, 3, 4].map((step) => (
                   <div
@@ -277,7 +299,6 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Content */}
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-280px)]">
               <h3 className="text-xl font-bold text-gray-800 mb-4">
                 {currentStep === 1 && "What cuisine are you in the mood for?"}
@@ -293,117 +314,96 @@ export default function Dashboard() {
               )}
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {currentStep === 1 &&
-                  cuisineOptions.map((option) => (
-                    <div
-                      key={option.id}
-                      onClick={() => toggleSelection(option.id, "cuisine")}
-                      className={`relative rounded-xl overflow-hidden cursor-pointer transition-all ${
-                        selectedCuisines.includes(option.id) ? "ring-4 ring-yellow-400 scale-95" : "hover:scale-105"
-                      }`}
-                    >
-                      <img src={option.image} alt={option.name} className="w-full h-32 object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent flex items-end p-3">
-                        <span className="text-white font-bold text-sm">{option.name}</span>
-                      </div>
-                      {selectedCuisines.includes(option.id) && (
-                        <div className="absolute top-2 right-2 bg-yellow-400 rounded-full p-1">
-                          <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </div>
-                      )}
+                {currentStep === 1 && cuisineOptions.map((option) => (
+                  <div
+                    key={option.id}
+                    onClick={() => toggleSelection(option.id, "cuisine")}
+                    className={`relative rounded-xl overflow-hidden cursor-pointer transition-all ${
+                      selectedCuisines.includes(option.id) ? "ring-4 ring-yellow-400 scale-95" : "hover:scale-105"
+                    }`}
+                  >
+                    <img src={option.image} alt={option.name} className="w-full h-32 object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent flex items-end p-3">
+                      <span className="text-white font-bold text-sm">{option.name}</span>
                     </div>
-                  ))}
+                    {selectedCuisines.includes(option.id) && (
+                      <div className="absolute top-2 right-2 bg-yellow-400 rounded-full p-1">
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                ))}
 
-                {currentStep === 2 &&
-                  dislikeOptions.map((option) => (
-                    <div
-                      key={option.id}
-                      onClick={() => toggleSelection(option.id, "dislike")}
-                      className={`relative rounded-xl overflow-hidden cursor-pointer transition-all ${
-                        selectedDislikes.includes(option.id) ? "ring-4 ring-red-400 scale-95" : "hover:scale-105"
-                      }`}
-                    >
-                      <img src={option.image} alt={option.name} className="w-full h-32 object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent flex items-end p-3">
-                        <span className="text-white font-bold text-sm">{option.name}</span>
-                      </div>
-                      {selectedDislikes.includes(option.id) && (
-                        <div className="absolute top-2 right-2 bg-red-500 rounded-full p-1">
-                          <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                              fillRule="evenodd"
-                              d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </div>
-                      )}
+                {currentStep === 2 && dislikeOptions.map((option) => (
+                  <div
+                    key={option.id}
+                    onClick={() => toggleSelection(option.id, "dislike")}
+                    className={`relative rounded-xl overflow-hidden cursor-pointer transition-all ${
+                      selectedDislikes.includes(option.id) ? "ring-4 ring-red-400 scale-95" : "hover:scale-105"
+                    }`}
+                  >
+                    <img src={option.image} alt={option.name} className="w-full h-32 object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent flex items-end p-3">
+                      <span className="text-white font-bold text-sm">{option.name}</span>
                     </div>
-                  ))}
+                    {selectedDislikes.includes(option.id) && (
+                      <div className="absolute top-2 right-2 bg-red-500 rounded-full p-1">
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                ))}
 
-                {currentStep === 3 &&
-                  dietOptions.map((option) => (
-                    <div
-                      key={option.id}
-                      onClick={() => toggleSelection(option.id, "diet")}
-                      className={`relative rounded-xl overflow-hidden cursor-pointer transition-all ${
-                        selectedDiets.includes(option.id) ? "ring-4 ring-yellow-400 scale-95" : "hover:scale-105"
-                      }`}
-                    >
-                      <img src={option.image} alt={option.name} className="w-full h-32 object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent flex items-end p-3">
-                        <span className="text-white font-bold text-sm">{option.name}</span>
-                      </div>
-                      {selectedDiets.includes(option.id) && (
-                        <div className="absolute top-2 right-2 bg-yellow-400 rounded-full p-1">
-                          <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </div>
-                      )}
+                {currentStep === 3 && dietOptions.map((option) => (
+                  <div
+                    key={option.id}
+                    onClick={() => toggleSelection(option.id, "diet")}
+                    className={`relative rounded-xl overflow-hidden cursor-pointer transition-all ${
+                      selectedDiets.includes(option.id) ? "ring-4 ring-yellow-400 scale-95" : "hover:scale-105"
+                    }`}
+                  >
+                    <img src={option.image} alt={option.name} className="w-full h-32 object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent flex items-end p-3">
+                      <span className="text-white font-bold text-sm">{option.name}</span>
                     </div>
-                  ))}
+                    {selectedDiets.includes(option.id) && (
+                      <div className="absolute top-2 right-2 bg-yellow-400 rounded-full p-1">
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                ))}
 
-                {currentStep === 4 &&
-                  allergenOptions.map((option) => (
-                    <div
-                      key={option.id}
-                      onClick={() => toggleSelection(option.id, "allergen")}
-                      className={`relative rounded-xl overflow-hidden cursor-pointer transition-all ${
-                        selectedAllergens.includes(option.id) ? "ring-4 ring-red-400 scale-95" : "hover:scale-105"
-                      }`}
-                    >
-                      <img src={option.image} alt={option.name} className="w-full h-32 object-cover" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent flex items-end p-3">
-                        <span className="text-white font-bold text-sm">{option.name}</span>
-                      </div>
-                      {selectedAllergens.includes(option.id) && (
-                        <div className="absolute top-2 right-2 bg-red-500 rounded-full p-1">
-                          <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path
-                              fillRule="evenodd"
-                              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </div>
-                      )}
+                {currentStep === 4 && allergenOptions.map((option) => (
+                  <div
+                    key={option.id}
+                    onClick={() => toggleSelection(option.id, "allergen")}
+                    className={`relative rounded-xl overflow-hidden cursor-pointer transition-all ${
+                      selectedAllergens.includes(option.id) ? "ring-4 ring-red-400 scale-95" : "hover:scale-105"
+                    }`}
+                  >
+                    <img src={option.image} alt={option.name} className="w-full h-32 object-cover" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent flex items-end p-3">
+                      <span className="text-white font-bold text-sm">{option.name}</span>
                     </div>
-                  ))}
+                    {selectedAllergens.includes(option.id) && (
+                      <div className="absolute top-2 right-2 bg-red-500 rounded-full p-1">
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Footer */}
             <div className="bg-gray-50 p-6 flex items-center justify-between border-t">
               <button
                 onClick={handleSkip}
@@ -425,201 +425,282 @@ export default function Dashboard() {
       )}
 
       {/* Main Dashboard */}
-      <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <header className="bg-white px-4 sm:px-6 py-3 sm:py-4 shadow-sm">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-            <div className="flex items-center justify-between w-full sm:w-auto">
-              <h1 className="text-lg sm:text-xl font-bold text-gray-800">Hello, Username</h1>
-              <button onClick={() => setShowMobileSearch(!showMobileSearch)} className="sm:hidden p-2">
-                <Search className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-
-            <div className={`${showMobileSearch ? "flex" : "hidden"} sm:flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto`}>
-              <div className="relative w-full sm:w-auto">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
-                <input
-                  type="text"
-                  placeholder="What do you want to eat today..."
-                  className="pl-9 sm:pl-10 pr-4 py-2 border border-gray-200 rounded-full w-full sm:w-64 md:w-80 focus:outline-none focus:ring-2 focus:ring-yellow-400 text-sm"
-                />
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50">
+        {/* Enhanced Header */}
+        <header className="bg-gradient-to-r from-amber-100 via-yellow-100 to-amber-100 backdrop-blur-md shadow-lg border-b-2 border-yellow-300">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="flex items-center justify-between">
+              {/* Logo and Brand Section */}
+              <div className="flex items-center gap-4">
+                {/* Large Logo */}
+                <div className="bg-gradient-to-br from-yellow-400 via-amber-500 to-yellow-600 p-4 rounded-2xl shadow-xl transform hover:scale-105 transition-transform">
+                  <Utensils className="w-10 h-10 text-white" />
+                </div>
+                
+                {/* Brand Name and Tagline */}
+                <div>
+                  <h1 className="text-4xl font-extrabold bg-gradient-to-r from-yellow-600 via-amber-600 to-orange-600 bg-clip-text text-transparent leading-tight">
+                    Pick-A-Plate
+                  </h1>
+                  <p className="text-sm text-amber-700 font-medium mt-1">
+                    Your personal food companion
+                  </p>
+                </div>
               </div>
-              <button className="bg-yellow-400 hover:bg-yellow-500 text-white font-semibold px-6 sm:px-8 py-2 rounded-full transition text-sm">
-                LOGIN
-              </button>
+              
+              {/* Right Side Info */}
+              <div className="flex items-center gap-6">
+                {/* Greeting */}
+                <div className="hidden md:block text-right">
+                  <p className="text-sm text-amber-600 font-medium">{greeting}!</p>
+                  <p className="text-xs text-amber-500">Ready to discover something delicious?</p>
+                </div>
+              </div>
             </div>
           </div>
         </header>
 
-        <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-7xl mx-auto">
-          {/* Hero Banner */}
-          <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-2xl sm:rounded-3xl p-6 sm:p-12 mb-6 sm:mb-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 sm:w-96 sm:h-96 bg-yellow-300 rounded-full opacity-30 -mr-16 sm:-mr-32 -mt-16 sm:-mt-32"></div>
-            <div className="absolute bottom-0 right-10 sm:right-20 w-32 h-32 sm:w-64 sm:h-64 bg-yellow-300 rounded-full opacity-30"></div>
-            <div className="relative z-10">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1 sm:mb-2">Discover Smarter Food</h2>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4">Choices here in PickAPlate</h2>
-              <p className="text-white text-xs sm:text-sm opacity-90">Sign up and we'll suggest recipes, stores, and more made just for you.</p>
-            </div>
-          </div>
-
-          {/* Features */}
-          <div className="mb-6 sm:mb-8">
-            <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Features</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-              {[
-                { icon: Users, label: "Community Recipes", color: "text-yellow-500" },
-                { icon: Users, label: "Barkada Vote", color: "text-yellow-500" },
-                { icon: Users, label: "AI Chat Bot", color: "text-yellow-500" },
-                { icon: BookOpen, label: "AI Food and Recipe", color: "text-yellow-500" },
-                { icon: Calendar, label: "Calendar", color: "text-yellow-500" },
-              ].map((feature, index) => (
-                <div key={index} className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center hover:shadow-lg transition cursor-pointer">
-                  <div className="bg-yellow-50 rounded-full w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center mx-auto mb-2 sm:mb-3">
-                    <feature.icon className={`w-6 h-6 sm:w-8 sm:h-8 ${feature.color}`} />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-gradient-to-br from-amber-50 to-yellow-100 rounded-3xl shadow-lg p-8 border border-yellow-200 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-300 opacity-20 rounded-full -mr-32 -mt-32"></div>
+              
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-xl flex items-center justify-center shadow-md">
+                    <Bot className="w-6 h-6 text-white" />
                   </div>
-                  <p className="text-xs sm:text-sm text-gray-600 font-medium leading-tight">{feature.label}</p>
+                  <div>
+                    <h2 className="text-2xl font-bold text-amber-900">
+                      AI Chat Assistant
+                    </h2>
+                    <p className="text-sm text-amber-700">{greeting}! How can I help?</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Popular Dishes */}
-          <div className="mb-6 sm:mb-8">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-800">Popular Dishes</h3>
-              <button className="text-yellow-500 font-semibold hover:text-yellow-600 flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
-                View all <span>→</span>
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {popularDishes.map((dish) => (
-                <div key={dish.id} className="bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition">
-                  <div className="relative">
-                    <img src={dish.image} alt={dish.name} className="w-full h-48 sm:h-56 object-cover" />
-                    <span className="absolute top-3 sm:top-4 left-3 sm:left-4 bg-red-500 text-white text-xs font-bold px-2 sm:px-3 py-1 rounded-full">
-                      {dish.discount}
-                    </span>
-                    <button
-                      onClick={() => toggleFavorite(dish.id)}
-                      className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-white rounded-full p-2 shadow-md hover:scale-110 transition"
-                    >
-                      <Heart
-                        fill={favoritesMap[dish.id] ? "currentColor" : "none"}
-                        className={`w-4 h-4 sm:w-5 sm:h-5 ${favoritesMap[dish.id] ? "text-red-500" : "text-gray-400"}`}
-                      />
-                    </button>
-                  </div>
-                  <div className="p-3 sm:p-4">
-                    <div className="flex gap-1 mb-2">
-                      {[...Array(5)].map((_, i) => (
-                        <span key={i} className={`text-base sm:text-lg ${i < dish.rating ? "text-yellow-400" : "text-gray-300"}`}>
-                          ★
-                        </span>
-                      ))}
+                
+                <p className="text-amber-800 mb-6">
+                  Ask me anything about food, recipes, restaurants, or meal planning. I'm here to help you discover your next delicious meal!
+                </p>
+                
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center gap-3 text-sm text-amber-800">
+                    <div className="w-8 h-8 bg-yellow-200 rounded-lg flex items-center justify-center">
+                      <Sparkles className="w-4 h-4 text-amber-600" />
                     </div>
-                    <h4 className="font-bold text-gray-800 mb-1 sm:mb-2 text-sm sm:text-base">{dish.name}</h4>
-                    <p className="text-yellow-500 font-bold text-lg sm:text-xl">₱{dish.price.toFixed(2)}</p>
+                    <span>Personalized food recommendations</span>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Recommended for You */}
-          <div className="mb-6 sm:mb-8">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-800">Recommended for You</h3>
-              <button className="text-yellow-500 font-semibold hover:text-yellow-600 flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
-                View all <span>→</span>
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {recommendedForYou.map((dish) => (
-                <div key={dish.id} className="bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition">
-                  <div className="relative">
-                    <img src={dish.image} alt={dish.name} className="w-full h-48 sm:h-56 object-cover" />
-                    <button
-                      onClick={() => toggleFavorite(dish.id)}
-                      className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-white rounded-full p-2 shadow-md hover:scale-110 transition"
-                    >
-                      <Heart
-                        fill={favoritesMap[dish.id] ? "currentColor" : "none"}
-                        className={`w-4 h-4 sm:w-5 sm:h-5 ${favoritesMap[dish.id] ? "text-red-500" : "text-gray-400"}`}
-                      />
-                    </button>
-                  </div>
-                  <div className="p-3 sm:p-4">
-                    <div className="flex gap-1 mb-2">
-                      {[...Array(5)].map((_, i) => (
-                        <span key={i} className={`text-base sm:text-lg ${i < dish.rating ? "text-yellow-400" : "text-gray-300"}`}>
-                          ★
-                        </span>
-                      ))}
+                  <div className="flex items-center gap-3 text-sm text-amber-800">
+                    <div className="w-8 h-8 bg-yellow-200 rounded-lg flex items-center justify-center">
+                      <ChefHat className="w-4 h-4 text-amber-600" />
                     </div>
-                    <h4 className="font-bold text-gray-800 mb-1 text-sm sm:text-base">{dish.name}</h4>
-                    <p className="text-gray-500 text-xs sm:text-sm mb-1 sm:mb-2">{dish.restaurant}</p>
-                    <p className="text-yellow-500 font-bold text-lg sm:text-xl">₱{dish.price.toFixed(2)}</p>
+                    <span>Recipe suggestions & cooking tips</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-amber-800">
+                    <div className="w-8 h-8 bg-yellow-200 rounded-lg flex items-center justify-center">
+                      <MessageSquare className="w-4 h-4 text-amber-600" />
+                    </div>
+                    <span>24/7 instant answers</span>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Trending Today */}
-          <div className="mb-6 sm:mb-8">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
-              <h3 className="text-xl sm:text-2xl font-bold text-gray-800">Trending Today 🔥</h3>
-              <button className="text-yellow-500 font-semibold hover:text-yellow-600 flex items-center gap-1 sm:gap-2 text-sm sm:text-base">
-                View all <span>→</span>
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {trendingToday.map((item) => (
-                <div key={item.id} className="bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition">
-                  <div className="relative">
-                    <img src={item.image} alt={item.name} className="w-full h-48 sm:h-56 object-cover" />
-                    <span className="absolute top-3 sm:top-4 left-3 sm:left-4 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs font-bold px-2 sm:px-3 py-1 rounded-full">
-                      🔥 Trending
-                    </span>
-                    <button
-                      onClick={() => toggleFavorite(item.id)}
-                      className="absolute top-3 sm:top-4 right-3 sm:right-4 bg-white rounded-full p-2 shadow-md hover:scale-110 transition"
-                    >
-                      <Heart
-                        fill={favoritesMap[item.id] ? "currentColor" : "none"}
-                        className={`w-4 h-4 sm:w-5 sm:h-5 ${favoritesMap[item.id] ? "text-red-500" : "text-gray-400"}`}
-                      />
-                    </button>
-                  </div>
-                  <div className="p-3 sm:p-4">
-                    <h4 className="font-bold text-gray-800 mb-1 sm:mb-2 text-sm sm:text-base">{item.name}</h4>
-                    <p className="text-yellow-500 font-bold text-lg sm:text-xl mb-1 sm:mb-2">₱{item.price.toFixed(2)}</p>
-                    <p className="text-orange-500 text-xs sm:text-sm font-medium">{item.orders}</p>
-                  </div>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleChatSubmit();
+                      }
+                    }}
+                    placeholder="Ask me anything about food..."
+                    className="w-full px-4 py-4 pr-14 rounded-2xl border-2 border-yellow-300 focus:border-yellow-400 focus:outline-none bg-white/80 shadow-sm text-amber-900 placeholder-amber-500 transition-all"
+                  />
+                  <button
+                    onClick={handleChatSubmit}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-br from-yellow-400 to-amber-500 text-white p-3 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105 active:scale-95"
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Explore Cuisines */}
-          <div className="mb-6 sm:mb-8">
-            <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">Explore Cuisines</h3>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-              {cuisines.map((cuisine, index) => (
-                <div
-                  key={index}
-                  className={`${cuisine.color} rounded-xl sm:rounded-2xl p-4 sm:p-6 text-center hover:shadow-lg transition cursor-pointer`}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => {
+                      setChatInput("What's popular today?");
+                      handleChatSubmit();
+                    }}
+                    className="px-4 py-2 bg-yellow-200 hover:bg-yellow-300 text-amber-800 rounded-xl text-sm font-medium transition-colors"
+                  >
+                    What's popular?
+                  </button>
+                  <button
+                    onClick={() => {
+                      setChatInput("Suggest a healthy meal");
+                      handleChatSubmit();
+                    }}
+                    className="px-4 py-2 bg-yellow-200 hover:bg-yellow-300 text-amber-800 rounded-xl text-sm font-medium transition-colors"
+                  >
+                    Healthy options
+                  </button>
+                  <button
+                    onClick={() => {
+                      setChatInput("Find restaurants near me");
+                      handleChatSubmit();
+                    }}
+                    className="px-4 py-2 bg-yellow-200 hover:bg-yellow-300 text-amber-800 rounded-xl text-sm font-medium transition-colors"
+                  >
+                    Near me
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-yellow-400 to-amber-500 rounded-3xl shadow-lg p-8 relative overflow-hidden">
+              <div className="absolute bottom-0 right-0 w-48 h-48 bg-white opacity-10 rounded-full -mr-24 -mb-24"></div>
+              
+              <div className="relative z-10 h-full flex flex-col justify-center">
+                <Sparkles className="w-12 h-12 text-white mb-4 opacity-90" />
+                <h2 className="text-3xl font-bold text-white mb-3">
+                  Can't Decide What to Eat?
+                </h2>
+                <p className="text-white/90 mb-8 text-lg">
+                  Let us surprise you with something delicious
+                </p>
+                
+                <button
+                  onClick={handleSurpriseClick}
+                  className="bg-white text-amber-600 hover:bg-amber-50 font-bold text-lg px-8 py-4 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105 active:scale-95 inline-flex items-center justify-center gap-3 w-full"
                 >
-                  <div className="text-3xl sm:text-4xl mb-2">{cuisine.emoji}</div>
-                  <p className="text-sm sm:text-base text-gray-700 font-semibold">{cuisine.name}</p>
+                  <Sparkles className="w-6 h-6" />
+                  Surprise Me!
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-8">
+            <h3 className="text-xl font-bold text-amber-900 mb-4 flex items-center gap-2">
+              <Utensils className="w-5 h-5 text-amber-600" />
+              Explore Features
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {navigationCards.map((card, index) => {
+                const Icon = card.icon;
+                return (
+                  <button 
+                    key={index}
+                    onClick={() => navigate(`/${card.title.toLowerCase().replace(/\s+/g, '-')}`)} 
+                    className="group bg-gradient-to-br from-amber-50 to-yellow-100 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden transform hover:-translate-y-1 border border-yellow-200 relative"
+                  >
+                    {/* Decorative background pattern */}
+                    <div className="absolute inset-0 opacity-5">
+                      <div className="absolute top-2 right-2 w-20 h-20 bg-yellow-400 rounded-full blur-2xl"></div>
+                      <div className="absolute bottom-2 left-2 w-16 h-16 bg-amber-400 rounded-full blur-xl"></div>
+                    </div>
+                    
+                    {/* Decorative corner accent */}
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-yellow-300/20 to-transparent rounded-bl-3xl"></div>
+                    
+                    <div className="p-6 relative z-10 flex flex-col items-center text-center">
+                      <div className="bg-gradient-to-br from-yellow-400 to-amber-500 w-20 h-20 rounded-xl flex items-center justify-center mb-4 transform group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 shadow-md relative">
+                        <Icon className="w-10 h-10 text-white" />
+                        {/* Icon glow effect */}
+                        <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      </div>
+                      
+                      <h3 className="text-lg font-bold text-amber-900 mb-2 group-hover:text-amber-800 transition-colors">
+                        {card.title}
+                      </h3>
+                      <p className="text-amber-700 text-sm leading-relaxed">
+                        {card.description}
+                      </p>
+                      
+                      {/* Hover arrow indicator */}
+                      <div className="mt-4 flex items-center gap-2 text-amber-600 opacity-0 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-1 transition-all duration-300">
+                        <span className="text-xs font-semibold">Explore</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+        </main>
+      </div>
+
+      {/* Surprise Me Modal */}
+      {showSurprise && currentFood && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-amber-50 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-yellow-400 to-amber-500 p-6 flex items-center justify-between z-10">
+              <div className="flex items-center gap-3">
+                <Sparkles className="w-7 h-7 text-white" />
+                <h3 className="text-2xl font-bold text-white">Your Surprise Meal!</h3>
+              </div>
+              <button
+                onClick={() => setShowSurprise(false)}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-white" />
+              </button>
+            </div>
+
+            <div className={`transition-all duration-300 ${isAnimating ? 'opacity-50 scale-95' : 'opacity-100 scale-100'}`}>
+              <div className="flex flex-col md:flex-row">
+                <div className="relative md:w-1/2">
+                  <img
+                    src={currentFood.image}
+                    alt={currentFood.name}
+                    className="w-full h-80 md:h-96 object-cover"
+                  />
+                  
+                  <button
+                    onClick={() => setIsLiked(!isLiked)}
+                    className="absolute top-4 right-4 bg-white rounded-full p-3 shadow-lg hover:scale-110 transition-transform"
+                  >
+                    <Heart
+                      className={`w-6 h-6 ${isLiked ? 'fill-red-500 text-red-500' : 'text-gray-400'}`}
+                    />
+                  </button>
                 </div>
-              ))}
+
+                <div className="md:w-1/2 p-8 flex flex-col justify-center bg-gradient-to-br from-amber-50 to-yellow-100">
+                  <div className="inline-flex items-center gap-2 bg-yellow-200 text-amber-800 px-3 py-1 rounded-full text-xs font-bold mb-4 w-fit">
+                    <Sparkles className="w-3 h-3" />
+                    RECOMMENDATION
+                  </div>
+                  <h2 className="text-4xl font-bold text-amber-900 mb-2">
+                    {currentFood.name}
+                  </h2>
+                  <p className="text-xl text-amber-700 mb-6 flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-amber-500" />
+                    {currentFood.restaurant}
+                  </p>
+                  <div className="pt-6 border-t-2 border-yellow-300 mb-6">
+                    <p className="text-sm text-amber-700 mb-1">Price</p>
+                    <p className="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-amber-700 bg-clip-text text-transparent">
+                      {currentFood.price}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={surpriseMe}
+                    className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 font-bold text-lg px-8 py-4 rounded-2xl shadow-lg transition-all duration-200 transform hover:scale-105 active:scale-95 inline-flex items-center justify-center gap-2 text-white w-full"
+                  >
+                    <RefreshCw className={`w-5 h-5 ${isAnimating ? 'animate-spin' : ''}`} />
+                    Try Another
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

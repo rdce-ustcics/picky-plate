@@ -1,13 +1,16 @@
 import React, { useEffect, useState, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
+import "leaflet.markercluster/dist/MarkerCluster.Default.css";
+import "leaflet.markercluster";
 import "./RestaurantLocator.css";
 
 export default function RestaurantLocator() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
-  const markersRef = useRef([]);
-  
+  const markerClusterRef = useRef(null);
+
   const [restaurants, setRestaurants] = useState([]);
   const [filteredRestaurants, setFilteredRestaurants] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,6 +18,36 @@ export default function RestaurantLocator() {
   const [minRating, setMinRating] = useState(0);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Metro Manila cities (NCR) - strict filter
+  const METRO_MANILA_CITIES = [
+    "Manila",
+    "Quezon City",
+    "Caloocan",
+    "Las Piñas",
+    "Makati",
+    "Makati City",
+    "Malabon",
+    "Mandaluyong",
+    "Mandaluyong City",
+    "Marikina",
+    "Marikina City",
+    "Muntinlupa",
+    "Muntinlupa City",
+    "Navotas",
+    "Parañaque",
+    "Pasay",
+    "Pasay City",
+    "Pasig",
+    "Pasig City",
+    "Pateros",
+    "San Juan",
+    "San Juan City",
+    "Taguig",
+    "Taguig City",
+    "Valenzuela",
+    "Valenzuela City"
+  ];
 
   // Convert price level string to number
   const getPriceLevelNum = (priceLevel) => {
@@ -73,14 +106,37 @@ export default function RestaurantLocator() {
 
   // Load restaurant data
   useEffect(() => {
-    fetch("/data/ncr_food_places2.json")   // ← Fetch from public root
+    fetch("/data/ncr_food_places2.json")
       .then((response) => response.json())
       .then((data) => {
+        // Filter STRICTLY to Metro Manila cities only
+        const metroManilaOnly = data.items.filter(item => {
+          const city = item.city || "";
+          return METRO_MANILA_CITIES.some(mmCity =>
+            city.toLowerCase().includes(mmCity.toLowerCase())
+          );
+        });
+
+        // Validate and clean data - remove items without essential fields
+        const validData = metroManilaOnly.filter(item => {
+          return item &&
+            item.name &&
+            typeof item.lat === 'number' &&
+            typeof item.lng === 'number' &&
+            item.lat !== 0 &&
+            item.lng !== 0;
+        });
+
         // Convert priceLevel strings to numbers for easier filtering
-        const processedData = data.items.map(item => ({
+        const processedData = validData.map(item => ({
           ...item,
+          name: String(item.name || 'Unknown'),
+          address: String(item.address || ''),
+          types: Array.isArray(item.types) ? item.types : [],
           priceLevelNum: getPriceLevelNum(item.priceLevel)
         }));
+
+        console.log(`Loaded ${processedData.length} valid restaurants in Metro Manila (from ${data.items.length} total, ${metroManilaOnly.length - validData.length} invalid entries removed)`);
         setRestaurants(processedData);
         setFilteredRestaurants(processedData);
         setLoading(false);
@@ -91,26 +147,46 @@ export default function RestaurantLocator() {
       });
   }, []);
 
-  // Update markers when filtered restaurants change
+  // Update markers when filtered restaurants change (with clustering)
   useEffect(() => {
     if (!mapInstanceRef.current) return;
 
-    // Clear existing markers
-    markersRef.current.forEach(marker => marker.remove());
-    markersRef.current = [];
+    // Clear existing marker cluster
+    if (markerClusterRef.current) {
+      mapInstanceRef.current.removeLayer(markerClusterRef.current);
+    }
 
-    // Add new markers
+    // Create new marker cluster group with custom options
+    const markerCluster = L.markerClusterGroup({
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+      iconCreateFunction: function(cluster) {
+        const count = cluster.getChildCount();
+        let size = 'small';
+        if (count > 100) size = 'large';
+        else if (count > 30) size = 'medium';
+
+        return L.divIcon({
+          html: `<div><span>${count}</span></div>`,
+          className: `marker-cluster marker-cluster-${size}`,
+          iconSize: L.point(40, 40)
+        });
+      }
+    });
+
+    // Add markers to cluster
     filteredRestaurants.forEach((place) => {
       const { lat, lng, name, address, rating, priceLevel, priceLevelNum, userRatingCount, googleMapsUri } = place;
-      if (lat && lng) {
+      if (lat && lng && name) {
         const marker = L.marker([lat, lng], {
           icon: createCustomIcon(priceLevel)
         })
-          .addTo(mapInstanceRef.current)
           .bindPopup(`
             <div class="popup-content">
-              <h3>${name}</h3>
-              <p class="popup-address">${address}</p>
+              <h3>${String(name || 'Unknown')}</h3>
+              <p class="popup-address">${String(address || 'No address')}</p>
               <div class="popup-info">
                 <span class="popup-rating">⭐ ${rating || "N/A"}</span>
                 <span class="popup-reviews">(${userRatingCount || 0} reviews)</span>
@@ -124,16 +200,20 @@ export default function RestaurantLocator() {
           setSelectedRestaurant(place);
         });
 
-        markersRef.current.push(marker);
+        markerCluster.addLayer(marker);
       }
     });
+
+    // Add cluster to map
+    mapInstanceRef.current.addLayer(markerCluster);
+    markerClusterRef.current = markerCluster;
 
     // Fit map bounds if there are restaurants
     if (filteredRestaurants.length > 0) {
       const validRestaurants = filteredRestaurants.filter(r => r.lat && r.lng);
       if (validRestaurants.length > 0) {
         const bounds = L.latLngBounds(validRestaurants.map(r => [r.lat, r.lng]));
-        mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
+        mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
       }
     }
   }, [filteredRestaurants]);
@@ -144,10 +224,12 @@ export default function RestaurantLocator() {
 
     // Search filter
     if (searchQuery) {
-      filtered = filtered.filter(restaurant =>
-        restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        restaurant.address.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      filtered = filtered.filter(restaurant => {
+        const name = String(restaurant.name || '').toLowerCase();
+        const address = String(restaurant.address || '').toLowerCase();
+        const query = searchQuery.toLowerCase();
+        return name.includes(query) || address.includes(query);
+      });
     }
 
     // Price level filter
@@ -191,14 +273,15 @@ export default function RestaurantLocator() {
 
   const handleRestaurantClick = (restaurant) => {
     setSelectedRestaurant(restaurant);
-    if (mapInstanceRef.current && restaurant.lat && restaurant.lng) {
+    if (mapInstanceRef.current && markerClusterRef.current && restaurant.lat && restaurant.lng) {
       mapInstanceRef.current.setView([restaurant.lat, restaurant.lng], 16, {
         animate: true,
         duration: 0.5
       });
-      
-      // Find and open the marker's popup
-      const marker = markersRef.current.find(m => {
+
+      // Find and open the marker's popup from cluster
+      const markers = markerClusterRef.current.getLayers();
+      const marker = markers.find(m => {
         const pos = m.getLatLng();
         return pos.lat === restaurant.lat && pos.lng === restaurant.lng;
       });
@@ -303,11 +386,11 @@ export default function RestaurantLocator() {
                     )}
                   </div>
 
-                  {restaurant.types && (
+                  {restaurant.types && Array.isArray(restaurant.types) && (
                     <div className="card-types">
                       {restaurant.types.slice(0, 3).map((type, i) => (
                         <span key={i} className="type-tag">
-                          {type.replace(/_/g, ' ')}
+                          {String(type || '').replace(/_/g, ' ')}
                         </span>
                       ))}
                     </div>
