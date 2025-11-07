@@ -7,10 +7,10 @@ const RecipeSchema = new mongoose.Schema(
     image: { type: String, default: "" },
 
     // quick info
-    prepTime: { type: String, default: "" },   // e.g. "20min"
-    cookTime: { type: String, default: "" },   // e.g. "30min"
+    prepTime: { type: String, default: "" },
+    cookTime: { type: String, default: "" },
     difficulty: { type: String, enum: ["Easy", "Medium", "Hard"], default: "Easy" },
-    servings: { type: String, default: "" },   // e.g. "4 servings"
+    servings: { type: String, default: "" },
 
     description: { type: String, default: "" },
     notes: { type: String, default: "" },
@@ -19,32 +19,22 @@ const RecipeSchema = new mongoose.Schema(
     instructions: { type: [String], default: [] },
 
     tags: { type: [String], index: true, default: [] },
-
     allergens: { type: [String], index: true, default: [] },
-
-    // ADD below allergens: { type: [String], index: true, default: [] },
-    reports: {
-      type: [
-        {
-          user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-          reason: { type: String, required: true },
-          comment: { type: String, default: "" },
-          createdAt: { type: Date, default: Date.now },
-        },
-      ],
-      default: [],
-    },
-    state: {
-      type: String,
-      enum: ["active", "forReview"],
-      default: "active",
-    },
-
+    
     // who created it (optional)
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+
+    // Admin moderation fields
+    isFlagged: { type: Boolean, default: false, index: true },
+    isDeleted: { type: Boolean, default: false, index: true },
+    flaggedAt: { type: Date, default: null },
+    flaggedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
 
+// Compound index for admin queries
+RecipeSchema.index({ isFlagged: 1, isDeleted: 1 });
+
 module.exports = mongoose.model("Recipe", RecipeSchema);
-model

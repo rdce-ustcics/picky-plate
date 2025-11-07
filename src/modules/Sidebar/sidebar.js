@@ -9,6 +9,12 @@ const Sidebar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+    // ADD THESE DEBUG LINES
+  console.log('🔍 Sidebar Debug:');
+  console.log('User:', user);
+  console.log('User Role:', user?.role);
+  console.log('Is Admin?:', user?.role === 'admin');
+
   useEffect(() => {
     if (isMobileMenuOpen) document.body.classList.add("mobile-menu-open");
     else document.body.classList.remove("mobile-menu-open");
@@ -30,7 +36,9 @@ const Sidebar = () => {
     // Conditionally add the Admin button ONLY if user is admin
     ...(user?.role === 'admin' ? [{ to: "/admin", label: "Admin Dashboard", icon: <FiSettings /> }] : [])
   ];
-
+  
+  console.log('📋 Items array:', items);
+  console.log('📋 Items count:', items.length);
   return (
     <>
       {/* Mobile Menu Button */}

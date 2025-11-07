@@ -1,17 +1,55 @@
 // server/models/RecipeReport.js
 const mongoose = require('mongoose');
 
-const recipeReportSchema = new mongoose.Schema({
-  recipeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Recipe', required: true },
-  reportedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  reason: { type: String, required: true, maxlength: 200 },
-  notes: { type: String, maxlength: 500 },
-  status: { type: String, enum: ['pending', 'resolved'], default: 'pending' },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
-});
+const RecipeReportSchema = new mongoose.Schema({
+  recipeId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Recipe', 
+    required: true,
+    index: true 
+  },
+  reportedBy: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User', 
+    required: true 
+  },
+  reason: { 
+    type: String, 
+    enum: [
+      'inappropriate',
+      'spam',
+      'incorrect_info',
+      'duplicate',
+      'copyright',
+      'offensive',
+      'other'
+    ],
+    default: 'other'
+  },
+  description: { 
+    type: String, 
+    default: '' 
+  },
+  status: { 
+    type: String, 
+    enum: ['pending', 'reviewed', 'dismissed', 'actioned'],
+    default: 'pending',
+    index: true
+  },
+  reviewedBy: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User' 
+  },
+  reviewedAt: { 
+    type: Date 
+  },
+  adminNotes: { 
+    type: String 
+  }
+}, { timestamps: true });
 
-// Create the model
-const RecipeReport = mongoose.model('RecipeReport', recipeReportSchema);
+// Index for efficient queries
+RecipeReportSchema.index({ recipeId: 1, status: 1 });
+RecipeReportSchema.index({ reportedBy: 1, createdAt: -1 });
 
-module.exports = RecipeReport;
+module.exports = mongoose.model('RecipeReport', RecipeReportSchema);

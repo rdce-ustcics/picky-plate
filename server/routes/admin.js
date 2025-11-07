@@ -1,5 +1,6 @@
+// server/routes/admin.js
 const express = require('express');
-const router = express.Router();
+const router = express.Router(); // ✅ THIS LINE WAS MISSING!
 const Recipe = require('../models/Recipe');
 const { requireAdmin } = require('../middleware/auth');
 

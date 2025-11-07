@@ -4,6 +4,7 @@ const Recipe = require("../models/Recipe");
 const { protect } = require("../middleware/auth");
 
 const router = express.Router();
+const RecipeReport = require('../models/RecipeReport');
 
 function devImpersonate(req, _res, next) {
   if (process.env.NODE_ENV !== "production") {
@@ -246,47 +247,69 @@ router.post("/", protect, async (req, res) => {
 
 /**
  * POST /api/recipes/:id/report
- * Body: { reason: string, comment?: string }
- * Requires auth. Each user can report once.
- * Flags state=forReview if (lifetime >= 20) OR (weekly >= 5).
+ * Report a recipe for admin review (with detailed tracking)
  */
-router.post("/:id/report", protect, devImpersonate, async (req, res) => {
+router.post("/:id/report", protect, async (req, res) => {
   try {
-    const { reason = "", comment = "" } = req.body || {};
+    const { reason = 'other', description = '' } = req.body;
+    
     const recipe = await Recipe.findById(req.params.id);
-    if (!recipe) return res.status(404).json({ success: false, error: "not_found" });
-
-    const userId = req.user?.id || req.user?._id;
-    if (!userId) return res.status(401).json({ success: false, error: "no_user" });
-
-    const already = (recipe.reports || []).some((r) => String(r.user) === String(userId));
-    if (already) return res.status(409).json({ success: false, error: "already_reported" });
-
-    recipe.reports.push({
-      user: userId,
-      reason: String(reason || "Other"),
-      comment: String(comment || ""),
-      createdAt: new Date(),
-    });
-
-    const { lifetime, weekly } = calcReportStats(recipe.reports);
-
-    if (lifetime >= 20 || weekly >= 5) {
-      recipe.state = "forReview";
+    
+    if (!recipe) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Recipe not found' 
+      });
     }
 
-    await recipe.save();
+    if (recipe.isDeleted) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'This recipe has already been removed' 
+      });
+    }
 
-    return res.status(201).json({
-      success: true,
-      state: recipe.state,
-      reportsCount: lifetime,
-      weeklyReports: weekly,
-      message: "reported",
+    // Check if user already reported this recipe
+    const existingReport = await RecipeReport.findOne({
+      recipeId: req.params.id,
+      reportedBy: req.user._id,
+      status: 'pending'
+    });
+
+    if (existingReport) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'You have already reported this recipe' 
+      });
+    }
+
+    // Create report
+    await RecipeReport.create({
+      recipeId: req.params.id,
+      reportedBy: req.user._id,
+      reason,
+      description,
+      status: 'pending'
+    });
+
+    // Flag the recipe if not already flagged
+    if (!recipe.isFlagged) {
+      recipe.isFlagged = true;
+      recipe.flaggedAt = new Date();
+      recipe.flaggedBy = req.user._id;
+      await recipe.save();
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Recipe reported successfully. Our admin team will review it.' 
     });
   } catch (e) {
-    console.error("report_recipe_error:", e);
-    res.status(500).json({ success: false, error: "report_failed" });
+    console.error('report_recipe_error:', e);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to report recipe. Please try again.' 
+    });
   }
 });
 
