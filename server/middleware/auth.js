@@ -1,109 +1,76 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
+// Extract bearer token from Authorization header
+function getBearerToken(req) {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) return null;
+  return auth.slice(7);
+}
+
+// Liberal userId extractor: supports { id }, { _id }, or { userId }
+function getUserIdFromDecoded(decoded) {
+  return decoded?.id || decoded?._id || decoded?.userId || null;
+}
+
+async function attachUserFromToken(req, res) {
+  const token = getBearerToken(req);
+  if (!token) {
+    return { ok: false, code: 401, msg: 'No token provided. Please login.' };
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (e) {
+    return { ok: false, code: 401, msg: 'Invalid or expired token. Please login again.' };
+  }
+
+  const userId = getUserIdFromDecoded(decoded);
+  if (!userId) {
+    return { ok: false, code: 401, msg: 'Bad token payload (no user id).' };
+  }
+
+  const user = await User.findById(userId).select('-password');
+  if (!user) {
+    return { ok: false, code: 401, msg: 'User not found. Please login again.' };
+  }
+
+  req.user = user;
+  req.tokenDecoded = decoded;
+  return { ok: true };
+}
+
 /**
- * Middleware to protect routes - requires valid JWT token
+ * Requires a valid JWT; sets req.user
  */
 const protect = async (req, res, next) => {
   try {
-    // Get token from Authorization header
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'No token provided. Please login.' 
-      });
-    }
-
-    const token = authHeader.split(' ')[1];
-    
-    if (!token) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'No token provided. Please login.' 
-      });
-    }
-
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Get user from token
-    const user = await User.findById(decoded.userId).select('-password');
-    
-    if (!user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not found. Please login again.' 
-      });
-    }
-
-    // Attach user to request
-    req.user = user;
+    const result = await attachUserFromToken(req, res);
+    if (!result.ok) return res.status(result.code).json({ success: false, message: result.msg });
     next();
   } catch (error) {
     console.error('Auth error:', error);
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Invalid or expired token. Please login again.' 
-    });
+    return res.status(401).json({ success: false, message: 'Authentication failed.' });
   }
 };
 
 /**
- * Middleware to require admin role
+ * Requires a valid JWT and admin role
  */
 const requireAdmin = async (req, res, next) => {
   try {
-    // Get token from Authorization header
-    const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'No token provided. Admin access required.' 
-      });
+    const result = await attachUserFromToken(req, res);
+    if (!result.ok) return res.status(result.code).json({ success: false, message: result.msg });
+
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Access denied. Admin privileges required.' });
     }
 
-    const token = authHeader.split(' ')[1];
-    
-    if (!token) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'No token provided. Admin access required.' 
-      });
-    }
-
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // Get user from token
-    const user = await User.findById(decoded.userId).select('-password');
-    
-    if (!user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not found. Please login again.' 
-      });
-    }
-
-    // Check if user is admin
-    if (user.role !== 'admin') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Admin privileges required.' 
-      });
-    }
-
-    // Attach user to request
-    req.user = user;
     next();
   } catch (error) {
     console.error('Admin auth error:', error);
-    return res.status(401).json({ 
-      success: false, 
-      message: 'Invalid or expired token. Please login again.' 
-    });
+    return res.status(401).json({ success: false, message: 'Authentication failed.' });
   }
 };
 
