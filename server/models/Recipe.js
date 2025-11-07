@@ -20,11 +20,13 @@ const RecipeSchema = new mongoose.Schema(
 
     tags: { type: [String], index: true, default: [] },
     allergens: { type: [String], index: true, default: [] },
-    
-    // who created it (optional)
+
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
 
-    // Admin moderation fields
+    // 🔑 moderation status
+    state: { type: String, enum: ["active", "forReview"], default: "active", index: true }, // ⬅️ ADD THIS
+
+    // legacy flags (keep if you still use them elsewhere)
     isFlagged: { type: Boolean, default: false, index: true },
     isDeleted: { type: Boolean, default: false, index: true },
     flaggedAt: { type: Date, default: null },
@@ -34,7 +36,7 @@ const RecipeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Compound index for admin queries
+// helpful compound index
 RecipeSchema.index({ isFlagged: 1, isDeleted: 1 });
 
 module.exports = mongoose.model("Recipe", RecipeSchema);
