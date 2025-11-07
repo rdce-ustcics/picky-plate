@@ -1,60 +1,74 @@
+// server/routes/recipes.js
 const express = require("express");
 const Recipe = require("../models/Recipe");
 const { protect } = require("../middleware/auth");
 
 const router = express.Router();
 
+function devImpersonate(req, _res, next) {
+  if (process.env.NODE_ENV !== "production") {
+    const id = req.headers["x-impersonate-user-id"];
+    if (id && /^[0-9a-fA-F]{24}$/.test(String(id))) {
+      req.user = { ...(req.user || {}), id: String(id), _id: String(id), email: `dev+${String(id).slice(-6)}@local` };
+    }
+  }
+  next();
+}
+
+// ---- Helpers ----
+function calcReportStats(reports) {
+  const arr = Array.isArray(reports) ? reports : [];
+  const lifetime = arr.length;
+  const weekAgoMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+  const weekly = arr.filter((r) => {
+    const t = r?.createdAt ? new Date(r.createdAt).getTime() : 0;
+    return t >= weekAgoMs;
+  }).length;
+
+  return { lifetime, weekly };
+}
+
+function escapeRegExp(str = "") {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /**
  * GET /api/recipes
- * List recipes with filters
- * Query params:
- *  - search: text search
- *  - tags: comma-separated tags
- *  - exclude: comma-separated allergens/terms to exclude
- *  - prep, cook, diff, servings: exact match filters
- *  - authorId: filter by creator (for "My Recipes")
- *  - page, limit: pagination
+ * Optional query:
+ *  - search: text search across title/description/ingredients/instructions
+ *  - tags: comma-separated list of tags (ANY)
+ *  - exclude: comma-separated list (exclude allergens/tags/text matches)
+ *  - prep, cook, diff, servings: exact string matches
+ *  - authorId: show “my recipes” (matches createdBy if ObjectId OR author string)
+ *  - page, limit
  */
 router.get("/", async (req, res) => {
   try {
     const {
       search = "",
       tags = "",
-      page = 1,
-      limit = 20,
       exclude = "",
       prep = "",
       cook = "",
       diff = "",
       servings = "",
       authorId = "",
+      page = 1,
+      limit = 20,
     } = req.query;
 
-    // Base query - exclude deleted recipes from public view
     const q = {
-      isDeleted: { $ne: true }
+      state: { $ne: "forReview" }, // Exclude recipes that are marked as "forReview"
     };
 
-    // Filter by author if provided (for "My Recipes" feature)
-    if (authorId && authorId !== 'global') {
-      q.createdBy = authorId;
-    }
-
-    // Text search across multiple fields
+    // Text search across fields
     if (search) {
-      const rx = new RegExp(
-        search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), 
-        "i"
-      );
-      q.$or = [
-        { title: rx },
-        { description: rx },
-        { ingredients: rx },
-        { instructions: rx },
-      ];
+      const rx = new RegExp(escapeRegExp(search.trim()), "i");
+      q.$or = [{ title: rx }, { description: rx }, { ingredients: rx }, { instructions: rx }];
     }
 
-    // Tag filter (match ANY of the provided tags)
+    // Tags (ANY)
     if (tags) {
       const list = String(tags)
         .split(",")
@@ -63,13 +77,13 @@ router.get("/", async (req, res) => {
       if (list.length) q.tags = { $in: list };
     }
 
-    // Exact match filters for dropdowns
+    // Exact-match dropdown filters
     if (prep) q.prepTime = prep;
     if (cook) q.cookTime = cook;
     if (diff) q.difficulty = diff;
     if (servings) q.servings = servings;
 
-    // Exclude allergens/terms
+    // Exclusions (allergens/tags/text)
     const excludes = String(exclude)
       .split(",")
       .map((a) => a.trim().toLowerCase())
@@ -77,37 +91,61 @@ router.get("/", async (req, res) => {
 
     if (excludes.length) {
       const andClauses = excludes.map((al) => {
-        const safe = al.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const safe = escapeRegExp(al);
         const rx = new RegExp(`\\b${safe}\\b`, "i");
         return {
           $nor: [
-            { allergens: al },
-            { tags: al },
-            { ingredients: rx },
-            { description: rx },
-            { title: rx },
+            { allergens: al }, // allergens array exact
+            { tags: al }, // tags array exact
+            { ingredients: rx }, // mention in ingredients text
+            { description: rx }, // mention in description
+            { title: rx }, // mention in title
           ],
         };
       });
       q.$and = (q.$and || []).concat(andClauses);
     }
 
+    // "My Recipes" filter (createdBy ObjectId or author string equals)
+    if (authorId) {
+      const safe = String(authorId).trim();
+      const or = [{ author: new RegExp(`^${escapeRegExp(safe)}$`, "i") }];
+      if (/^[0-9a-fA-F]{24}$/.test(safe)) {
+        or.push({ createdBy: safe });
+      }
+      q.$and = (q.$and || []).concat([{ $or: or }]);
+    }
+
     // Pagination
     const p = Math.max(parseInt(page, 10) || 1, 1);
     const l = Math.min(Math.max(parseInt(limit, 10) || 20, 1), 100);
 
-    // Execute query
-    const [items, total] = await Promise.all([
-      Recipe.find(q)
-        .sort({ createdAt: -1 })
-        .skip((p - 1) * l)
-        .limit(l)
-        .lean(),
+    // Who is asking (to mark reportedByMe)
+    const userHeaderId = (req.headers["x-user-id"] || "").toString();
+
+    // Query
+    const [rawItems, total] = await Promise.all([
+      Recipe.find(q).sort({ createdAt: -1 }).skip((p - 1) * l).limit(l).lean(),
       Recipe.countDocuments(q),
     ]);
 
+    // Decorate with counters and flags
+    const items = rawItems.map((doc) => {
+      const { lifetime, weekly } = calcReportStats(doc.reports);
+      const reportedByMe =
+        userHeaderId &&
+        Array.isArray(doc.reports) &&
+        doc.reports.some((r) => String(r.user) === userHeaderId);
+
+      return {
+        ...doc,
+        reportsCount: lifetime, // lifetime total
+        weeklyReports: weekly, // last 7 days
+        reportedByMe,
+      };
+    });
+
     res.json({
-      success: true,
       items,
       total,
       page: p,
@@ -115,56 +153,50 @@ router.get("/", async (req, res) => {
     });
   } catch (e) {
     console.error("recipes_list_error:", e);
-    res.status(500).json({ 
-      success: false, 
-      error: "Failed to fetch recipes" 
-    });
+    res.status(500).json({ success: false, error: "list_failed" });
   }
 });
 
 /**
  * GET /api/recipes/:id
- * Get single recipe by ID
  */
 router.get("/:id", async (req, res) => {
   try {
+    const userHeaderId = (req.headers["x-user-id"] || "").toString();
     const doc = await Recipe.findById(req.params.id).lean();
-    
-    if (!doc) {
-      return res.status(404).json({ 
-        success: false, 
-        error: "Recipe not found" 
-      });
-    }
+    if (!doc) return res.status(404).json({ success: false, error: "not_found" });
 
-    // Don't show deleted recipes
-    if (doc.isDeleted) {
-      return res.status(404).json({ 
-        success: false, 
-        error: "Recipe not found" 
-      });
-    }
+    const { lifetime, weekly } = calcReportStats(doc.reports);
+    const reportedByMe =
+      userHeaderId &&
+      Array.isArray(doc.reports) &&
+      doc.reports.some((r) => String(r.user) === userHeaderId);
 
-    res.json({ success: true, recipe: doc });
+    res.json({
+      success: true,
+      recipe: {
+        ...doc,
+        reportsCount: lifetime,
+        weeklyReports: weekly,
+        reportedByMe,
+      },
+    });
   } catch (e) {
     console.error("get_recipe_error:", e);
-    res.status(500).json({ 
-      success: false, 
-      error: "Failed to fetch recipe" 
-    });
+    res.status(500).json({ success: false, error: "get_failed" });
   }
 });
 
 /**
  * POST /api/recipes
- * Create a new recipe (requires authentication)
+ * Requires auth
  */
 router.post("/", protect, async (req, res) => {
   try {
     const {
       title,
       image = "",
-      author,
+      author, // optional override
       prepTime = "",
       cookTime = "",
       difficulty = "Easy",
@@ -177,29 +209,20 @@ router.post("/", protect, async (req, res) => {
       allergens = [],
     } = req.body;
 
-    // Validate required fields
-    if (!title || !title.trim()) {
-      return res.status(400).json({ 
-        success: false, 
-        error: "Title is required" 
-      });
-    }
+    if (!title) return res.status(400).json({ success: false, error: "title_required" });
 
-    // Clean and normalize tags
     const cleanTags = (Array.isArray(tags) ? tags : String(tags).split(","))
       .map((t) => String(t).trim().toLowerCase())
       .filter(Boolean);
 
-    // Clean and normalize allergens
     const cleanAllergens = (Array.isArray(allergens) ? allergens : String(allergens).split(","))
       .map((a) => String(a).trim().toLowerCase())
       .filter(Boolean);
 
-    // Create recipe
     const doc = await Recipe.create({
-      title: title.trim(),
+      title,
       image,
-      author: author || req.user?.name || req.user?.email || "anonymous",
+      author: author || (req.user?.name || req.user?.email || "anonymous"),
       prepTime,
       cookTime,
       difficulty,
@@ -211,157 +234,59 @@ router.post("/", protect, async (req, res) => {
       tags: cleanTags,
       allergens: cleanAllergens,
       createdBy: req.user?._id || req.user?.id || null,
-      isFlagged: false,
-      isDeleted: false,
+      // reports/state default from schema
     });
 
     res.status(201).json({ success: true, recipe: doc });
   } catch (e) {
     console.error("create_recipe_error:", e);
-    res.status(500).json({ 
-      success: false, 
-      error: "Failed to create recipe" 
-    });
+    res.status(500).json({ success: false, error: "create_failed" });
   }
 });
 
 /**
  * POST /api/recipes/:id/report
- * Report a recipe for admin review (requires authentication)
+ * Body: { reason: string, comment?: string }
+ * Requires auth. Each user can report once.
+ * Flags state=forReview if (lifetime >= 20) OR (weekly >= 5).
  */
-router.post("/:id/report", protect, async (req, res) => {
+router.post("/:id/report", protect, devImpersonate, async (req, res) => {
   try {
+    const { reason = "", comment = "" } = req.body || {};
     const recipe = await Recipe.findById(req.params.id);
-    
-    if (!recipe) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Recipe not found' 
-      });
-    }
+    if (!recipe) return res.status(404).json({ success: false, error: "not_found" });
 
-    if (recipe.isDeleted) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'This recipe has already been removed' 
-      });
-    }
+    const userId = req.user?.id || req.user?._id;
+    if (!userId) return res.status(401).json({ success: false, error: "no_user" });
 
-    if (recipe.isFlagged) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'This recipe has already been reported and is under review' 
-      });
-    }
+    const already = (recipe.reports || []).some((r) => String(r.user) === String(userId));
+    if (already) return res.status(409).json({ success: false, error: "already_reported" });
 
-    // Flag the recipe
-    recipe.isFlagged = true;
-    recipe.flaggedAt = new Date();
-    recipe.flaggedBy = req.user?._id || req.user?.id;
-    await recipe.save();
-
-    res.json({ 
-      success: true, 
-      message: 'Recipe reported successfully. Our admin team will review it.' 
+    recipe.reports.push({
+      user: userId,
+      reason: String(reason || "Other"),
+      comment: String(comment || ""),
+      createdAt: new Date(),
     });
-  } catch (e) {
-    console.error('report_recipe_error:', e);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to report recipe. Please try again.' 
-    });
-  }
-});
 
-/**
- * PUT /api/recipes/:id
- * Update a recipe (requires authentication and ownership)
- */
-router.put("/:id", protect, async (req, res) => {
-  try {
-    const recipe = await Recipe.findById(req.params.id);
-    
-    if (!recipe) {
-      return res.status(404).json({ 
-        success: false, 
-        error: "Recipe not found" 
-      });
+    const { lifetime, weekly } = calcReportStats(recipe.reports);
+
+    if (lifetime >= 20 || weekly >= 5) {
+      recipe.state = "forReview";
     }
-
-    // Check ownership (only creator or admin can update)
-    const isOwner = recipe.createdBy && 
-                    recipe.createdBy.toString() === (req.user?._id || req.user?.id).toString();
-    const isAdmin = req.user?.role === 'admin';
-
-    if (!isOwner && !isAdmin) {
-      return res.status(403).json({ 
-        success: false, 
-        error: "You don't have permission to edit this recipe" 
-      });
-    }
-
-    // Update fields
-    const updates = req.body;
-    Object.keys(updates).forEach(key => {
-      if (key !== '_id' && key !== 'createdBy' && key !== 'isFlagged' && key !== 'isDeleted') {
-        recipe[key] = updates[key];
-      }
-    });
 
     await recipe.save();
 
-    res.json({ success: true, recipe });
-  } catch (e) {
-    console.error("update_recipe_error:", e);
-    res.status(500).json({ 
-      success: false, 
-      error: "Failed to update recipe" 
-    });
-  }
-});
-
-/**
- * DELETE /api/recipes/:id
- * Delete a recipe (requires authentication and ownership)
- */
-router.delete("/:id", protect, async (req, res) => {
-  try {
-    const recipe = await Recipe.findById(req.params.id);
-    
-    if (!recipe) {
-      return res.status(404).json({ 
-        success: false, 
-        error: "Recipe not found" 
-      });
-    }
-
-    // Check ownership (only creator or admin can delete)
-    const isOwner = recipe.createdBy && 
-                    recipe.createdBy.toString() === (req.user?._id || req.user?.id).toString();
-    const isAdmin = req.user?.role === 'admin';
-
-    if (!isOwner && !isAdmin) {
-      return res.status(403).json({ 
-        success: false, 
-        error: "You don't have permission to delete this recipe" 
-      });
-    }
-
-    // Soft delete
-    recipe.isDeleted = true;
-    recipe.deletedAt = new Date();
-    await recipe.save();
-
-    res.json({ 
-      success: true, 
-      message: "Recipe deleted successfully" 
+    return res.status(201).json({
+      success: true,
+      state: recipe.state,
+      reportsCount: lifetime,
+      weeklyReports: weekly,
+      message: "reported",
     });
   } catch (e) {
-    console.error("delete_recipe_error:", e);
-    res.status(500).json({ 
-      success: false, 
-      error: "Failed to delete recipe" 
-    });
+    console.error("report_recipe_error:", e);
+    res.status(500).json({ success: false, error: "report_failed" });
   }
 });
 
