@@ -1,6 +1,5 @@
-// server/routes/admin.js
 const express = require('express');
-const router = express.Router(); // ✅ THIS LINE WAS MISSING!
+const router = express.Router();
 const Recipe = require('../models/Recipe');
 const { requireAdmin } = require('../middleware/auth');
 
@@ -10,22 +9,19 @@ const { requireAdmin } = require('../middleware/auth');
  */
 router.get('/flagged-recipes', requireAdmin, async (req, res) => {
   try {
-    const recipes = await Recipe.find({ 
+    const recipes = await Recipe.find({
       isFlagged: true,
-      isDeleted: false 
+      isDeleted: false,
     })
-    .populate('flaggedBy', 'name email')
-    .populate('createdBy', 'name email')
-    .sort({ flaggedAt: -1 })
-    .lean();
-    
-    return res.json({ success: true, recipes });
+      .populate('flaggedBy', 'name email')
+      .populate('createdBy', 'name email')
+      .sort({ flaggedAt: -1 })
+      .lean();
+
+    res.json({ success: true, recipes });
   } catch (e) {
     console.error('Error fetching flagged recipes:', e);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch flagged recipes' 
-    });
+    res.status(500).json({ success: false, error: 'Failed to fetch flagged recipes' });
   }
 });
 
@@ -36,31 +32,17 @@ router.get('/flagged-recipes', requireAdmin, async (req, res) => {
 router.post('/approve-recipe/:id', requireAdmin, async (req, res) => {
   try {
     const recipe = await Recipe.findById(req.params.id);
-    
-    if (!recipe) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Recipe not found' 
-      });
-    }
+    if (!recipe) return res.status(404).json({ success: false, error: 'Recipe not found' });
 
-    // Remove flag
     recipe.isFlagged = false;
     recipe.flaggedAt = null;
     recipe.flaggedBy = null;
     await recipe.save();
-    
-    return res.json({ 
-      success: true, 
-      message: 'Recipe approved successfully',
-      recipe 
-    });
+
+    res.json({ success: true, message: 'Recipe approved successfully', recipe });
   } catch (e) {
     console.error('Error approving recipe:', e);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to approve recipe' 
-    });
+    res.status(500).json({ success: false, error: 'Failed to approve recipe' });
   }
 });
 
@@ -71,61 +53,106 @@ router.post('/approve-recipe/:id', requireAdmin, async (req, res) => {
 router.delete('/reject-recipe/:id', requireAdmin, async (req, res) => {
   try {
     const recipe = await Recipe.findById(req.params.id);
-    
-    if (!recipe) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Recipe not found' 
-      });
-    }
+    if (!recipe) return res.status(404).json({ success: false, error: 'Recipe not found' });
 
-    // Soft delete and remove flag
     recipe.isDeleted = true;
     recipe.deletedAt = new Date();
     recipe.isFlagged = false;
     recipe.flaggedAt = null;
     recipe.flaggedBy = null;
     await recipe.save();
-    
-    return res.json({ 
-      success: true, 
-      message: 'Recipe rejected and removed from public view' 
-    });
+
+    res.json({ success: true, message: 'Recipe rejected and removed from public view' });
   } catch (e) {
     console.error('Error rejecting recipe:', e);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Failed to reject recipe' 
-    });
+    res.status(500).json({ success: false, error: 'Failed to reject recipe' });
+  }
+});
+
+/**
+ * GET /api/admin/review-recipes
+ * Recipes where state: "forReview"
+ */
+router.get('/review-recipes', requireAdmin, async (req, res) => {
+  try {
+    const recipes = await Recipe.find({ state: 'forReview', isDeleted: false })
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json({ success: true, recipes });
+  } catch (e) {
+    console.error('Error fetching review recipes:', e);
+    res.status(500).json({ success: false, error: 'Failed to fetch recipes for review' });
+  }
+});
+
+/**
+ * POST /api/admin/recipes/:id/reinstate
+ * Reinstate recipe (state -> active)
+ */
+router.post('/recipes/:id/reinstate', requireAdmin, async (req, res) => {
+  try {
+    const recipe = await Recipe.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          state: 'active',
+          isFlagged: false,
+          flaggedAt: null,
+          flaggedBy: null,
+        },
+      },
+      { new: true, runValidators: true } // ⬅️ ensure enum + schema apply
+    );
+
+    if (!recipe) {
+      return res.status(404).json({ success: false, error: 'Recipe not found' });
+    }
+
+    return res.json({ success: true, message: 'Recipe reinstated (state: active)', recipe });
+  } catch (e) {
+    console.error('Error reinstating recipe:', e);
+    return res.status(500).json({ success: false, error: 'Failed to reinstate recipe' });
+  }
+});
+
+/**
+ * DELETE /api/admin/recipes/:id
+ * Permanently delete recipe
+ */
+router.delete('/recipes/:id', requireAdmin, async (req, res) => {
+  try {
+    const result = await Recipe.deleteOne({ _id: req.params.id }); // hard delete
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, error: 'Recipe not found' });
+    }
+    return res.json({ success: true, message: 'Recipe permanently deleted' });
+  } catch (e) {
+    console.error('Error deleting recipe:', e);
+    return res.status(500).json({ success: false, error: 'Failed to permanently delete recipe' });
   }
 });
 
 /**
  * GET /api/admin/stats
- * Get admin dashboard statistics
+ * Dashboard stats
  */
 router.get('/stats', requireAdmin, async (req, res) => {
   try {
-    const [totalRecipes, flaggedCount, deletedCount] = await Promise.all([
+    const [totalRecipes, flaggedCount, deletedCount, forReviewCount] = await Promise.all([
       Recipe.countDocuments({ isDeleted: false }),
       Recipe.countDocuments({ isFlagged: true, isDeleted: false }),
       Recipe.countDocuments({ isDeleted: true }),
+      Recipe.countDocuments({ state: 'forReview', isDeleted: false }),
     ]);
 
-    return res.json({
+    res.json({
       success: true,
-      stats: {
-        totalRecipes,
-        flaggedCount,
-        deletedCount,
-      }
+      stats: { totalRecipes, flaggedCount, deletedCount, forReviewCount },
     });
   } catch (e) {
-    console.error('Error fetching admin stats:', e);
-    return res.status(500).json({
-      success: false,
-      error: 'Failed to fetch statistics'
-    });
+    console.error('Error fetching stats:', e);
+    res.status(500).json({ success: false, error: 'Failed to fetch statistics' });
   }
 });
 
