@@ -1,31 +1,110 @@
-// server/middleware/auth.js
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-async function requireAuth(req, res, next) {
+/**
+ * Middleware to protect routes - requires valid JWT token
+ */
+const protect = async (req, res, next) => {
   try {
-    const hdr = req.headers.authorization || '';
-    const token = hdr.startsWith('Bearer ') ? hdr.slice(7) : null;
-    if (!token) return res.status(401).json({ error: 'Missing token' });
+    // Get token from Authorization header
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'No token provided. Please login.' 
+      });
+    }
 
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = payload.id || payload.sub || payload.userId;
-    if (!userId) return res.status(401).json({ error: 'Invalid token payload' });
+    const token = authHeader.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'No token provided. Please login.' 
+      });
+    }
 
-    const user = await User.findById(userId).select('email name role verified').lean();
-    if (!user) return res.status(401).json({ error: 'User not found' });
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Get user from token
+    const user = await User.findById(decoded.userId).select('-password');
+    
+    if (!user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'User not found. Please login again.' 
+      });
+    }
 
-    req.user = { id: String(user._id), email: user.email, name: user.name, role: user.role, verified: user.verified };
+    // Attach user to request
+    req.user = user;
     next();
-  } catch (e) {
-    console.error('requireAuth error:', e.message);
-    res.status(401).json({ error: 'Unauthorized' });
+  } catch (error) {
+    console.error('Auth error:', error);
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Invalid or expired token. Please login again.' 
+    });
   }
-}
+};
 
-function requireAdmin(req, res, next) {
-  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
-  next();
-}
+/**
+ * Middleware to require admin role
+ */
+const requireAdmin = async (req, res, next) => {
+  try {
+    // Get token from Authorization header
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'No token provided. Admin access required.' 
+      });
+    }
 
-module.exports = { requireAuth, requireAdmin, protect: requireAuth };
+    const token = authHeader.split(' ')[1];
+    
+    if (!token) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'No token provided. Admin access required.' 
+      });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Get user from token
+    const user = await User.findById(decoded.userId).select('-password');
+    
+    if (!user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'User not found. Please login again.' 
+      });
+    }
+
+    // Check if user is admin
+    if (user.role !== 'admin') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. Admin privileges required.' 
+      });
+    }
+
+    // Attach user to request
+    req.user = user;
+    next();
+  } catch (error) {
+    console.error('Admin auth error:', error);
+    return res.status(401).json({ 
+      success: false, 
+      message: 'Invalid or expired token. Please login again.' 
+    });
+  }
+};
+
+module.exports = { protect, requireAdmin };

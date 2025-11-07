@@ -1,8 +1,8 @@
-// client/src/pages/CommunityRecipes.js
+// client/src/pages/Recipe.js
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle
+  Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle, Flag
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import html2canvas from "html2canvas";
@@ -77,7 +77,7 @@ export default function CommunityRecipes() {
   const [showTagMenu, setShowTagMenu] = useState(false);
   const [showAllergenMenu, setShowAllergenMenu] = useState(false);
 
-  // NEW: “My Recipes” toggle
+  // NEW: "My Recipes" toggle
   const [showMine, setShowMine] = useState(false);
 
   // Inject pdf mode CSS once
@@ -286,6 +286,35 @@ export default function CommunityRecipes() {
       window.open(blobUrl, "_blank", "noopener,noreferrer");
     } catch {
       pdf.output("dataurlnewwindow");
+    }
+  };
+
+  // ===== REPORT RECIPE HANDLER =====
+  const handleReportRecipe = async (recipeId) => {
+    if (!window.confirm('Are you sure you want to report this recipe? Our admin team will review it.')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/recipes/${recipeId}/report`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders()
+        }
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert('Recipe reported successfully. Our team will review it.');
+        setSelectedRecipe(null); // Close the modal
+      } else {
+        alert(data.message || 'Failed to report recipe');
+      }
+    } catch (e) {
+      console.error('Error reporting recipe:', e);
+      alert('Failed to report recipe. Please try again.');
     }
   };
 
@@ -734,8 +763,8 @@ export default function CommunityRecipes() {
                 </div>
               ) : null}
 
-              {/* PDF Actions (hidden while capturing) */}
-              <div className="no-pdf flex justify-center gap-3 mt-6 mb-4">
+              {/* PDF Actions and Report Button */}
+              <div className="no-pdf flex flex-col sm:flex-row justify-center gap-3 mt-6 mb-4">
                 <button
                   onClick={previewRecipePdf}
                   className="bg-white border border-yellow-500 text-yellow-700 hover:bg-yellow-50 font-semibold px-6 py-2 rounded-full shadow-sm transition"
@@ -748,6 +777,17 @@ export default function CommunityRecipes() {
                 >
                   Download PDF
                 </button>
+                
+                {/* Report Recipe Button - Only show if authenticated */}
+                {isAuthenticated && (
+                  <button
+                    onClick={() => handleReportRecipe(selectedRecipe._id)}
+                    className="bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-2 rounded-full shadow transition flex items-center justify-center gap-2"
+                  >
+                    <Flag className="w-4 h-4" />
+                    Report Recipe
+                  </button>
+                )}
               </div>
             </div>
           </div>

@@ -88,6 +88,10 @@ connectDB()
     app.use('/api/ai',       require('./routes/ai'));
     app.use('/api/preferences', require('./routes/preferences'));
 
+    
+    // 🔑 admin
+    app.use('/api/admin', require('./routes/admin'));
+
     const port = process.env.PORT || 4000;
     app.listen(port, () => console.log(`🚀 API running on http://localhost:${port}`));
   })

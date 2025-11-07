@@ -1,25 +1,12 @@
+// src/modules/Sidebar/sidebar.js
 import { useState, useEffect } from "react";
 import { NavLink, Link } from "react-router-dom";
-import {
-  FiGrid, FiUser, FiZap, FiUsers, FiGlobe, FiPhoneCall, FiSettings,
-  FiMessageCircle, FiMenu, FiX, FiBookOpen, FiMapPin
-} from "react-icons/fi";
-import { useAuth } from "../../auth/AuthContext";
+import { FiGrid, FiUser, FiZap, FiUsers, FiGlobe, FiPhoneCall, FiSettings, FiMessageCircle, FiMenu, FiX, FiBookOpen, FiMapPin } from "react-icons/fi";
+import { useAuth } from "../../auth/AuthContext"; // ✅ FIXED PATH - Changed from "../auth/AuthContext"
 import "./sidebar.css";
 
-const items = [
-  { to: "/", label: "Dashboard", icon: <FiGrid /> },
-  { to: "/chatbot", label: "AI ChatBot", icon: <FiMessageCircle /> },
-  { to: "/recipes", label: "Community Recipes", icon: <FiBookOpen /> },      
-  { to: "/profile", label: "Profile", icon: <FiUser /> },
-  { to: "/surprise", label: "Surprise me", icon: <FiZap /> },               
-  { to: "/barkada-vote", label: "Barkada Vote", icon: <FiUsers /> },
-  { to: "/explorer", label: "Cultural Food Explorer", icon: <FiGlobe /> },    
-  { to: "/restaurants", label: "Restaurant Locator", icon: <FiMapPin /> },   
-];
-
-export default function Sidebar() {
-  const { isAuthenticated, logout } = useAuth();
+const Sidebar = () => {
+  const { user, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -29,6 +16,20 @@ export default function Sidebar() {
   }, [isMobileMenuOpen]);
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  // Items array with conditional admin button
+  const items = [
+    { to: "/", label: "Dashboard", icon: <FiGrid /> },
+    { to: "/chatbot", label: "AI ChatBot", icon: <FiMessageCircle /> },
+    { to: "/recipes", label: "Community Recipes", icon: <FiBookOpen /> },
+    { to: "/profile", label: "Profile", icon: <FiUser /> },
+    { to: "/surprise", label: "Surprise me", icon: <FiZap /> },
+    { to: "/barkada-vote", label: "Barkada Vote", icon: <FiUsers /> },
+    { to: "/explorer", label: "Cultural Food Explorer", icon: <FiGlobe /> },
+    { to: "/restaurants", label: "Restaurant Locator", icon: <FiMapPin /> },
+    // Conditionally add the Admin button ONLY if user is admin
+    ...(user?.role === 'admin' ? [{ to: "/admin", label: "Admin Dashboard", icon: <FiSettings /> }] : [])
+  ];
 
   return (
     <>
@@ -62,20 +63,18 @@ export default function Sidebar() {
         </Link>
 
         <nav className="pap-nav">
-          {items
-            .filter(it => !(it.to === "/profile" && !isAuthenticated))
-            .map(it => (
-              <NavLink
-                key={it.to}
-                to={it.to}
-                end
-                className={({ isActive }) => "pap-nav-item" + (isActive ? " is-active" : "")}
-                onClick={closeMobileMenu}
-              >
-                <span className="pap-icon">{it.icon}</span>
-                <span className="pap-label">{it.label}</span>
-              </NavLink>
-            ))}
+          {items.map(it => (
+            <NavLink
+              key={it.to}
+              to={it.to}
+              end
+              className={({ isActive }) => "pap-nav-item" + (isActive ? " is-active" : "")}
+              onClick={closeMobileMenu}
+            >
+              <span className="pap-icon">{it.icon}</span>
+              <span className="pap-label">{it.label}</span>
+            </NavLink>
+          ))}
 
           <NavLink
             to="/contact"
@@ -108,7 +107,9 @@ export default function Sidebar() {
           ) : (
             <>
               <div className="pap-login-title">You're logged in</div>
-              <div className="pap-login-sub">Access Profile</div>
+              <div className="pap-login-sub">
+                {user?.role === 'admin' ? 'Admin' : 'User'} • {user?.name || user?.email}
+              </div>
               <button className="pap-login-btn" onClick={() => { logout(); closeMobileMenu(); }}>LOGOUT</button>
             </>
           )}
@@ -116,4 +117,6 @@ export default function Sidebar() {
       </aside>
     </>
   );
-}
+};
+
+export default Sidebar;

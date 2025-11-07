@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Flag, Globe, Link2, Plus, Check, X, Edit, Trash2, Search } from 'lucide-react';
+import { useAuth } from '../auth/AuthContext';
 
 const API_BASE = "http://localhost:4000";
 
 export default function Admin() {
+  const { authHeaders } = useAuth(); // Get auth headers
+  
   const [activeTab, setActiveTab] = useState('flagged');
   const [flaggedRecipes, setFlaggedRecipes] = useState([]);
   const [culturalRecipes, setCulturalRecipes] = useState([]);
   const [allRecipes, setAllRecipes] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   
   // Cultural Explorer States
   const [editingCultural, setEditingCultural] = useState(null);
@@ -24,67 +29,114 @@ export default function Admin() {
   const [linkingRecipe, setLinkingRecipe] = useState(null);
   const [selectedRecipes, setSelectedRecipes] = useState([]);
 
-  // Fetch data
-  useEffect(() => {
-    fetchFlaggedRecipes();
-    fetchCulturalRecipes();
-    fetchAllRecipes();
-  }, []);
-
-  const fetchFlaggedRecipes = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/admin/flagged-recipes`);
-      const data = await res.json();
-      if (res.ok) setFlaggedRecipes(data.recipes || []);
-    } catch (e) {
-      console.error('Error fetching flagged recipes:', e);
-    }
+  // Fetch data on mount
+useEffect(() => {
+  const fetchData = async () => {
+    await fetchFlaggedRecipes();
+    await fetchCulturalRecipes();
+    await fetchAllRecipes();
   };
+  fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, []); // Only run on mount
 
-  const fetchCulturalRecipes = async () => {
+  const fetchFlaggedRecipes = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/cultural-recipes`);
+      setLoading(true);
+      setError(null);
+      const res = await fetch(`${API_BASE}/api/admin/flagged-recipes`, {
+        headers: authHeaders()
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        setFlaggedRecipes(data.recipes || []);
+      } else {
+        setError(data.error || 'Failed to fetch flagged recipes');
+        console.error('Error fetching flagged recipes:', data);
+      }
+    } catch (e) {
+      setError('Failed to connect to server');
+      console.error('Error fetching flagged recipes:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [authHeaders]);
+
+  const fetchCulturalRecipes = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/cultural-recipes`, {
+        headers: authHeaders()
+      });
       const data = await res.json();
       if (res.ok) setCulturalRecipes(data.recipes || []);
     } catch (e) {
       console.error('Error fetching cultural recipes:', e);
     }
-  };
+  }, [authHeaders]);
 
-  const fetchAllRecipes = async () => {
+  const fetchAllRecipes = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/recipes?limit=100`);
+      const res = await fetch(`${API_BASE}/api/recipes?limit=100`, {
+        headers: authHeaders()
+      });
       const data = await res.json();
       if (res.ok) setAllRecipes(data.items || []);
     } catch (e) {
       console.error('Error fetching all recipes:', e);
     }
-  };
+  }, [authHeaders]);
+    useEffect(() => {
+    fetchFlaggedRecipes();
+    fetchCulturalRecipes();
+    fetchAllRecipes();
+  }, [fetchFlaggedRecipes, fetchCulturalRecipes, fetchAllRecipes]);
+
 
   // Flagged Recipe Actions
   const handleApprove = async (recipeId) => {
+    if (!window.confirm('Approve this recipe? It will be unmarked as flagged.')) return;
+    
     try {
       const res = await fetch(`${API_BASE}/api/admin/approve-recipe/${recipeId}`, {
-        method: 'POST'
+        method: 'POST',
+        headers: authHeaders()
       });
+      
+      const data = await res.json();
+      
       if (res.ok) {
         setFlaggedRecipes(prev => prev.filter(r => r._id !== recipeId));
+        alert('Recipe approved successfully!');
+      } else {
+        alert(data.error || 'Failed to approve recipe');
       }
     } catch (e) {
       console.error('Error approving recipe:', e);
+      alert('Failed to approve recipe. Please try again.');
     }
   };
 
   const handleReject = async (recipeId) => {
+    if (!window.confirm('Reject this recipe? It will be removed from public view.')) return;
+    
     try {
       const res = await fetch(`${API_BASE}/api/admin/reject-recipe/${recipeId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: authHeaders()
       });
+      
+      const data = await res.json();
+      
       if (res.ok) {
         setFlaggedRecipes(prev => prev.filter(r => r._id !== recipeId));
+        alert('Recipe rejected and removed successfully!');
+      } else {
+        alert(data.error || 'Failed to reject recipe');
       }
     } catch (e) {
       console.error('Error rejecting recipe:', e);
+      alert('Failed to reject recipe. Please try again.');
     }
   };
 
@@ -98,7 +150,10 @@ export default function Admin() {
       
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders()
+        },
         body: JSON.stringify(culturalForm)
       });
 
@@ -107,21 +162,34 @@ export default function Admin() {
         setShowAddCultural(false);
         setEditingCultural(null);
         setCulturalForm({ title: '', description: '', culture: '', linkedRecipeIds: [] });
+        alert(editingCultural ? 'Cultural recipe updated!' : 'Cultural recipe created!');
+      } else {
+        alert('Failed to save cultural recipe');
       }
     } catch (e) {
       console.error('Error saving cultural recipe:', e);
+      alert('Failed to save cultural recipe. Please try again.');
     }
   };
 
   const handleDeleteCultural = async (id) => {
     if (!window.confirm('Delete this cultural recipe?')) return;
+    
     try {
       const res = await fetch(`${API_BASE}/api/cultural-recipes/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: authHeaders()
       });
-      if (res.ok) fetchCulturalRecipes();
+      
+      if (res.ok) {
+        fetchCulturalRecipes();
+        alert('Cultural recipe deleted!');
+      } else {
+        alert('Failed to delete cultural recipe');
+      }
     } catch (e) {
       console.error('Error deleting cultural recipe:', e);
+      alert('Failed to delete. Please try again.');
     }
   };
 
@@ -141,16 +209,24 @@ export default function Admin() {
     try {
       const res = await fetch(`${API_BASE}/api/cultural-recipes/${culturalId}/link`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders()
+        },
         body: JSON.stringify({ recipeIds: selectedRecipes })
       });
+      
       if (res.ok) {
         fetchCulturalRecipes();
         setLinkingRecipe(null);
         setSelectedRecipes([]);
+        alert('Recipes linked successfully!');
+      } else {
+        alert('Failed to link recipes');
       }
     } catch (e) {
       console.error('Error linking recipes:', e);
+      alert('Failed to link recipes. Please try again.');
     }
   };
 
@@ -213,6 +289,12 @@ export default function Admin() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {error && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
+
         {activeTab === 'flagged' && (
           <div>
             <div className="mb-6">
@@ -220,15 +302,21 @@ export default function Admin() {
               <p className="text-gray-600">Review and approve or reject flagged content</p>
             </div>
 
-            {flaggedRecipes.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-yellow-400"></div>
+                <p className="mt-4 text-gray-600">Loading flagged recipes...</p>
+              </div>
+            ) : flaggedRecipes.length === 0 ? (
               <div className="bg-white rounded-2xl p-12 text-center shadow-sm">
                 <Flag className="w-16 h-16 mx-auto text-gray-300 mb-4" />
                 <p className="text-gray-500 text-lg">No flagged recipes to review</p>
+                <p className="text-gray-400 text-sm mt-2">All clear! 🎉</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {flaggedRecipes.map(recipe => (
-                  <div key={recipe._id} className="bg-white rounded-2xl shadow-sm overflow-hidden">
+                  <div key={recipe._id} className="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition">
                     <div className="flex flex-col md:flex-row">
                       <img
                         src={recipe.image || 'https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=400'}
@@ -240,13 +328,18 @@ export default function Admin() {
                           <div>
                             <h3 className="text-xl font-bold text-gray-800 mb-1">{recipe.title}</h3>
                             <p className="text-sm text-gray-600">By {recipe.author || 'Anonymous'}</p>
+                            {recipe.flaggedAt && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Reported on {new Date(recipe.flaggedAt).toLocaleDateString()}
+                              </p>
+                            )}
                           </div>
                           <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-medium">
                             Flagged
                           </span>
                         </div>
                         
-                        <p className="text-gray-700 mb-4">{recipe.description}</p>
+                        <p className="text-gray-700 mb-4 line-clamp-2">{recipe.description}</p>
                         
                         {recipe.tags && recipe.tags.length > 0 && (
                           <div className="flex flex-wrap gap-2 mb-4">
@@ -261,17 +354,17 @@ export default function Admin() {
                         <div className="flex gap-3">
                           <button
                             onClick={() => handleApprove(recipe._id)}
-                            className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-3 rounded-xl transition flex items-center justify-center gap-2"
+                            className="flex-1 bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-sm"
                           >
                             <Check className="w-5 h-5" />
                             Approve
                           </button>
                           <button
                             onClick={() => handleReject(recipe._id)}
-                            className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-3 rounded-xl transition flex items-center justify-center gap-2"
+                            className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold px-6 py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-sm"
                           >
                             <X className="w-5 h-5" />
-                            Reject
+                            Reject & Remove
                           </button>
                         </div>
                       </div>
