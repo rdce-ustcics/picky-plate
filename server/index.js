@@ -5,10 +5,14 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
 
+const http = require('http');
+const { Server } = require('socket.io');
+
 const connectDB = require('./db/mongo');
 const recipesRoutes = require('./routes/recipes');
 
 const app = express();
+const server = http.createServer(app); // <-- use http server so socket.io can attach
 
 // ──────────────────────────────────────────────────────────────
 // CORS — allow multiple origins + requested headers/methods
@@ -16,6 +20,14 @@ const app = express();
 const allowed = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://127.0.0.1:3000')
   .split(',')
   .map(s => s.trim());
+
+// Socket.IO CORS needs a plain array (matches your manual CORS above)
+const io = new Server(server, {
+  cors: { origin: allowed, credentials: true },
+});
+
+// Mount Barkada Vote realtime handlers
+require('./realtime/barkada')(io);
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
@@ -93,7 +105,9 @@ connectDB()
     app.use('/api/admin', require('./routes/admin'));
 
     const port = process.env.PORT || 4000;
-    app.listen(port, () => console.log(`🚀 API running on http://localhost:${port}`));
+    server.listen(port, () =>
+  console.log(`🚀 API + Socket.IO running on http://localhost:${port}`) 
+    );
   })
   .catch((err) => {
     console.error('❌ Failed to connect MongoDB:', err);
