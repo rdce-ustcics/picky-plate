@@ -1,10 +1,13 @@
 :root{
-  --pap-yellow:#E5B73B;
-  --pap-yellow-2:#f1c85d;
-  --pap-lavender:#9B92A6;
+  --pap-yellow:#FFC42D;
+  --pap-yellow-hover:#FFD45E;
+  --pap-yellow-active:#FFB800;
+  --pap-orange:#FF8A3D;
   --pap-text:#2E2E2E;
   --pap-muted:#7e7e7e;
   --pap-white:#ffffff;
+  --pap-bg-light:#fceece;
+  --pap-shadow: 0 4px 20px rgba(255, 196, 45, 0.15);
 
   --sidebar-closed:84px;
   --sidebar-open:290px;
@@ -16,24 +19,24 @@
   top: 16px;
   left: 16px;
   z-index: 1001;
-  background: var(--pap-yellow);
+  background: linear-gradient(135deg, var(--pap-yellow) 0%, var(--pap-orange) 100%);
   border: none;
-  border-radius: 12px;
+  border-radius: 16px;
   padding: 12px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 6px 20px rgba(255, 138, 61, 0.4);
   color: white;
-  transition: all 0.2s;
-  display: none; /* Hidden by default on desktop */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: none;
 }
 
 .mobile-menu-btn:hover {
-  background: var(--pap-yellow-2);
-  transform: scale(1.05);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 24px rgba(255, 138, 61, 0.5);
 }
 
 .mobile-menu-btn:active {
-  transform: scale(0.95);
+  transform: translateY(0) scale(0.98);
 }
 
 /* Mobile Overlay */
@@ -43,7 +46,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(46, 46, 46, 0.6);
+  backdrop-filter: blur(4px);
   z-index: 999;
   animation: fadeIn 0.3s;
 }
@@ -59,31 +63,38 @@
   top: 0;
   height: 100vh;
   width: var(--sidebar-closed);
-  background: var(--pap-white);
-  border-right: 1px solid #eee;
-  box-shadow: 0 0 30px rgba(0,0,0,.04);
-  padding: 22px 14px;
+  background: linear-gradient(180deg, #FFFBF0 0%, #FFFFFF 100%);
+  border-right: 2px solid rgba(255, 196, 45, 0.2);
+  box-shadow: 4px 0 24px rgba(255, 196, 45, 0.08);
+  padding: 24px 14px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  transition: width .2s ease;
+  gap: 16px;
+  transition: width .3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   z-index: 100;
 }
 
 .pap-sidebar:hover{ 
-  width: var(--sidebar-open); 
+  width: var(--sidebar-open);
+  box-shadow: 4px 0 32px rgba(255, 196, 45, 0.12);
 }
 
 /* Logo Container */
 .pap-logo-container{
   text-decoration: none;
-  padding: 0 8px;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
   position: relative;
   height: 56px;
   overflow: visible;
+  border-radius: 16px;
+  transition: background 0.3s;
+}
+
+.pap-logo-container:hover {
+  background: rgba(255, 196, 45, 0.1);
 }
 
 /* Logo Image - visible when collapsed */
@@ -92,7 +103,7 @@
   align-items: center;
   justify-content: center;
   opacity: 1;
-  transition: opacity .2s ease;
+  transition: opacity .3s ease;
   position: absolute;
   left: 0;
   right: 0;
@@ -107,14 +118,14 @@
 /* Text Logo - hidden when collapsed */
 .pap-logo-text{
   font-weight: 800;
-  font-size: 1.55rem;
-  color: #111;
-  letter-spacing: .2px;
+  font-size: 1.6rem;
+  color: var(--pap-text);
+  letter-spacing: -0.5px;
   display: flex;
   align-items: baseline;
   gap: 2px;
   opacity: 0;
-  transition: opacity .2s ease;
+  transition: opacity .3s ease;
   white-space: nowrap;
 }
 
@@ -129,21 +140,25 @@
 }
 
 .pap-logo-a{ 
-  color: var(--pap-yellow); 
+  color: var(--pap-yellow);
+  text-shadow: 0 2px 4px rgba(255, 196, 45, 0.2);
 }
 
 .pap-dot{ 
-  color: #111; 
+  color: var(--pap-orange);
+  font-size: 2rem;
+  line-height: 0.8;
 }
 
 /* Nav container */
 .pap-nav{
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin-top: 8px;
   flex: 1;
   overflow-y: auto;
+  padding-right: 4px;
 }
 
 /* Base links */
@@ -151,49 +166,82 @@
 .pap-contact-pill{
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 12px;
-  border-radius: 14px;
+  gap: 14px;
+  padding: 14px 14px;
+  border-radius: 16px;
   text-decoration: none;
-  color: #3d3d3d;
+  color: var(--pap-text);
   font-weight: 600;
+  font-size: 0.95rem;
   white-space: nowrap;
   background: transparent;
   box-shadow: none;
-  transition: background 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.pap-nav-item::before,
+.pap-contact-pill::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--pap-yellow);
+  transform: scaleY(0);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0 4px 4px 0;
 }
 
 .pap-nav-item .pap-icon,
 .pap-contact-pill .pap-icon{
   font-size: 22px;
   min-width: 28px;
-  color: var(--pap-lavender);
+  color: var(--pap-orange);
   flex-shrink: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .pap-nav-item:hover,
 .pap-contact-pill:hover{
-  background: #f5f5f5;
+  background: rgba(255, 196, 45, 0.15);
+  transform: translateX(4px);
+}
+
+.pap-nav-item:hover .pap-icon,
+.pap-contact-pill:hover .pap-icon {
+  transform: scale(1.1);
+  color: var(--pap-yellow-active);
 }
 
 /* Active state */
 .pap-nav-item.is-active,
 .pap-contact-pill.is-active{
-  background: var(--pap-yellow);
-  color: #222;
-  box-shadow: 0 10px 22px rgba(229,183,59,.25);
+  background: linear-gradient(135deg, var(--pap-yellow) 0%, var(--pap-yellow-hover) 100%);
+  color: var(--pap-text);
+  box-shadow: 0 8px 24px rgba(255, 196, 45, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  transform: translateX(4px);
+}
+
+.pap-nav-item.is-active::before,
+.pap-contact-pill.is-active::before {
+  transform: scaleY(1);
+  background: var(--pap-orange);
 }
 
 .pap-nav-item.is-active .pap-icon,
 .pap-contact-pill.is-active .pap-icon{
-  color: #222;
+  color: var(--pap-text);
+  transform: scale(1.15);
 }
 
 /* Label reveal on hover */
 .pap-label{
   opacity: 0;
-  transform: translateX(-6px);
-  transition: opacity .15s ease, transform .15s ease;
+  transform: translateX(-8px);
+  transition: opacity .25s ease, transform .25s ease;
   pointer-events: none;
 }
 
@@ -209,69 +257,104 @@
 }
 
 .pap-sidebar:not(:hover) .pap-contact-pill{
-  padding: 12px;
-  border-radius: 14px;
+  padding: 14px;
+  border-radius: 16px;
 }
 
 /* Login card */
 .pap-login-card{
   margin-top: auto;
-  background: radial-gradient(120px 120px at 80% 80%, rgba(0,0,0,.06), transparent 60%), var(--pap-yellow);
-  border-radius: 18px;
-  padding: 16px;
-  box-shadow: 0 20px 40px rgba(229,183,59,.25);
+  background: linear-gradient(135deg, var(--pap-yellow) 0%, var(--pap-orange) 100%);
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 12px 32px rgba(255, 138, 61, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.3);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  position: relative;
+  overflow: hidden;
+}
+
+.pap-login-card::before {
+  content: '🍽️';
+  position: absolute;
+  font-size: 80px;
+  right: -10px;
+  bottom: -15px;
+  opacity: 0.2;
+  transform: rotate(-15deg);
 }
 
 .pap-login-title{
-  font-weight: 900;
-  color: #2a2a2a;
-  font-size: 1rem;
+  font-weight: 800;
+  color: var(--pap-text);
+  font-size: 1.05rem;
+  position: relative;
+  z-index: 1;
 }
 
 .pap-login-sub{
-  font-weight: 800;
-  font-size: 1rem;
-  margin-bottom: 14px;
-  color: #2a2a2a;
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin-bottom: 16px;
+  color: var(--pap-text);
+  opacity: 0.9;
+  position: relative;
+  z-index: 1;
 }
 
 .pap-login-btn{
-  padding: 10px 16px;
-  border-radius: 10px;
-  background: #fff;
-  font-weight: 900;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: var(--pap-white);
+  font-weight: 800;
+  font-size: 0.9rem;
   text-decoration: none;
-  color: #1f1f1f;
-  box-shadow: 0 6px 16px rgba(0,0,0,.12);
+  color: var(--pap-text);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border: none;
   cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1;
+  letter-spacing: 0.5px;
+}
+
+.pap-login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  background: #FFF;
+}
+
+.pap-login-btn:active {
+  transform: translateY(0);
 }
 
 /* Scrollbar */
 .pap-nav::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
 }
 
 .pap-nav::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(255, 196, 45, 0.1);
+  border-radius: 10px;
 }
 
 .pap-nav::-webkit-scrollbar-thumb {
-  background: #ddd;
-  border-radius: 2px;
+  background: linear-gradient(180deg, var(--pap-yellow) 0%, var(--pap-orange) 100%);
+  border-radius: 10px;
+}
+
+.pap-nav::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--pap-yellow-hover) 0%, var(--pap-orange) 100%);
 }
 
 /* ========== MOBILE RESPONSIVE (TABLETS & PHONES) ========== */
 @media (max-width: 900px){
-  /* Show mobile menu button */
   .mobile-menu-btn {
     display: block !important;
   }
 
-  /* Hide sidebar by default on mobile */
   .pap-sidebar {
     position: fixed;
     top: 0;
@@ -280,17 +363,15 @@
     width: 85vw;
     max-width: 320px;
     z-index: 1000;
-    transition: left 0.3s ease;
+    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: none;
   }
 
-  /* Show sidebar when mobile-open class is added */
   .pap-sidebar.mobile-open {
     left: 0;
-    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 8px 0 32px rgba(255, 138, 61, 0.25);
   }
 
-  /* Always show full sidebar content on mobile (no collapse) */
   .pap-sidebar .pap-label {
     opacity: 1 !important;
     transform: none !important;
@@ -310,13 +391,22 @@
   }
 
   .pap-sidebar .pap-contact-pill {
-    padding: 12px !important;
+    padding: 14px !important;
   }
 
-  /* Remove hover effects on mobile */
   .pap-sidebar:hover {
     width: 85vw;
     max-width: 320px;
+  }
+
+  .pap-nav-item:hover,
+  .pap-contact-pill:hover {
+    transform: translateX(2px);
+  }
+
+  .pap-nav-item.is-active,
+  .pap-contact-pill.is-active {
+    transform: translateX(2px);
   }
 }
 
@@ -326,20 +416,52 @@
     top: 12px;
     left: 12px;
     padding: 10px;
+    border-radius: 14px;
   }
 
   .pap-sidebar {
     width: 90vw;
     max-width: 280px;
+    padding: 20px 12px;
   }
 
   .pap-sidebar.mobile-open {
     width: 90vw;
     max-width: 280px;
   }
+
+  .pap-logo-text {
+    font-size: 1.4rem;
+  }
+
+  .pap-nav-item,
+  .pap-contact-pill {
+    padding: 12px;
+    font-size: 0.9rem;
+  }
+
+  .pap-login-card {
+    padding: 16px;
+  }
 }
 
 /* Prevent body scroll when mobile menu is open */
 body.mobile-menu-open {
   overflow: hidden;
+}
+
+/* Add smooth entrance animation */
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.pap-sidebar.mobile-open {
+  animation: slideIn 0.4s cu  bic-bezier(0.4, 0, 0.2, 1);
 }
