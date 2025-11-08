@@ -99,8 +99,9 @@ connectDB()
     app.use('/api/mealplans',require('./routes/mealPlans'));
     app.use('/api/ai',       require('./routes/ai'));
     app.use('/api/preferences', require('./routes/preferences'));
+    app.use('/api/cultural-recipes', require('./routes/culturalRecipes')); // Filipino cultural recipes
 
-    
+
     // 🔑 admin
     app.use('/api/admin', require('./routes/admin'));
 

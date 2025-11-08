@@ -25,7 +25,8 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin')); // ⬅️ mount admin routes
-
+app.use('/api/recipes', require('./routes/recipes'));
+app.use('/api/cultural-recipes', require('./routes/culturalRecipes'));
 
 const debugRoutes = require('./routes/debug');
 app.use('/api/debug', debugRoutes);

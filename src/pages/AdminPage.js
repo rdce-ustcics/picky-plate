@@ -323,11 +323,21 @@ export default function Admin() {
           </>
         )}
 
-        {/* CULTURAL TAB (left minimal; keep your existing logic if needed) */}
+        {/* CULTURAL TAB */}
         {activeTab === "cultural" && (
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Cultural Explorer</h2>
-            <p className="text-gray-500">Your cultural tools live here. (Tab kept minimal as requested.)</p>
+          <div className="bg-white rounded-2xl p-12 text-center shadow-sm">
+            <Globe className="w-20 h-20 mx-auto text-yellow-500 mb-4" />
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">Cultural Recipe Management</h2>
+            <p className="text-gray-600 mb-6 max-w-lg mx-auto">
+              Cultural recipes are now managed directly on the Cultural Explorer page.
+              Visit the page to add, edit, or delete Filipino cultural recipes.
+            </p>
+            <a
+              href="/explorer"
+              className="inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-6 py-3 rounded-full shadow-lg transition transform hover:scale-105"
+            >
+              Go to Cultural Explorer
+            </a>
           </div>
         )}
       </div>

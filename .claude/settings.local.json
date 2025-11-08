@@ -6,7 +6,17 @@
       "Bash(npm install:*)",
       "WebSearch",
       "Bash(node fetch-osm-restaurants.js:*)",
-      "Bash(node merge-all-sources.js:*)"
+      "Bash(node merge-all-sources.js:*)",
+      "Bash(curl:*)",
+      "Bash(node scripts/seedCulturalRecipes.js:*)",
+      "Bash(node -e:*)",
+      "Bash(npm start)",
+      "Bash(python -m json.tool:*)",
+      "Bash(taskkill:*)",
+      "Bash(node scripts/verifyCulturalRecipes.js:*)",
+      "Bash(node scripts/checkCurrentStructure.js:*)",
+      "Bash(node scripts/updateRecipesStructure.js:*)",
+      "Bash(node scripts/seedComprehensiveCulturalRecipes.js:*)"
     ],
     "deny": [],
     "ask": []
