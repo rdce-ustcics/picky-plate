@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { LikePref, DislikePref, DietPref, AllergenPref } = require('../models/prefs');
+const { LikePref, DislikePref, DietPref, AllergenPref, FavoritePref } = require('../models/prefs');
+const KiddieMeal = require('../models/kiddieMeal');
 
 const getUserId = (req) =>
   req.header('x-user-id') || req.query.userId || (req.body && req.body.userId) || null;
@@ -10,20 +11,23 @@ router.get('/me', async (req, res) => {
     const userId = getUserId(req);
     if (!userId) return res.status(400).json({ error: 'userId required' });
 
-    const [likes, dislikes, diets, allergens] = await Promise.all([
+    const [likes, dislikes, diets, allergens, favorites, kiddieMeal] = await Promise.all([
       LikePref.findOne({ userId }).lean(),
       DislikePref.findOne({ userId }).lean(),
       DietPref.findOne({ userId }).lean(),
       AllergenPref.findOne({ userId }).lean(),
+      FavoritePref.findOne({ userId }).lean(),
+      KiddieMeal.findOne({ userId }).lean(),
     ]);
 
     res.json({
       userId,
       likes: likes?.items ?? [],
       dislikes: dislikes?.items ?? [],
-      favorites: [],                // keep key for UI compatibility
+      favorites: favorites?.items ?? [],
       diets: diets?.items ?? [],
       allergens: allergens?.items ?? [],
+      kiddieMeal: kiddieMeal?.enabled ?? false,
       onboardingDone: Boolean(likes || dislikes || diets || allergens),
     });
   } catch (e) {
@@ -49,22 +53,38 @@ router.put('/me', async (req, res) => {
     if ('dislikes' in req.body)  jobs.push(upsert(DislikePref, req.body.dislikes));
     if ('diets' in req.body)     jobs.push(upsert(DietPref, req.body.diets));
     if ('allergens' in req.body) jobs.push(upsert(AllergenPref, req.body.allergens));
+    if ('favorites' in req.body) jobs.push(upsert(FavoritePref, req.body.favorites));
+
+    // Handle kiddieMeal separately as it's a boolean, not an array
+    if ('kiddieMeal' in req.body) {
+      jobs.push(
+        KiddieMeal.findOneAndUpdate(
+          { userId },
+          { $set: { enabled: req.body.kiddieMeal === true } },
+          { new: true, upsert: true, setDefaultsOnInsert: true }
+        ).lean()
+      );
+    }
+
     await Promise.all(jobs);
 
-    const [likes, dislikes, diets, allergens] = await Promise.all([
+    const [likes, dislikes, diets, allergens, favorites, kiddieMeal] = await Promise.all([
       LikePref.findOne({ userId }).lean(),
       DislikePref.findOne({ userId }).lean(),
       DietPref.findOne({ userId }).lean(),
       AllergenPref.findOne({ userId }).lean(),
+      FavoritePref.findOne({ userId }).lean(),
+      KiddieMeal.findOne({ userId }).lean(),
     ]);
 
     res.json({
       userId,
       likes: likes?.items ?? [],
       dislikes: dislikes?.items ?? [],
-      favorites: [],
+      favorites: favorites?.items ?? [],
       diets: diets?.items ?? [],
       allergens: allergens?.items ?? [],
+      kiddieMeal: kiddieMeal?.enabled ?? false,
       onboardingDone: true,
     });
   } catch (e) {

@@ -16,7 +16,18 @@
       "Bash(node scripts/verifyCulturalRecipes.js:*)",
       "Bash(node scripts/checkCurrentStructure.js:*)",
       "Bash(node scripts/updateRecipesStructure.js:*)",
-      "Bash(node scripts/seedComprehensiveCulturalRecipes.js:*)"
+      "Bash(node scripts/seedComprehensiveCulturalRecipes.js:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(C:Reactpappy2picky-platesrcpagesForgotPassword.js)",
+      "Bash(npm run server:*)",
+      "Bash(cmd //c \"taskkill /PID 22460 /F\")",
+      "Bash(npm run dev:*)",
+      "Bash(cmd //c \"taskkill /PID 16044 /F\")",
+      "Bash(cmd //c \"taskkill /PID 38028 /F\")",
+      "Bash(cmd //c \"taskkill /PID 23504 /F\")",
+      "Bash(node:*)",
+      "Bash(cmd //c \"taskkill /PID 28124 /F && taskkill /PID 30088 /F\")"
     ],
     "deny": [],
     "ask": []

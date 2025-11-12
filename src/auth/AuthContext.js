@@ -100,8 +100,101 @@ export const AuthProvider = ({ children }) => {
   // Check if the user is an admin (based on their role)
   const isAdmin = user?.role === 'admin';
 
+  // Password Reset Functions
+  const requestResetOtp = async (email) => {
+    try {
+      const res = await fetch(`${API_URL}/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        return { success: false, message: data?.message || 'Failed to send OTP' };
+      }
+
+      return {
+        success: true,
+        message: data.message,
+        length: data.length,
+        ttlMin: data.ttlMin,
+        cooldownSec: data.cooldownSec
+      };
+    } catch (e) {
+      console.error('Request OTP error:', e);
+      return { success: false, message: 'Unable to connect to server' };
+    }
+  };
+
+  const verifyResetOtp = async (email, otp) => {
+    try {
+      const res = await fetch(`${API_URL}/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp, purpose: 'password-reset' }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        return { success: false, message: data?.message || 'Invalid OTP' };
+      }
+
+      return {
+        success: true,
+        message: data.message,
+        resetToken: otp, // Use OTP as token for password reset
+        allowPasswordReset: data.allowPasswordReset
+      };
+    } catch (e) {
+      console.error('Verify OTP error:', e);
+      return { success: false, message: 'Unable to connect to server' };
+    }
+  };
+
+  const changePasswordWithToken = async (token, newPassword) => {
+    try {
+      // Extract email from localStorage (should be set during forgot password flow)
+      const email = localStorage.getItem('pap:resetEmail') || '';
+
+      const res = await fetch(`${API_URL}/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: newPassword, otp: token }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        return { success: false, message: data?.message || 'Failed to reset password' };
+      }
+
+      // Clear reset email from localStorage
+      try {
+        localStorage.removeItem('pap:resetEmail');
+      } catch {}
+
+      return { success: true, message: data.message };
+    } catch (e) {
+      console.error('Reset password error:', e);
+      return { success: false, message: 'Unable to connect to server' };
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, signup, logout, isAuthenticated, isAdmin, loading, authHeaders }}>
+    <AuthContext.Provider value={{
+      user,
+      token,
+      login,
+      signup,
+      logout,
+      isAuthenticated,
+      isAdmin,
+      loading,
+      authHeaders,
+      requestResetOtp,
+      verifyResetOtp,
+      changePasswordWithToken
+    }}>
       {loading ? <div style={{display:'flex', justifyContent:'center', alignItems:'center', height:'100vh'}}>Loading...</div> : children}
     </AuthContext.Provider>
   );

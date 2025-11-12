@@ -14,4 +14,5 @@ module.exports = {
   DislikePref: makePrefModel('dislikes'),
   DietPref: makePrefModel('diets'),
   AllergenPref: makePrefModel('allergens'),
+  FavoritePref: makePrefModel('favorites'), // Added favorites model
 };

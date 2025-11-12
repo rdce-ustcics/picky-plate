@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import './Profile.css';
 
 export default function Profile() {
+  // API base configuration (matching Dashboard)
+  const API = process.env.REACT_APP_API_BASE || "";
+
   // ---- Identify active user ----
   const activeUserId = useMemo(() => {
     try {
@@ -39,24 +42,31 @@ export default function Profile() {
     }
   });
 
-  // ---- Option sets ----
+  // ---- Option sets (matching Dashboard.js exactly) ----
   const cuisineOptions   = ['filipino','japanese','italian','korean','chinese','american','thai','mexican'];
   const dislikeOptions   = ['seafood','spicy','vegetables','meat','dairy','gluten','nuts','eggs'];
-  const favoriteOptions  = ['steak','sushi','pizza','burger','pasta','ramen','tacos','desserts'];
   const allergenOptions  = ['peanuts','tree-nuts','eggs','dairy','gluten','soy','fish','shellfish'];
   const dietOptions      = ['omnivore','vegetarian','vegan','pescetarian','keto','low-carb','halal','kosher'];
+  // Note: favorites are not in Dashboard modal, keeping for extra feature
+  const favoriteOptions  = ['steak','sushi','pizza','burger','pasta','ramen','tacos','desserts'];
 
-  // ---- Label + emoji maps ----
+  // ---- Label + emoji maps (matching Dashboard labels) ----
   const pretty = {
+    // Cuisines
     filipino:'Filipino 🇵🇭', japanese:'Japanese 🍜', italian:'Italian 🍝', korean:'Korean 🍲',
     chinese:'Chinese 🥟', american:'American 🍔', thai:'Thai 🥘', mexican:'Mexican 🌮',
-    seafood:'Seafood 🦞', spicy:'Spicy 🌶️', vegetables:'Vegetables 🥦', meat:'Meat 🥩',
-    dairy:'Dairy 🧀', gluten:'Gluten/Wheat 🌾', nuts:'Tree Nuts/Peanuts 🥜', 'tree-nuts':'Tree Nuts 🥜',
-    eggs:'Eggs 🥚', soy:'Soy 🫘', fish:'Fish 🐟', shellfish:'Shellfish 🦐',
-    steak:'Steak 🥩', sushi:'Sushi 🍣', pizza:'Pizza 🍕', burger:'Burger 🍔',
-    pasta:'Pasta 🍝', ramen:'Ramen 🍜', tacos:'Tacos 🌮', desserts:'Desserts 🍰',
+    // Dislikes
+    seafood:'Seafood 🦞', spicy:'Spicy Food 🌶️', vegetables:'Vegetables 🥦', meat:'Meat 🥩',
+    dairy:'Dairy 🧀', gluten:'Gluten 🌾', nuts:'Tree Nuts/Peanuts 🥜', eggs:'Eggs 🥚',
+    // Allergens
+    peanuts:'Peanuts 🥜', 'tree-nuts':'Tree Nuts 🌰', soy:'Soy 🫘', fish:'Fish 🐟',
+    shellfish:'Shellfish 🦐',
+    // Diet types
     omnivore:'Omnivore 🍽️', vegetarian:'Vegetarian 🥗', vegan:'Vegan 🌱', pescetarian:'Pescetarian 🐟',
-    keto:'Keto 🥓', 'low-carb':'Low Carb 📉', halal:'Halal ☪️', kosher:'Kosher ✡️'
+    keto:'Keto 🥓', 'low-carb':'Low Carb 📉', halal:'Halal ☪️', kosher:'Kosher ✡️',
+    // Favorites (extra feature)
+    steak:'Steak 🥩', sushi:'Sushi 🍣', pizza:'Pizza 🍕', burger:'Burger 🍔',
+    pasta:'Pasta 🍝', ramen:'Ramen 🍜', tacos:'Tacos 🌮', desserts:'Desserts 🍰'
   };
   const display = (id) => pretty[id] || id;
 
@@ -66,6 +76,7 @@ export default function Profile() {
   const [favorites, setFavorites] = useState([]);
   const [allergens, setAllergens] = useState([]);
   const [diets, setDiets] = useState([]);
+  const [kiddieMeal, setKiddieMeal] = useState(false);
 
   // ---- UI state ----
   const [loading, setLoading] = useState(true);
@@ -88,7 +99,7 @@ export default function Profile() {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch('/api/preferences/me', {
+        const res = await fetch(`${API}/api/preferences/me`, {
           headers: { 'x-user-id': activeUserId }
         });
         if (!res.ok) throw new Error('Failed to load preferences');
@@ -100,6 +111,7 @@ export default function Profile() {
         setFavorites(Array.isArray(data.favorites) ? data.favorites : []);
         setAllergens(Array.isArray(data.allergens) ? data.allergens : []);
         setDiets(Array.isArray(data.diets) ? data.diets : []);
+        setKiddieMeal(data.kiddieMeal === true);
 
         // If server ever stores name, you could hydrate it here (optional):
         // if (data.profile?.name) setName(data.profile.name);
@@ -140,10 +152,16 @@ export default function Profile() {
       // 1) Save preferences to backend
       const payload = {
         userId: activeUserId,
-        likes, dislikes, favorites, allergens, diets,
+        likes,        // cuisines
+        dislikes,     // foods to avoid
+        diets,        // dietary restrictions
+        allergens,    // allergen restrictions
+        favorites,    // favorite dishes
+        kiddieMeal,   // kiddie meal mode
         onboardingDone: true
       };
-      const res = await fetch('/api/preferences/me', {
+
+      const res = await fetch(`${API}/api/preferences/me`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -294,16 +312,38 @@ export default function Profile() {
             </div>
           </div>
 
+          {/* Special Features */}
+          <div className="special-features-card">
+            <h2>Special Features</h2>
+            <div className="kiddie-meal-toggle">
+              <label className="toggle-container">
+                <input
+                  type="checkbox"
+                  checked={kiddieMeal}
+                  onChange={(e) => setKiddieMeal(e.target.checked)}
+                />
+                <span className="toggle-slider"></span>
+                <span className="toggle-label">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                  Kiddie Meal Mode
+                </span>
+              </label>
+              <p className="feature-description">Enable kid-friendly meal suggestions and portions</p>
+            </div>
+          </div>
+
           {/* Food Preferences */}
           <div className="preferences-card">
             <h2>Food Preferences</h2>
 
-            <div className="preferences-list">
-              {allSelectedPreferences.length === 0 ? (
-                <p className="no-preferences">No preferences selected yet</p>
-              ) : (
-                allSelectedPreferences.map((pref) => (
-                  <div key={pref} className="preference-pill">
+            {/* Cuisines Section */}
+            <div className="preference-section">
+              <h3 className="section-title">🍽️ Favorite Cuisines</h3>
+              <div className="preference-pills">
+                {likes.map((pref) => (
+                  <div key={pref} className="preference-pill cuisine-pill">
                     <span>{display(pref)}</span>
                     <button
                       className="remove-pref-btn"
@@ -313,48 +353,223 @@ export default function Profile() {
                       ×
                     </button>
                   </div>
-                ))
-              )}
+                ))}
+                {cuisineOptions.filter(opt => !likes.includes(opt)).length > 0 && (
+                  <button
+                    className="add-pill-btn"
+                    onClick={() => setShowAddPreferences('cuisine')}
+                    title="Add Cuisine"
+                  >
+                    + Add
+                  </button>
+                )}
+              </div>
             </div>
 
-            <button
-              className="add-preferences-btn"
-              onClick={() => setShowAddPreferences(!showAddPreferences)}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              Add Preferences
-            </button>
-
-            {/* Add Preferences Dropdown */}
-            {showAddPreferences && (
-              <div className="add-preferences-dropdown">
-                <div className="dropdown-header">
-                  <h3>Select Preferences</h3>
+            {/* Dietary Restrictions Section */}
+            <div className="preference-section">
+              <h3 className="section-title">🥗 Dietary Preferences</h3>
+              <div className="preference-pills">
+                {diets.map((pref) => (
+                  <div key={pref} className="preference-pill diet-pill">
+                    <span>{display(pref)}</span>
+                    <button
+                      className="remove-pref-btn"
+                      onClick={() => togglePreference(pref)}
+                      title="Remove"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {dietOptions.filter(opt => !diets.includes(opt)).length > 0 && (
                   <button
-                    className="close-dropdown-btn"
-                    onClick={() => setShowAddPreferences(false)}
+                    className="add-pill-btn"
+                    onClick={() => setShowAddPreferences('diet')}
+                    title="Add Diet"
                   >
-                    ×
+                    + Add
                   </button>
-                </div>
-                <div className="dropdown-options">
-                  {allAvailableOptions
-                    .filter(opt => !allSelectedPreferences.includes(opt))
-                    .map((opt) => (
-                      <button
-                        key={opt}
-                        className="add-option-btn"
-                        onClick={() => {
-                          togglePreference(opt);
-                          setShowAddPreferences(false);
-                        }}
-                      >
-                        {display(opt)}
-                      </button>
-                    ))}
+                )}
+              </div>
+            </div>
+
+            {/* Allergens Section */}
+            <div className="preference-section">
+              <h3 className="section-title">⚠️ Allergens</h3>
+              <div className="preference-pills">
+                {allergens.map((pref) => (
+                  <div key={pref} className="preference-pill allergen-pill">
+                    <span>{display(pref)}</span>
+                    <button
+                      className="remove-pref-btn"
+                      onClick={() => togglePreference(pref)}
+                      title="Remove"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {allergenOptions.filter(opt => !allergens.includes(opt)).length > 0 && (
+                  <button
+                    className="add-pill-btn"
+                    onClick={() => setShowAddPreferences('allergen')}
+                    title="Add Allergen"
+                  >
+                    + Add
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Dislikes Section */}
+            <div className="preference-section">
+              <h3 className="section-title">👎 Dislikes</h3>
+              <div className="preference-pills">
+                {dislikes.map((pref) => (
+                  <div key={pref} className="preference-pill dislike-pill">
+                    <span>{display(pref)}</span>
+                    <button
+                      className="remove-pref-btn"
+                      onClick={() => togglePreference(pref)}
+                      title="Remove"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {dislikeOptions.filter(opt => !dislikes.includes(opt)).length > 0 && (
+                  <button
+                    className="add-pill-btn"
+                    onClick={() => setShowAddPreferences('dislike')}
+                    title="Add Dislike"
+                  >
+                    + Add
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Favorites Section */}
+            <div className="preference-section">
+              <h3 className="section-title">⭐ Favorites</h3>
+              <div className="preference-pills">
+                {favorites.map((pref) => (
+                  <div key={pref} className="preference-pill favorite-pill">
+                    <span>{display(pref)}</span>
+                    <button
+                      className="remove-pref-btn"
+                      onClick={() => togglePreference(pref)}
+                      title="Remove"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {favoriteOptions.filter(opt => !favorites.includes(opt)).length > 0 && (
+                  <button
+                    className="add-pill-btn"
+                    onClick={() => setShowAddPreferences('favorite')}
+                    title="Add Favorite"
+                  >
+                    + Add
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Add Preferences Modal */}
+            {showAddPreferences && (
+              <div className="add-preferences-modal">
+                <div className="modal-backdrop" onClick={() => setShowAddPreferences(false)}></div>
+                <div className="modal-content">
+                  <div className="modal-header">
+                    <h3>
+                      {showAddPreferences === 'cuisine' && '🍽️ Add Cuisine'}
+                      {showAddPreferences === 'diet' && '🥗 Add Dietary Preference'}
+                      {showAddPreferences === 'allergen' && '⚠️ Add Allergen'}
+                      {showAddPreferences === 'dislike' && '👎 Add Dislike'}
+                      {showAddPreferences === 'favorite' && '⭐ Add Favorite'}
+                    </h3>
+                    <button
+                      className="close-modal-btn"
+                      onClick={() => setShowAddPreferences(false)}
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <div className="modal-options">
+                    {showAddPreferences === 'cuisine' && cuisineOptions
+                      .filter(opt => !likes.includes(opt))
+                      .map((opt) => (
+                        <button
+                          key={opt}
+                          className="option-btn"
+                          onClick={() => {
+                            togglePreference(opt);
+                            setShowAddPreferences(false);
+                          }}
+                        >
+                          {display(opt)}
+                        </button>
+                      ))}
+                    {showAddPreferences === 'diet' && dietOptions
+                      .filter(opt => !diets.includes(opt))
+                      .map((opt) => (
+                        <button
+                          key={opt}
+                          className="option-btn"
+                          onClick={() => {
+                            togglePreference(opt);
+                            setShowAddPreferences(false);
+                          }}
+                        >
+                          {display(opt)}
+                        </button>
+                      ))}
+                    {showAddPreferences === 'allergen' && allergenOptions
+                      .filter(opt => !allergens.includes(opt))
+                      .map((opt) => (
+                        <button
+                          key={opt}
+                          className="option-btn"
+                          onClick={() => {
+                            togglePreference(opt);
+                            setShowAddPreferences(false);
+                          }}
+                        >
+                          {display(opt)}
+                        </button>
+                      ))}
+                    {showAddPreferences === 'dislike' && dislikeOptions
+                      .filter(opt => !dislikes.includes(opt))
+                      .map((opt) => (
+                        <button
+                          key={opt}
+                          className="option-btn"
+                          onClick={() => {
+                            togglePreference(opt);
+                            setShowAddPreferences(false);
+                          }}
+                        >
+                          {display(opt)}
+                        </button>
+                      ))}
+                    {showAddPreferences === 'favorite' && favoriteOptions
+                      .filter(opt => !favorites.includes(opt))
+                      .map((opt) => (
+                        <button
+                          key={opt}
+                          className="option-btn"
+                          onClick={() => {
+                            togglePreference(opt);
+                            setShowAddPreferences(false);
+                          }}
+                        >
+                          {display(opt)}
+                        </button>
+                      ))}
+                  </div>
                 </div>
               </div>
             )}

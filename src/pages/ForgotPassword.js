@@ -39,6 +39,12 @@ export default function ForgotPassword() {
     setLoading(false);
 
     if (!res?.success) return setApiError(res?.message || "Failed to send code");
+
+    // Save email for password reset
+    try {
+      localStorage.setItem('pap:resetEmail', email);
+    } catch {}
+
     setOtpLen(Number(res.length || 6));
     setStep(2);
     setSuccess("We sent a code to your email.");
