@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Globe, Clock, TrendingUp, Users, X } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
+import LoadingModal from "../components/LoadingModal";
 
 const API_BASE = "http://localhost:4000";
 
@@ -95,8 +96,11 @@ export default function Admin() {
 
   // -------- render --------
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* HEADER */}
+    <>
+      {loading && <LoadingModal message="Loading review recipes..." />}
+
+      <div className="min-h-screen bg-gray-50">
+        {/* HEADER */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <h1 className="text-4xl font-bold text-gray-800">Admin Dashboard</h1>
@@ -381,6 +385,7 @@ export default function Admin() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

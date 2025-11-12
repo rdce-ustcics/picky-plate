@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import L from "leaflet";
+import LoadingModal from "../components/LoadingModal";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
@@ -682,8 +683,11 @@ export default function RestaurantLocator() {
   };
 
   return (
-    <div className="restaurant-locator">
-      {/* Header */}
+    <>
+      {loading && <LoadingModal message="Loading restaurant data..." />}
+
+      <div className="restaurant-locator">
+        {/* Header */}
       <header className="app-header">
         <div className="header-content">
           <div className="brand">
@@ -1049,6 +1053,7 @@ export default function RestaurantLocator() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

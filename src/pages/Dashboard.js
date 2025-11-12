@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Heart, RefreshCw, Users, MessageSquare, Bot, ChefHat, Calendar, MapPin, Utensils, Sparkles, X, Star, Send } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
+import LoadingModal from '../components/LoadingModal';
 
 export default function Dashboard() {
   const location = useLocation();
@@ -338,6 +339,9 @@ export default function Dashboard() {
 
   return (
     <>
+      {/* Loading Modal */}
+      {loadingSurprise && <LoadingModal message="Fetching delicious surprises..." />}
+
       {/* Onboarding Modal */}
       {showWelcomeModal && (
         <div className="min-h-screen bg-black bg-opacity-50 flex items-center justify-center p-4 fixed inset-0 z-50">

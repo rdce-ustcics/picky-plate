@@ -2,12 +2,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle, 
+  Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle,
   Filter, Search
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import LoadingModal from "../components/LoadingModal";
 import { Flag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -74,6 +75,7 @@ export default function CommunityRecipes() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
 
   // filters
   const [search, setSearch] = useState("");
@@ -174,6 +176,7 @@ export default function CommunityRecipes() {
   // fetch recipes
   useEffect(() => {
     (async () => {
+      setLoading(true);
       try {
         const headers = isAuthenticated ? authHeaders() : {};
         // Send x-user-id to match your server pattern (useful for /mine and auth)
@@ -192,6 +195,8 @@ export default function CommunityRecipes() {
       } catch (e) {
         console.error("recipes_list_error:", e);
         setItems([]); setTotal(0); setPages(1);
+      } finally {
+        setLoading(false);
       }
     })();
   }, [query, isAuthenticated, authHeaders, activeUserId]);
@@ -391,8 +396,11 @@ export default function CommunityRecipes() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+    <>
+      {loading && <LoadingModal message="Loading community recipes..." />}
+
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
@@ -1015,6 +1023,7 @@ export default function CommunityRecipes() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import LoadingModal from '../components/LoadingModal';
 import './Profile.css';
 
 export default function Profile() {
@@ -188,17 +189,12 @@ export default function Profile() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="profile-page">
-        <div className="loading-state">Loading your profile...</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="profile-page">
-      {/* Header Banner */}
+    <>
+      {loading && <LoadingModal message="Loading your preferences..." />}
+
+      <div className="profile-page">
+        {/* Header Banner */}
       <div className="header-banner">
         <div className="banner-decoration"></div>
         <h1>Hello, {name || nameFromEmail(activeUserId)}!</h1>
@@ -582,6 +578,7 @@ export default function Profile() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Edit, Trash2, X, Download } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import jsPDF from "jspdf";
+import LoadingModal from "../components/LoadingModal";
 import "./Explorer.css";
 
 const API_BASE = "http://localhost:4000";
@@ -368,8 +369,11 @@ export default function Explorer() {
   };
 
   return (
-    <div className="explorer">
-      <div className="explorer-header">
+    <>
+      {loading && <LoadingModal message="Loading cultural recipes..." />}
+
+      <div className="explorer">
+        <div className="explorer-header">
         <h1>Explore Filipino Cuisine</h1>
         <div className="explorer-header-actions">
           <select value={region} onChange={(e) => setRegion(e.target.value)}>
@@ -664,7 +668,8 @@ export default function Explorer() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
