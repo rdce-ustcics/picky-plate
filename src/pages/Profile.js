@@ -276,7 +276,7 @@ export default function Profile() {
           </button>
         </div>
 
-        {/* Right Side - Profile Info & Preferences */}
+        {/* Right Side - Profile Info & Special Features */}
         <div className="profile-info-section">
           {/* User Info Display */}
           <div className="info-display-card">
@@ -333,254 +333,254 @@ export default function Profile() {
               <p className="feature-description">Enable kid-friendly meal suggestions and portions</p>
             </div>
           </div>
+        </div>
 
-          {/* Food Preferences */}
-          <div className="preferences-card">
-            <h2>Food Preferences</h2>
+        {/* Food Preferences - Full Width */}
+        <div className="preferences-card">
+          <h2>Food Preferences</h2>
 
-            {/* Cuisines Section */}
-            <div className="preference-section">
-              <h3 className="section-title">🍽️ Favorite Cuisines</h3>
-              <div className="preference-pills">
-                {likes.map((pref) => (
-                  <div key={pref} className="preference-pill cuisine-pill">
-                    <span>{display(pref)}</span>
-                    <button
-                      className="remove-pref-btn"
-                      onClick={() => togglePreference(pref)}
-                      title="Remove"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                {cuisineOptions.filter(opt => !likes.includes(opt)).length > 0 && (
+          {/* Cuisines Section */}
+          <div className="preference-section">
+            <h3 className="section-title">🍽️ Favorite Cuisines</h3>
+            <div className="preference-pills">
+              {likes.map((pref) => (
+                <div key={pref} className="preference-pill cuisine-pill">
+                  <span>{display(pref)}</span>
                   <button
-                    className="add-pill-btn"
-                    onClick={() => setShowAddPreferences('cuisine')}
-                    title="Add Cuisine"
+                    className="remove-pref-btn"
+                    onClick={() => togglePreference(pref)}
+                    title="Remove"
                   >
-                    + Add
+                    ×
                   </button>
-                )}
-              </div>
-            </div>
-
-            {/* Dietary Restrictions Section */}
-            <div className="preference-section">
-              <h3 className="section-title">🥗 Dietary Preferences</h3>
-              <div className="preference-pills">
-                {diets.map((pref) => (
-                  <div key={pref} className="preference-pill diet-pill">
-                    <span>{display(pref)}</span>
-                    <button
-                      className="remove-pref-btn"
-                      onClick={() => togglePreference(pref)}
-                      title="Remove"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                {dietOptions.filter(opt => !diets.includes(opt)).length > 0 && (
-                  <button
-                    className="add-pill-btn"
-                    onClick={() => setShowAddPreferences('diet')}
-                    title="Add Diet"
-                  >
-                    + Add
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Allergens Section */}
-            <div className="preference-section">
-              <h3 className="section-title">⚠️ Allergens</h3>
-              <div className="preference-pills">
-                {allergens.map((pref) => (
-                  <div key={pref} className="preference-pill allergen-pill">
-                    <span>{display(pref)}</span>
-                    <button
-                      className="remove-pref-btn"
-                      onClick={() => togglePreference(pref)}
-                      title="Remove"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                {allergenOptions.filter(opt => !allergens.includes(opt)).length > 0 && (
-                  <button
-                    className="add-pill-btn"
-                    onClick={() => setShowAddPreferences('allergen')}
-                    title="Add Allergen"
-                  >
-                    + Add
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Dislikes Section */}
-            <div className="preference-section">
-              <h3 className="section-title">👎 Dislikes</h3>
-              <div className="preference-pills">
-                {dislikes.map((pref) => (
-                  <div key={pref} className="preference-pill dislike-pill">
-                    <span>{display(pref)}</span>
-                    <button
-                      className="remove-pref-btn"
-                      onClick={() => togglePreference(pref)}
-                      title="Remove"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                {dislikeOptions.filter(opt => !dislikes.includes(opt)).length > 0 && (
-                  <button
-                    className="add-pill-btn"
-                    onClick={() => setShowAddPreferences('dislike')}
-                    title="Add Dislike"
-                  >
-                    + Add
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Favorites Section */}
-            <div className="preference-section">
-              <h3 className="section-title">⭐ Favorites</h3>
-              <div className="preference-pills">
-                {favorites.map((pref) => (
-                  <div key={pref} className="preference-pill favorite-pill">
-                    <span>{display(pref)}</span>
-                    <button
-                      className="remove-pref-btn"
-                      onClick={() => togglePreference(pref)}
-                      title="Remove"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-                {favoriteOptions.filter(opt => !favorites.includes(opt)).length > 0 && (
-                  <button
-                    className="add-pill-btn"
-                    onClick={() => setShowAddPreferences('favorite')}
-                    title="Add Favorite"
-                  >
-                    + Add
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Add Preferences Modal */}
-            {showAddPreferences && (
-              <div className="add-preferences-modal">
-                <div className="modal-backdrop" onClick={() => setShowAddPreferences(false)}></div>
-                <div className="modal-content">
-                  <div className="modal-header">
-                    <h3>
-                      {showAddPreferences === 'cuisine' && '🍽️ Add Cuisine'}
-                      {showAddPreferences === 'diet' && '🥗 Add Dietary Preference'}
-                      {showAddPreferences === 'allergen' && '⚠️ Add Allergen'}
-                      {showAddPreferences === 'dislike' && '👎 Add Dislike'}
-                      {showAddPreferences === 'favorite' && '⭐ Add Favorite'}
-                    </h3>
-                    <button
-                      className="close-modal-btn"
-                      onClick={() => setShowAddPreferences(false)}
-                    >
-                      ×
-                    </button>
-                  </div>
-                  <div className="modal-options">
-                    {showAddPreferences === 'cuisine' && cuisineOptions
-                      .filter(opt => !likes.includes(opt))
-                      .map((opt) => (
-                        <button
-                          key={opt}
-                          className="option-btn"
-                          onClick={() => {
-                            togglePreference(opt);
-                            setShowAddPreferences(false);
-                          }}
-                        >
-                          {display(opt)}
-                        </button>
-                      ))}
-                    {showAddPreferences === 'diet' && dietOptions
-                      .filter(opt => !diets.includes(opt))
-                      .map((opt) => (
-                        <button
-                          key={opt}
-                          className="option-btn"
-                          onClick={() => {
-                            togglePreference(opt);
-                            setShowAddPreferences(false);
-                          }}
-                        >
-                          {display(opt)}
-                        </button>
-                      ))}
-                    {showAddPreferences === 'allergen' && allergenOptions
-                      .filter(opt => !allergens.includes(opt))
-                      .map((opt) => (
-                        <button
-                          key={opt}
-                          className="option-btn"
-                          onClick={() => {
-                            togglePreference(opt);
-                            setShowAddPreferences(false);
-                          }}
-                        >
-                          {display(opt)}
-                        </button>
-                      ))}
-                    {showAddPreferences === 'dislike' && dislikeOptions
-                      .filter(opt => !dislikes.includes(opt))
-                      .map((opt) => (
-                        <button
-                          key={opt}
-                          className="option-btn"
-                          onClick={() => {
-                            togglePreference(opt);
-                            setShowAddPreferences(false);
-                          }}
-                        >
-                          {display(opt)}
-                        </button>
-                      ))}
-                    {showAddPreferences === 'favorite' && favoriteOptions
-                      .filter(opt => !favorites.includes(opt))
-                      .map((opt) => (
-                        <button
-                          key={opt}
-                          className="option-btn"
-                          onClick={() => {
-                            togglePreference(opt);
-                            setShowAddPreferences(false);
-                          }}
-                        >
-                          {display(opt)}
-                        </button>
-                      ))}
-                  </div>
                 </div>
-              </div>
-            )}
+              ))}
+              {cuisineOptions.filter(opt => !likes.includes(opt)).length > 0 && (
+                <button
+                  className="add-pill-btn"
+                  onClick={() => setShowAddPreferences('cuisine')}
+                  title="Add Cuisine"
+                >
+                  + Add
+                </button>
+              )}
+            </div>
           </div>
 
-          {error && (
-            <div className="error-message">
-              ⚠️ {error}
+          {/* Dietary Restrictions Section */}
+          <div className="preference-section">
+            <h3 className="section-title">🥗 Dietary Preferences</h3>
+            <div className="preference-pills">
+              {diets.map((pref) => (
+                <div key={pref} className="preference-pill diet-pill">
+                  <span>{display(pref)}</span>
+                  <button
+                    className="remove-pref-btn"
+                    onClick={() => togglePreference(pref)}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {dietOptions.filter(opt => !diets.includes(opt)).length > 0 && (
+                <button
+                  className="add-pill-btn"
+                  onClick={() => setShowAddPreferences('diet')}
+                  title="Add Diet"
+                >
+                  + Add
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Allergens Section */}
+          <div className="preference-section">
+            <h3 className="section-title">⚠️ Allergens</h3>
+            <div className="preference-pills">
+              {allergens.map((pref) => (
+                <div key={pref} className="preference-pill allergen-pill">
+                  <span>{display(pref)}</span>
+                  <button
+                    className="remove-pref-btn"
+                    onClick={() => togglePreference(pref)}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {allergenOptions.filter(opt => !allergens.includes(opt)).length > 0 && (
+                <button
+                  className="add-pill-btn"
+                  onClick={() => setShowAddPreferences('allergen')}
+                  title="Add Allergen"
+                >
+                  + Add
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Dislikes Section */}
+          <div className="preference-section">
+            <h3 className="section-title">👎 Dislikes</h3>
+            <div className="preference-pills">
+              {dislikes.map((pref) => (
+                <div key={pref} className="preference-pill dislike-pill">
+                  <span>{display(pref)}</span>
+                  <button
+                    className="remove-pref-btn"
+                    onClick={() => togglePreference(pref)}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {dislikeOptions.filter(opt => !dislikes.includes(opt)).length > 0 && (
+                <button
+                  className="add-pill-btn"
+                  onClick={() => setShowAddPreferences('dislike')}
+                  title="Add Dislike"
+                >
+                  + Add
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Favorites Section */}
+          <div className="preference-section">
+            <h3 className="section-title">⭐ Favorites</h3>
+            <div className="preference-pills">
+              {favorites.map((pref) => (
+                <div key={pref} className="preference-pill favorite-pill">
+                  <span>{display(pref)}</span>
+                  <button
+                    className="remove-pref-btn"
+                    onClick={() => togglePreference(pref)}
+                    title="Remove"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {favoriteOptions.filter(opt => !favorites.includes(opt)).length > 0 && (
+                <button
+                  className="add-pill-btn"
+                  onClick={() => setShowAddPreferences('favorite')}
+                  title="Add Favorite"
+                >
+                  + Add
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Add Preferences Modal */}
+          {showAddPreferences && (
+            <div className="add-preferences-modal">
+              <div className="modal-backdrop" onClick={() => setShowAddPreferences(false)}></div>
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h3>
+                    {showAddPreferences === 'cuisine' && '🍽️ Add Cuisine'}
+                    {showAddPreferences === 'diet' && '🥗 Add Dietary Preference'}
+                    {showAddPreferences === 'allergen' && '⚠️ Add Allergen'}
+                    {showAddPreferences === 'dislike' && '👎 Add Dislike'}
+                    {showAddPreferences === 'favorite' && '⭐ Add Favorite'}
+                  </h3>
+                  <button
+                    className="close-modal-btn"
+                    onClick={() => setShowAddPreferences(false)}
+                  >
+                    ×
+                  </button>
+                </div>
+                <div className="modal-options">
+                  {showAddPreferences === 'cuisine' && cuisineOptions
+                    .filter(opt => !likes.includes(opt))
+                    .map((opt) => (
+                      <button
+                        key={opt}
+                        className="option-btn"
+                        onClick={() => {
+                          togglePreference(opt);
+                          setShowAddPreferences(false);
+                        }}
+                      >
+                        {display(opt)}
+                      </button>
+                    ))}
+                  {showAddPreferences === 'diet' && dietOptions
+                    .filter(opt => !diets.includes(opt))
+                    .map((opt) => (
+                      <button
+                        key={opt}
+                        className="option-btn"
+                        onClick={() => {
+                          togglePreference(opt);
+                          setShowAddPreferences(false);
+                        }}
+                      >
+                        {display(opt)}
+                      </button>
+                    ))}
+                  {showAddPreferences === 'allergen' && allergenOptions
+                    .filter(opt => !allergens.includes(opt))
+                    .map((opt) => (
+                      <button
+                        key={opt}
+                        className="option-btn"
+                        onClick={() => {
+                          togglePreference(opt);
+                          setShowAddPreferences(false);
+                        }}
+                      >
+                        {display(opt)}
+                      </button>
+                    ))}
+                  {showAddPreferences === 'dislike' && dislikeOptions
+                    .filter(opt => !dislikes.includes(opt))
+                    .map((opt) => (
+                      <button
+                        key={opt}
+                        className="option-btn"
+                        onClick={() => {
+                          togglePreference(opt);
+                          setShowAddPreferences(false);
+                        }}
+                      >
+                        {display(opt)}
+                      </button>
+                    ))}
+                  {showAddPreferences === 'favorite' && favoriteOptions
+                    .filter(opt => !favorites.includes(opt))
+                    .map((opt) => (
+                      <button
+                        key={opt}
+                        className="option-btn"
+                        onClick={() => {
+                          togglePreference(opt);
+                          setShowAddPreferences(false);
+                        }}
+                      >
+                        {display(opt)}
+                      </button>
+                    ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
+
+        {error && (
+          <div className="error-message">
+            ⚠️ {error}
+          </div>
+        )}
       </div>
     </div>
   );
