@@ -1,7 +1,7 @@
 // src/modules/Sidebar/sidebar.js
 import { useState, useEffect } from "react";
 import { NavLink, Link } from "react-router-dom";
-import { FiGrid, FiUser, FiZap, FiUsers, FiGlobe, FiPhoneCall, FiSettings, FiMessageCircle, FiMenu, FiX, FiBookOpen, FiMapPin } from "react-icons/fi";
+import { FiGrid, FiUser, FiUsers, FiGlobe, FiSettings, FiMessageCircle, FiMenu, FiX, FiBookOpen, FiMapPin } from "react-icons/fi";
 import { useAuth } from "../../auth/AuthContext"; // ✅ FIXED PATH - Changed from "../auth/AuthContext"
 import "./sidebar.css";
 
@@ -29,7 +29,6 @@ const Sidebar = () => {
     { to: "/chatbot", label: "AI ChatBot", icon: <FiMessageCircle /> },
     { to: "/recipes", label: "Community Recipes", icon: <FiBookOpen /> },
     { to: "/profile", label: "Profile", icon: <FiUser /> },
-    { to: "/surprise", label: "Surprise me", icon: <FiZap /> },
     { to: "/barkada-vote", label: "Barkada Vote", icon: <FiUsers /> },
     { to: "/explorer", label: "Cultural Food Explorer", icon: <FiGlobe /> },
     { to: "/restaurants", label: "Restaurant Locator", icon: <FiMapPin /> },
@@ -83,26 +82,6 @@ const Sidebar = () => {
               <span className="pap-label">{it.label}</span>
             </NavLink>
           ))}
-
-          <NavLink
-            to="/contact"
-            end
-            className={({ isActive }) => "pap-contact-pill" + (isActive ? " is-active" : "")}
-            onClick={closeMobileMenu}
-          >
-            <span className="pap-icon"><FiPhoneCall /></span>
-            <span className="pap-label">Contact Us</span>
-          </NavLink>
-
-          <NavLink
-            to="/settings"
-            end
-            className={({ isActive }) => "pap-nav-item" + (isActive ? " is-active" : "")}
-            onClick={closeMobileMenu}
-          >
-            <span className="pap-icon"><FiSettings /></span>
-            <span className="pap-label">Settings</span>
-          </NavLink>
         </nav>
 
         <div className="pap-login-card">

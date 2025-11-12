@@ -100,6 +100,7 @@ connectDB()
     app.use('/api/ai',       require('./routes/ai'));
     app.use('/api/preferences', require('./routes/preferences'));
     app.use('/api/cultural-recipes', require('./routes/culturalRecipes')); // Filipino cultural recipes
+    app.use('/api/surprise', require('./routes/surprise'));    // Surprise Me feature
 
 
     // 🔑 admin

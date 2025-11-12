@@ -2,7 +2,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle
+  Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle, 
+  Filter, Search
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import html2canvas from "html2canvas";
@@ -90,10 +91,13 @@ export default function CommunityRecipes() {
   const [showTagMenu, setShowTagMenu] = useState(false);
   const [showAllergenMenu, setShowAllergenMenu] = useState(false);
 
-  // NEW: “My Recipes” toggle
+  // NEW: "My Recipes" toggle
   const [showMine, setShowMine] = useState(false);
 
-    // Report modal state
+  // NEW: Advanced filters toggle
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+  // Report modal state
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [reportComment, setReportComment] = useState("");
@@ -101,6 +105,18 @@ export default function CommunityRecipes() {
 
   const navigate = useNavigate();
 
+  // Check if any filters are active (for badge count)
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (selectedTags.length) count += selectedTags.length;
+    if (excludeAllergens.length) count += excludeAllergens.length;
+    if (excludeTerms.length) count += excludeTerms.length;
+    if (prepFilter) count += 1;
+    if (cookFilter) count += 1;
+    if (difficultyFilter) count += 1;
+    if (servingsFilter) count += 1;
+    return count;
+  }, [selectedTags, excludeAllergens, excludeTerms, prepFilter, cookFilter, difficultyFilter, servingsFilter]);
 
   // Inject pdf mode CSS once
   useEffect(() => {
@@ -235,7 +251,7 @@ export default function CommunityRecipes() {
     setCookFilter("");
     setDifficultyFilter("");
     setServingsFilter("");
-    setShowMine(false); // also reset "Mine"
+    setShowMine(false);
     setPage(1);
   };
 
@@ -312,72 +328,67 @@ export default function CommunityRecipes() {
   };
 
   function openReport() {
-  if (!selectedRecipe) return;
-  // if logged out → to login
-  if (!isAuthenticated) {
-    navigate("/login");
-    return;
-  }
-  if (selectedRecipe.reportedByMe) return; // already reported, no-op
-  setReportReason("");
-  setReportComment("");
-  setShowReportModal(true);
-}
-
-function closeReport() {
-  setShowReportModal(false);
-  setReportReason("");
-  setReportComment("");
-}
-
-async function submitReport() {
-  if (!selectedRecipe || !isAuthenticated || !reportReason.trim()) return;
-  setReportLoading(true);
-  try {
-    const headers = { "Content-Type": "application/json", ...(authHeaders ? authHeaders() : {}) };
-    // keep x-user-id header in case your server uses it elsewhere
-    headers["x-user-id"] = (localStorage.getItem("pap:activeUserId") || "global");
-
-    const res = await fetch(`${API_BASE}/api/recipes/${selectedRecipe._id}/report`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ reason: reportReason.trim(), comment: reportComment.trim() }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      if (data?.error === "already_reported") {
-        // harden UI state
-        setSelectedRecipe((r) => (r ? { ...r, reportedByMe: true } : r));
-        setItems((prev) => prev.map((it) => it._id === selectedRecipe._id ? { ...it, reportedByMe: true } : it));
-        closeReport();
-        return;
-      }
-      console.error("report_failed:", data);
-      alert("Failed to report. Please try again.");
+    if (!selectedRecipe) return;
+    if (!isAuthenticated) {
+      navigate("/login");
       return;
     }
-
-    // success → mark as reported in both modal recipe + grid items
-    setSelectedRecipe((r) => (r ? { ...r, reportedByMe: true, reportsCount: (r.reportsCount || 0) + 1, state: data?.state || r.state } : r));
-    setItems((prev) =>
-      prev.map((it) =>
-        it._id === selectedRecipe._id
-          ? { ...it, reportedByMe: true, reportsCount: (it.reportsCount || 0) + 1, state: data?.state || it.state }
-          : it
-      )
-    );
-
-    closeReport();
-  } catch (e) {
-    console.error("report_error:", e);
-    alert("Failed to report. Please try again.");
-  } finally {
-    setReportLoading(false);
+    if (selectedRecipe.reportedByMe) return;
+    setReportReason("");
+    setReportComment("");
+    setShowReportModal(true);
   }
-}
 
+  function closeReport() {
+    setShowReportModal(false);
+    setReportReason("");
+    setReportComment("");
+  }
+
+  async function submitReport() {
+    if (!selectedRecipe || !isAuthenticated || !reportReason.trim()) return;
+    setReportLoading(true);
+    try {
+      const headers = { "Content-Type": "application/json", ...(authHeaders ? authHeaders() : {}) };
+      headers["x-user-id"] = (localStorage.getItem("pap:activeUserId") || "global");
+
+      const res = await fetch(`${API_BASE}/api/recipes/${selectedRecipe._id}/report`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ reason: reportReason.trim(), comment: reportComment.trim() }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data?.error === "already_reported") {
+          setSelectedRecipe((r) => (r ? { ...r, reportedByMe: true } : r));
+          setItems((prev) => prev.map((it) => it._id === selectedRecipe._id ? { ...it, reportedByMe: true } : it));
+          closeReport();
+          return;
+        }
+        console.error("report_failed:", data);
+        alert("Failed to report. Please try again.");
+        return;
+      }
+
+      setSelectedRecipe((r) => (r ? { ...r, reportedByMe: true, reportsCount: (r.reportsCount || 0) + 1, state: data?.state || r.state } : r));
+      setItems((prev) =>
+        prev.map((it) =>
+          it._id === selectedRecipe._id
+            ? { ...it, reportedByMe: true, reportsCount: (it.reportsCount || 0) + 1, state: data?.state || it.state }
+            : it
+        )
+      );
+
+      closeReport();
+    } catch (e) {
+      console.error("report_error:", e);
+      alert("Failed to report. Please try again.");
+    } finally {
+      setReportLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -390,7 +401,6 @@ async function submitReport() {
             </h1>
 
             <div className="flex items-center gap-2">
-              {/* NEW: Mine toggle */}
               <button
                 onClick={() => { setShowMine((v) => !v); setPage(1); }}
                 className={`px-4 py-2 rounded-full border text-sm transition ${
@@ -400,7 +410,7 @@ async function submitReport() {
                 }`}
                 title="Show only recipes you uploaded"
               >
-                {showMine ? "Showing: My Recipes" : "Show: My Recipes"}
+                {showMine ? "My Recipes" : "All Recipes"}
               </button>
 
               <Link
@@ -413,178 +423,251 @@ async function submitReport() {
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <input
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-yellow-400"
-              placeholder="Search title, description, ingredients…"
-            />
-
-            {/* TAG PICKER */}
-            <div className="relative" ref={tagMenuRef}>
-              <button
-                onClick={() => setShowTagMenu((s) => !s)}
-                className="w-full border rounded-xl px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50"
-              >
-                <span>Select tags</span>
-                <ChevronDown className="w-4 h-4 text-gray-500" />
-              </button>
-              {showTagMenu && (
-                <div className="absolute z-20 mt-2 w-full bg-white border rounded-xl shadow-lg p-2 max-h-72 overflow-auto">
-                  <div className="flex flex-wrap gap-2">
-                    {TAG_OPTIONS.map((tag) => {
-                      const active = selectedTags.includes(tag);
-                      return (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => toggleTag(tag)}
-                          className={`px-3 py-1 rounded-full text-sm border transition
-                            ${active ? "bg-yellow-500 text-white border-yellow-500"
-                                     : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"}`}
-                        >
-                          #{tag}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* ALLERGEN PICKER */}
-            <div className="relative" ref={allergenMenuRef}>
-              <button
-                onClick={() => setShowAllergenMenu((s) => !s)}
-                className="w-full border rounded-xl px-4 py-2.5 text-sm flex items-center justify-between hover:bg-gray-50"
-              >
-                <span>Exclude allergens</span>
-                <ChevronDown className="w-4 h-4 text-gray-500" />
-              </button>
-              {showAllergenMenu && (
-                <div className="absolute z-20 mt-2 w-full bg-white border rounded-xl shadow-lg p-2 max-h-72 overflow-auto">
-                  <div className="flex flex-wrap gap-2">
-                    {ALLERGENS.map((a) => {
-                      const active = excludeAllergens.includes(a);
-                      return (
-                        <button
-                          key={a}
-                          type="button"
-                          onClick={() => toggleExcludeAllergen(a)}
-                          className={`px-3 py-1 rounded-full text-sm border transition
-                            ${active ? "bg-red-500 text-white border-red-500"
-                                     : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"}`}
-                        >
-                          {a}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* EXTRA EXCLUDE TERMS → chips */}
-            <div className="flex gap-2">
+          {/* REDESIGNED FILTERS - Simple and Clean */}
+          <div className="mt-6 space-y-4">
+            {/* Main Search Bar - Most Prominent */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
-                value={excludeInput}
-                onChange={(e) => setExcludeInput(e.target.value)}
-                onKeyDown={onExcludeInputKeyDown}
-                className="flex-1 border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-yellow-400"
-                placeholder="Add exclude term…"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                className="w-full border-2 border-gray-200 rounded-2xl pl-12 pr-4 py-4 text-base outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition"
+                placeholder="Search recipes by title, ingredients, or description..."
               />
-              <button
-                type="button"
-                onClick={addExcludeTerm}
-                className="px-3 py-2.5 border rounded-xl text-sm hover:bg-gray-50 flex items-center gap-1"
-                title="Add exclude term"
-              >
-                <PlusCircle className="w-4 h-4" /> Add
-              </button>
             </div>
-          </div>
 
-          {/* Secondary filter row: prep, cook, difficulty, servings + reset */}
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-5 gap-3">
-            <select
-              value={prepFilter}
-              onChange={(e) => { setPrepFilter(e.target.value); setPage(1); }}
-              className="border rounded-xl px-3 py-2.5 text-sm bg-white"
-            >
-              <option value="">Prep time (any)</option>
-              {PREP_TIME_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-            <select
-              value={cookFilter}
-              onChange={(e) => { setCookFilter(e.target.value); setPage(1); }}
-              className="border rounded-xl px-3 py-2.5 text-sm bg-white"
-            >
-              <option value="">Cook time (any)</option>
-              {COOK_TIME_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-            <select
-              value={difficultyFilter}
-              onChange={(e) => { setDifficultyFilter(e.target.value); setPage(1); }}
-              className="border rounded-xl px-3 py-2.5 text-sm bg-white"
-            >
-              <option value="">Difficulty (any)</option>
-              <option>Easy</option>
-              <option>Medium</option>
-              <option>Hard</option>
-            </select>
-            <select
-              value={servingsFilter}
-              onChange={(e) => { setServingsFilter(e.target.value); setPage(1); }}
-              className="border rounded-xl px-3 py-2.5 text-sm bg-white"
-            >
-              <option value="">Servings (any)</option>
-              {SERVING_SIZE_OPTIONS.map((opt) => (
-                <option key={opt} value={opt}>{opt}</option>
-              ))}
-            </select>
-
-            <button onClick={resetFilters} className="border rounded-xl px-4 py-2.5 text-sm hover:bg-gray-50">
-              Clear all filters
-            </button>
-          </div>
-
-          {/* Selected chips row */}
-          <div className="mt-3 flex flex-wrap gap-2">
-            {selectedTags.map((tag) => (
-              <span key={`tag-${tag}`} className="chip inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800 border border-yellow-200">
-                #{tag}
-                <button className="ml-1" onClick={() => removeTagChip(tag)} aria-label={`Remove tag ${tag}`}>
-                  <X className="w-3 h-3" />
+            {/* Quick Filters Row */}
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Tag Picker - Primary Filter */}
+              <div className="relative" ref={tagMenuRef}>
+                <button
+                  onClick={() => setShowTagMenu((s) => !s)}
+                  className="border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-gray-50 hover:border-gray-300 transition bg-white"
+                >
+                  <span className="font-medium">
+                    {selectedTags.length > 0 ? `Tags (${selectedTags.length})` : "Filter by Tags"}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-gray-500 transition ${showTagMenu ? 'rotate-180' : ''}`} />
                 </button>
-              </span>
-            ))}
-            {excludeAllergens.map((a) => (
-              <span key={`alg-${a}`} className="chip inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-red-100 text-red-800 border border-red-200">
-                exclude: {a}
-                <button className="ml-1" onClick={() => removeAllergenChip(a)} aria-label={`Remove allergen ${a}`}>
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-            {excludeTerms.map((t) => (
-              <span key={`ext-${t}`} className="chip inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">
-                exclude: {t}
-                <button className="ml-1" onClick={() => removeExcludeTermChip(t)} aria-label={`Remove exclude term ${t}`}>
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-          </div>
+                {showTagMenu && (
+                  <div className="absolute z-20 mt-2 w-80 bg-white border-2 border-gray-200 rounded-xl shadow-xl p-4 max-h-96 overflow-auto">
+                    <div className="flex flex-wrap gap-2">
+                      {TAG_OPTIONS.map((tag) => {
+                        const active = selectedTags.includes(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => toggleTag(tag)}
+                            className={`px-3 py-1.5 rounded-full text-sm border-2 transition font-medium
+                              ${active 
+                                ? "bg-yellow-500 text-white border-yellow-500 shadow-sm"
+                                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                              }`}
+                          >
+                            #{tag}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
 
-          {/* Stats */}
-          <div className="mt-3 text-sm text-gray-500">
-            {total} recipe{total === 1 ? "" : "s"} • Page {page} of {pages}
+              {/* Advanced Filters Toggle */}
+              <button
+                onClick={() => setShowAdvancedFilters((v) => !v)}
+                className={`border-2 rounded-xl px-4 py-2.5 text-sm flex items-center gap-2 transition font-medium
+                  ${showAdvancedFilters || activeFiltersCount > 0
+                    ? "bg-yellow-50 border-yellow-300 text-yellow-700"
+                    : "border-gray-200 text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-300"
+                  }`}
+              >
+                <Filter className="w-4 h-4" />
+                Advanced Filters
+                {activeFiltersCount > 0 && (
+                  <span className="ml-1 bg-yellow-400 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Clear Filters - Only show if filters are active */}
+              {(search || activeFiltersCount > 0 || showMine) && (
+                <button
+                  onClick={resetFilters}
+                  className="border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition font-medium"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+
+            {/* Advanced Filters - Collapsible */}
+            {showAdvancedFilters && (
+              <div className="bg-gray-50 border-2 border-gray-200 rounded-2xl p-5 space-y-4 animate-fadeIn">
+                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Advanced Filters</h3>
+                
+                {/* Time & Difficulty Filters */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <select
+                    value={prepFilter}
+                    onChange={(e) => { setPrepFilter(e.target.value); setPage(1); }}
+                    className="border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white hover:border-gray-300 transition"
+                  >
+                    <option value="">Prep Time (Any)</option>
+                    {PREP_TIME_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                  
+                  <select
+                    value={cookFilter}
+                    onChange={(e) => { setCookFilter(e.target.value); setPage(1); }}
+                    className="border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white hover:border-gray-300 transition"
+                  >
+                    <option value="">Cook Time (Any)</option>
+                    {COOK_TIME_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                  
+                  <select
+                    value={difficultyFilter}
+                    onChange={(e) => { setDifficultyFilter(e.target.value); setPage(1); }}
+                    className="border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white hover:border-gray-300 transition"
+                  >
+                    <option value="">Difficulty (Any)</option>
+                    <option>Easy</option>
+                    <option>Medium</option>
+                    <option>Hard</option>
+                  </select>
+                  
+                  <select
+                    value={servingsFilter}
+                    onChange={(e) => { setServingsFilter(e.target.value); setPage(1); }}
+                    className="border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white hover:border-gray-300 transition"
+                  >
+                    <option value="">Servings (Any)</option>
+                    {SERVING_SIZE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Allergen Exclusions */}
+                <div>
+                  <div className="relative" ref={allergenMenuRef}>
+                    <button
+                      onClick={() => setShowAllergenMenu((s) => !s)}
+                      className="w-full sm:w-auto border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-white hover:border-gray-300 transition bg-gray-50"
+                    >
+                      <span className="font-medium">
+                        {excludeAllergens.length > 0 
+                          ? `Excluding ${excludeAllergens.length} allergen${excludeAllergens.length > 1 ? 's' : ''}`
+                          : "Exclude Allergens"
+                        }
+                      </span>
+                      <ChevronDown className={`w-4 h-4 text-gray-500 transition ${showAllergenMenu ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showAllergenMenu && (
+                      <div className="absolute z-20 mt-2 w-full sm:w-96 bg-white border-2 border-gray-200 rounded-xl shadow-xl p-4 max-h-72 overflow-auto">
+                        <div className="flex flex-wrap gap-2">
+                          {ALLERGENS.map((a) => {
+                            const active = excludeAllergens.includes(a);
+                            return (
+                              <button
+                                key={a}
+                                type="button"
+                                onClick={() => toggleExcludeAllergen(a)}
+                                className={`px-3 py-1.5 rounded-full text-sm border-2 transition font-medium
+                                  ${active 
+                                    ? "bg-red-500 text-white border-red-500 shadow-sm"
+                                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                                  }`}
+                              >
+                                {a}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Custom Exclude Terms */}
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                    Exclude Custom Terms
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      value={excludeInput}
+                      onChange={(e) => setExcludeInput(e.target.value)}
+                      onKeyDown={onExcludeInputKeyDown}
+                      className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition bg-white"
+                      placeholder="e.g., cilantro, mushroom..."
+                    />
+                    <button
+                      type="button"
+                      onClick={addExcludeTerm}
+                      className="px-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm hover:bg-yellow-50 hover:border-yellow-300 transition font-medium flex items-center gap-2"
+                      title="Add exclude term"
+                    >
+                      <PlusCircle className="w-4 h-4" />
+                      Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Active Filter Chips - Only show if filters are active */}
+            {(selectedTags.length > 0 || excludeAllergens.length > 0 || excludeTerms.length > 0) && (
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200">
+                {selectedTags.map((tag) => (
+                  <span key={`tag-${tag}`} className="chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border-2 border-yellow-200">
+                    #{tag}
+                    <button className="hover:bg-yellow-200 rounded-full p-0.5 transition" onClick={() => removeTagChip(tag)} aria-label={`Remove tag ${tag}`}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+                {excludeAllergens.map((a) => (
+                  <span key={`alg-${a}`} className="chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border-2 border-red-200">
+                    No {a}
+                    <button className="hover:bg-red-200 rounded-full p-0.5 transition" onClick={() => removeAllergenChip(a)} aria-label={`Remove allergen ${a}`}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+                {excludeTerms.map((t) => (
+                  <span key={`ext-${t}`} className="chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border-2 border-gray-200">
+                    No {t}
+                    <button className="hover:bg-gray-200 rounded-full p-0.5 transition" onClick={() => removeExcludeTermChip(t)} aria-label={`Remove exclude term ${t}`}>
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Stats - Cleaner Display */}
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-sm font-medium text-gray-600">
+                {total === 0 ? "No recipes found" : (
+                  <>
+                    <span className="text-gray-900 font-bold">{total}</span> recipe{total === 1 ? "" : "s"} found
+                  </>
+                )}
+              </p>
+              {pages > 1 && (
+                <p className="text-sm text-gray-500">
+                  Page {page} of {pages}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -592,12 +675,17 @@ async function submitReport() {
       {/* Recipe Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {items.length === 0 ? (
-          <div className="text-center text-gray-500 py-16">
-            No recipes found. Try different filters, or{" "}
-            <Link to="/recipes/upload" className="text-yellow-600 font-semibold">
-              add one
-            </Link>
-            .
+          <div className="text-center py-16">
+            <div className="mb-4">
+              <ChefHat className="w-16 h-16 mx-auto text-gray-300" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">No recipes found</h3>
+            <p className="text-gray-500 mb-6">
+              Try adjusting your filters or{" "}
+              <Link to="/recipes/upload" className="text-yellow-600 font-semibold hover:underline">
+                be the first to add one!
+              </Link>
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
@@ -661,21 +749,21 @@ async function submitReport() {
 
         {/* Pagination */}
         {pages > 1 && (
-          <div className="mt-6 flex items-center justify-center gap-2">
+          <div className="mt-8 flex items-center justify-center gap-2">
             <button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
-              className="px-3 py-2 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl border-2 border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition"
             >
-              Prev
+              Previous
             </button>
-            <div className="text-sm text-gray-600">
-              Page {page} / {pages}
+            <div className="px-4 py-2 text-sm font-medium text-gray-700">
+              Page {page} of {pages}
             </div>
             <button
               onClick={() => setPage((p) => Math.min(pages, p + 1))}
               disabled={page >= pages}
-              className="px-3 py-2 rounded-lg border hover:bg-gray-50 disabled:opacity-50"
+              className="px-4 py-2 rounded-xl border-2 border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition"
             >
               Next
             </button>
@@ -858,75 +946,75 @@ async function submitReport() {
           </div>
         </div>
       )}
+
       {/* Report Modal */}
       {showReportModal && (
-  <div
-    className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
-    onClick={closeReport}
-  >
-    <div
-      className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-5 sm:p-6"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-9 h-9 rounded-xl bg-yellow-50 border border-yellow-200 flex items-center justify-center">
-          <Flag className="w-4 h-4 text-yellow-600" />
-        </div>
-        <h3 className="text-lg sm:text-xl font-bold text-gray-800">Report recipe</h3>
-      </div>
-
-      <p className="text-sm text-gray-600 mb-4">
-        Help us keep the community healthy. Choose a reason and (optionally) add more details.
-      </p>
-
-      <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
-      <select
-        value={reportReason}
-        onChange={(e) => setReportReason(e.target.value)}
-        className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white mb-3 outline-none focus:ring-2 focus:ring-yellow-400"
-      >
-        <option value="">Select a reason…</option>
-        {REPORT_REASONS.map((r) => (
-          <option key={r} value={r}>{r}</option>
-        ))}
-      </select>
-
-      <label className="block text-sm font-medium text-gray-700 mb-1">Additional comment (optional)</label>
-      <textarea
-        value={reportComment}
-        onChange={(e) => setReportComment(e.target.value)}
-        rows={4}
-        className="w-full border rounded-xl px-3 py-2 text-sm mb-4 outline-none focus:ring-2 focus:ring-yellow-400"
-        placeholder="Add more context (optional)…"
-      />
-
-      <div className="flex justify-end gap-2">
-        <button
+        <div
+          className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
           onClick={closeReport}
-          className="px-4 py-2 text-sm rounded-xl border border-gray-200 hover:bg-gray-50"
         >
-          Cancel
-        </button>
-        <button
-          onClick={submitReport}
-          disabled={!reportReason || reportLoading}
-          className={`px-4 py-2 text-sm rounded-xl text-white ${
-            (!reportReason || reportLoading)
-              ? "bg-yellow-300 cursor-not-allowed"
-              : "bg-yellow-500 hover:bg-yellow-600"
-          }`}
-        >
-          {reportLoading ? "Submitting…" : "Submit report"}
-        </button>
-      </div>
+          <div
+            className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-5 sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-9 h-9 rounded-xl bg-yellow-50 border border-yellow-200 flex items-center justify-center">
+                <Flag className="w-4 h-4 text-yellow-600" />
+              </div>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800">Report recipe</h3>
+            </div>
 
-      <p className="text-[11px] text-gray-500 mt-3">
-        You can report a recipe only once. Reaching 20 total reports (lifetime) or 5 reports in a week flags it for review.
-      </p>
-    </div>
-  </div>
-)}
+            <p className="text-sm text-gray-600 mb-4">
+              Help us keep the community healthy. Choose a reason and (optionally) add more details.
+            </p>
 
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+            <select
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white mb-3 outline-none focus:ring-2 focus:ring-yellow-400"
+            >
+              <option value="">Select a reason…</option>
+              {REPORT_REASONS.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+
+            <label className="block text-sm font-medium text-gray-700 mb-1">Additional comment (optional)</label>
+            <textarea
+              value={reportComment}
+              onChange={(e) => setReportComment(e.target.value)}
+              rows={4}
+              className="w-full border rounded-xl px-3 py-2 text-sm mb-4 outline-none focus:ring-2 focus:ring-yellow-400"
+              placeholder="Add more context (optional)…"
+            />
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={closeReport}
+                className="px-4 py-2 text-sm rounded-xl border border-gray-200 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitReport}
+                disabled={!reportReason || reportLoading}
+                className={`px-4 py-2 text-sm rounded-xl text-white ${
+                  (!reportReason || reportLoading)
+                    ? "bg-yellow-300 cursor-not-allowed"
+                    : "bg-yellow-500 hover:bg-yellow-600"
+                }`}
+              >
+                {reportLoading ? "Submitting…" : "Submit report"}
+              </button>
+            </div>
+
+            <p className="text-[11px] text-gray-500 mt-3">
+              You can report a recipe only once. Reaching 20 total reports (lifetime) or 5 reports in a week flags it for review.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

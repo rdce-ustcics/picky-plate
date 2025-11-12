@@ -27,7 +27,12 @@
       "Bash(cmd //c \"taskkill /PID 38028 /F\")",
       "Bash(cmd //c \"taskkill /PID 23504 /F\")",
       "Bash(node:*)",
-      "Bash(cmd //c \"taskkill /PID 28124 /F && taskkill /PID 30088 /F\")"
+      "Bash(cmd //c \"taskkill /PID 28124 /F && taskkill /PID 30088 /F\")",
+      "Bash(cmd //c \"taskkill /PID 16296 /F\")",
+      "Bash(timeout /t 3 /nobreak)",
+      "Bash(nul)",
+      "Bash(cmd //c \"taskkill /PID 37288 /F\")",
+      "Bash(cmd //c \"taskkill /PID 4672 /F\")"
     ],
     "deny": [],
     "ask": []

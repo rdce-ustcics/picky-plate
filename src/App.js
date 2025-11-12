@@ -2,11 +2,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainLayout from "./layouts/MainLayout";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
-import Surprise from "./pages/Surprise";
 import BarkadaVote from "./pages/Barkadavote";
 import Explorer from "./pages/Explorer";
-import Contact from "./pages/Contact";
-import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import AdminPage from "./pages/AdminPage";
 import ChatBot from "./pages/ChatBot";
@@ -19,7 +16,7 @@ import RoleRoute, { GuestOnlyRoute } from "./auth/RoleRoute";
 import "./index.css";
 import CommunityRecipes from "./pages/Recipe";
 import Calendar from "./pages/Calendar";
-import VerifyOtp from "./pages/VerifyOtp"; // ✅ ADD THIS
+import VerifyOtp from "./pages/VerifyOtp";
 
 export default function App() {
   return (
@@ -40,15 +37,6 @@ export default function App() {
               element={
                 <RoleRoute allow={["user", "admin"]}>
                   <Profile />
-                </RoleRoute>
-              }
-            />
-
-            <Route
-              path="/surprise"
-              element={
-                <RoleRoute allow={["user", "admin"]}>
-                  <Surprise />
                 </RoleRoute>
               }
             />
@@ -85,24 +73,6 @@ export default function App() {
               element={
                 <RoleRoute allow={["user", "admin"]}>
                   <RestaurantLocator />
-                </RoleRoute>
-              }
-            />
-
-            <Route
-              path="/contact"
-              element={
-                <RoleRoute allow={["user", "admin"]}>
-                  <Contact />
-                </RoleRoute>
-              }
-            />
-
-            <Route
-              path="/settings"
-              element={
-                <RoleRoute allow={["user", "admin"]}>
-                  <Settings />
                 </RoleRoute>
               }
             />

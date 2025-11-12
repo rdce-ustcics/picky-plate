@@ -415,7 +415,7 @@ export default function Explorer() {
 
               <div className="card-actions">
                 <button className="btn-primary" onClick={() => setModalDish(dish)}>
-                  Show Recipe
+                  Click here to view recipe
                 </button>
               </div>
 

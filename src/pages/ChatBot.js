@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { BookOpen, Plus, Search, Image, User, Send, Sparkles, X, ChevronRight } from "lucide-react";
 import {
   getSessionId,
@@ -52,6 +53,7 @@ function SmallBotAvatar({ mode }) {
 
 export default function ChatBot() {
   const { isAuthenticated, authHeaders } = useAuth();
+  const location = useLocation();
 
   const [input, setInput] = useState("");
   const [chats, setChats] = useState([]);
@@ -64,6 +66,7 @@ export default function ChatBot() {
   const [isTalking, setIsTalking] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [chatPendingDelete, setChatPendingDelete] = useState(null);
+  const [hasProcessedInitialMessage, setHasProcessedInitialMessage] = useState(false);
 
 
   // --- NEW: track previous auth to detect logout exactly
@@ -222,6 +225,24 @@ export default function ChatBot() {
     setShowSidebar(false);
     if (initialMessage) sendMessage(initialMessage, newChat.id);
   }
+
+  // Handle incoming message from Dashboard
+  useEffect(() => {
+    const incomingMessage = location.state?.message;
+
+    if (incomingMessage && !hasProcessedInitialMessage) {
+      // Wait for chats to be loaded (or empty array confirmed) before creating new chat
+      const timer = setTimeout(() => {
+        createNewChat(incomingMessage);
+        setHasProcessedInitialMessage(true);
+
+        // Clear the location state to prevent re-sending on refresh
+        window.history.replaceState({}, document.title);
+      }, 500); // Small delay to ensure chats have loaded
+
+      return () => clearTimeout(timer);
+    }
+  }, [location.state?.message, hasProcessedInitialMessage]);
 
   async function sendMessage(text = null, chatLocalId = null) {
     const messageText = (text ?? input).trim();

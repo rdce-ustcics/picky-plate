@@ -203,52 +203,126 @@ export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [greeting, setGreeting] = useState('');
   const [chatInput, setChatInput] = useState('');
+  const [foodItems, setFoodItems] = useState([]);
+  const [loadingSurprise, setLoadingSurprise] = useState(false);
+  const [showRecipeDetails, setShowRecipeDetails] = useState(false);
 
-  const foodItems = [
-    { id: 1, name: "Spaghetti Carbonara", restaurant: "Pasta House", price: "₱280.00", image: "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=800&q=80" },
-    { id: 2, name: "Beef Bulgogi Bowl", restaurant: "Korean Kitchen", price: "₱350.00", image: "https://images.unsplash.com/photo-1553163147-622ab57be1c7?w=800&q=80" },
-    { id: 3, name: "Margherita Pizza", restaurant: "Italian Corner", price: "₱420.00", image: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800&q=80" },
-    { id: 4, name: "Chicken Teriyaki", restaurant: "Tokyo Express", price: "₱295.00", image: "https://images.unsplash.com/photo-1580822184713-fc5400e7fe10?w=800&q=80" },
-    { id: 5, name: "Caesar Salad", restaurant: "Green Bistro", price: "₱245.00", image: "https://images.unsplash.com/photo-1546793665-c74683f339c1?w=800&q=80" },
-    { id: 6, name: "Pad Thai", restaurant: "Thai Delights", price: "₱315.00", image: "https://images.unsplash.com/photo-1559314809-0d155014e29e?w=800&q=80" },
-    { id: 7, name: "Beef Burger", restaurant: "Burger Junction", price: "₱380.00", image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&q=80" },
-    { id: 8, name: "Chicken Adobo", restaurant: "Filipino Eats", price: "₱260.00", image: "https://images.unsplash.com/photo-1626804475297-41608ea09aeb?w=800&q=80" },
-    { id: 9, name: "Salmon Sushi Platter", restaurant: "Sushi Bar", price: "₱520.00", image: "https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=800&q=80" },
-    { id: 10, name: "Grilled Lamb Chops", restaurant: "Steakhouse Prime", price: "₱680.00", image: "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=800&q=80" }
-  ];
+  // Fetch surprise recipes from database
+  const fetchSurpriseRecipes = async () => {
+    try {
+      const res = await fetch(`${API}/api/surprise?limit=20`);
+      const data = await res.json();
+
+      if (res.ok && data.success && data.recipes.length > 0) {
+        setFoodItems(data.recipes);
+      } else {
+        // Fallback to empty array if no recipes found
+        setFoodItems([]);
+      }
+    } catch (error) {
+      console.error("Error fetching surprise recipes:", error);
+      setFoodItems([]);
+    }
+  };
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-    
+
     const hour = new Date().getHours();
     if (hour < 12) setGreeting('Good Morning');
     else if (hour < 18) setGreeting('Good Afternoon');
     else setGreeting('Hello');
-    
+
+    // Fetch recipes from database
+    fetchSurpriseRecipes();
+
     return () => clearInterval(timer);
   }, []);
 
-  const surpriseMe = () => {
+  const surpriseMe = async () => {
     setIsAnimating(true);
-    setTimeout(() => {
-      const randomIndex = Math.floor(Math.random() * foodItems.length);
-      setCurrentFood(foodItems[randomIndex]);
-      setIsLiked(false);
-      setIsAnimating(false);
-    }, 300);
+    setLoadingSurprise(true);
+
+    try {
+      // Fetch a new random recipe from the API
+      const res = await fetch(`${API}/api/surprise/random`);
+      const data = await res.json();
+
+      if (res.ok && data.success && data.recipe) {
+        setTimeout(() => {
+          setCurrentFood(data.recipe);
+          setIsLiked(false);
+          setIsAnimating(false);
+          setLoadingSurprise(false);
+        }, 300);
+      } else {
+        // Fallback to local array if API fails
+        if (foodItems.length > 0) {
+          setTimeout(() => {
+            const randomIndex = Math.floor(Math.random() * foodItems.length);
+            setCurrentFood(foodItems[randomIndex]);
+            setIsLiked(false);
+            setIsAnimating(false);
+            setLoadingSurprise(false);
+          }, 300);
+        } else {
+          setIsAnimating(false);
+          setLoadingSurprise(false);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching random recipe:", error);
+      // Fallback to local array
+      if (foodItems.length > 0) {
+        setTimeout(() => {
+          const randomIndex = Math.floor(Math.random() * foodItems.length);
+          setCurrentFood(foodItems[randomIndex]);
+          setIsLiked(false);
+          setIsAnimating(false);
+          setLoadingSurprise(false);
+        }, 300);
+      } else {
+        setIsAnimating(false);
+        setLoadingSurprise(false);
+      }
+    }
   };
 
-  const handleSurpriseClick = () => {
+  const handleSurpriseClick = async () => {
     if (!showSurprise) {
-      const randomIndex = Math.floor(Math.random() * foodItems.length);
-      setCurrentFood(foodItems[randomIndex]);
+      setLoadingSurprise(true);
+      try {
+        // Fetch a random recipe from the API
+        const res = await fetch(`${API}/api/surprise/random`);
+        const data = await res.json();
+
+        if (res.ok && data.success && data.recipe) {
+          setCurrentFood(data.recipe);
+        } else {
+          // Fallback to local array
+          if (foodItems.length > 0) {
+            const randomIndex = Math.floor(Math.random() * foodItems.length);
+            setCurrentFood(foodItems[randomIndex]);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching random recipe:", error);
+        // Fallback to local array
+        if (foodItems.length > 0) {
+          const randomIndex = Math.floor(Math.random() * foodItems.length);
+          setCurrentFood(foodItems[randomIndex]);
+        }
+      } finally {
+        setLoadingSurprise(false);
+      }
     }
     setShowSurprise(!showSurprise);
   };
 
   const handleChatSubmit = () => {
     if (chatInput.trim()) {
-      alert(`Redirecting to AI Chat Bot with message: "${chatInput}"`);
+      // Navigate to ChatBot page with the message in state
+      navigate('/chatbot', { state: { message: chatInput.trim() } });
       setChatInput('');
     }
   };
@@ -527,8 +601,7 @@ export default function Dashboard() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     onClick={() => {
-                      setChatInput("What's popular today?");
-                      handleChatSubmit();
+                      navigate('/chatbot', { state: { message: "What's popular today?" } });
                     }}
                     className="px-4 py-2 bg-yellow-200 hover:bg-yellow-300 text-amber-800 rounded-xl text-sm font-medium transition-colors"
                   >
@@ -536,8 +609,7 @@ export default function Dashboard() {
                   </button>
                   <button
                     onClick={() => {
-                      setChatInput("Suggest a healthy meal");
-                      handleChatSubmit();
+                      navigate('/chatbot', { state: { message: "Suggest a healthy meal" } });
                     }}
                     className="px-4 py-2 bg-yellow-200 hover:bg-yellow-300 text-amber-800 rounded-xl text-sm font-medium transition-colors"
                   >
@@ -545,8 +617,7 @@ export default function Dashboard() {
                   </button>
                   <button
                     onClick={() => {
-                      setChatInput("Find restaurants near me");
-                      handleChatSubmit();
+                      navigate('/chatbot', { state: { message: "Find restaurants near me" } });
                     }}
                     className="px-4 py-2 bg-yellow-200 hover:bg-yellow-300 text-amber-800 rounded-xl text-sm font-medium transition-colors"
                   >
@@ -681,12 +752,50 @@ export default function Dashboard() {
                     <MapPin className="w-5 h-5 text-amber-500" />
                     {currentFood.restaurant}
                   </p>
-                  <div className="pt-6 border-t-2 border-yellow-300 mb-6">
-                    <p className="text-sm text-amber-700 mb-1">Price</p>
-                    <p className="text-4xl font-bold bg-gradient-to-r from-yellow-600 to-amber-700 bg-clip-text text-transparent">
-                      {currentFood.price}
+
+                  {/* Recipe details info */}
+                  {currentFood.description && (
+                    <p className="text-amber-800 mb-4 leading-relaxed">
+                      {currentFood.description}
                     </p>
+                  )}
+
+                  {/* Recipe metadata */}
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    {currentFood.prepTime && (
+                      <div className="bg-white/60 rounded-lg p-3">
+                        <p className="text-xs text-amber-600 font-semibold">Prep Time</p>
+                        <p className="text-sm text-amber-900">{currentFood.prepTime}</p>
+                      </div>
+                    )}
+                    {currentFood.cookTime && (
+                      <div className="bg-white/60 rounded-lg p-3">
+                        <p className="text-xs text-amber-600 font-semibold">Cook Time</p>
+                        <p className="text-sm text-amber-900">{currentFood.cookTime}</p>
+                      </div>
+                    )}
+                    {currentFood.difficulty && (
+                      <div className="bg-white/60 rounded-lg p-3">
+                        <p className="text-xs text-amber-600 font-semibold">Difficulty</p>
+                        <p className="text-sm text-amber-900">{currentFood.difficulty}</p>
+                      </div>
+                    )}
+                    {currentFood.servings && (
+                      <div className="bg-white/60 rounded-lg p-3">
+                        <p className="text-xs text-amber-600 font-semibold">Servings</p>
+                        <p className="text-sm text-amber-900">{currentFood.servings}</p>
+                      </div>
+                    )}
                   </div>
+
+                  {/* View Full Recipe Button */}
+                  <button
+                    onClick={() => setShowRecipeDetails(true)}
+                    className="w-full bg-white border-2 border-amber-400 hover:bg-amber-50 text-amber-800 font-bold py-3 px-6 rounded-xl mb-4 transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    <ChefHat className="w-5 h-5" />
+                    Click here to view full recipe
+                  </button>
 
                   <button
                     onClick={surpriseMe}
@@ -696,6 +805,196 @@ export default function Dashboard() {
                     Try Another
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Recipe Details Modal */}
+      {showRecipeDetails && currentFood && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-yellow-400 to-amber-500 p-6 flex items-center justify-between z-10">
+              <div className="flex items-center gap-3">
+                <ChefHat className="w-7 h-7 text-white" />
+                <h3 className="text-2xl font-bold text-white">Full Recipe</h3>
+              </div>
+              <button
+                onClick={() => setShowRecipeDetails(false)}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-white" />
+              </button>
+            </div>
+
+            <div className="p-8">
+              {/* Recipe Header */}
+              <div className="mb-6">
+                <div className="inline-flex items-center gap-2 bg-yellow-100 text-amber-800 px-3 py-1 rounded-full text-xs font-bold mb-3">
+                  <Star className="w-3 h-3" />
+                  {currentFood.type === "community" ? "COMMUNITY RECIPE" : "CULTURAL RECIPE"}
+                </div>
+                <h2 className="text-4xl font-bold text-gray-800 mb-2">
+                  {currentFood.name}
+                </h2>
+                <p className="text-lg text-gray-600">
+                  {currentFood.restaurant}
+                </p>
+              </div>
+
+              {/* Recipe Image */}
+              {currentFood.image && (
+                <img
+                  src={currentFood.image}
+                  alt={currentFood.name}
+                  className="w-full h-64 object-cover rounded-2xl mb-6 shadow-md"
+                />
+              )}
+
+              {/* Description */}
+              {currentFood.description && (
+                <div className="mb-6">
+                  <p className="text-gray-700 leading-relaxed">
+                    {currentFood.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Recipe metadata */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+                {currentFood.prepTime && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
+                    <p className="text-xs text-amber-600 font-semibold mb-1">Prep Time</p>
+                    <p className="text-sm text-amber-900 font-bold">{currentFood.prepTime}</p>
+                  </div>
+                )}
+                {currentFood.cookTime && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
+                    <p className="text-xs text-amber-600 font-semibold mb-1">Cook Time</p>
+                    <p className="text-sm text-amber-900 font-bold">{currentFood.cookTime}</p>
+                  </div>
+                )}
+                {currentFood.difficulty && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
+                    <p className="text-xs text-amber-600 font-semibold mb-1">Difficulty</p>
+                    <p className="text-sm text-amber-900 font-bold">{currentFood.difficulty}</p>
+                  </div>
+                )}
+                {currentFood.servings && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
+                    <p className="text-xs text-amber-600 font-semibold mb-1">Servings</p>
+                    <p className="text-sm text-amber-900 font-bold">{currentFood.servings}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Ingredients Section */}
+              {currentFood.ingredients && currentFood.ingredients.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <Utensils className="w-6 h-6 text-amber-500" />
+                    Ingredients
+                  </h3>
+                  <ul className="space-y-2">
+                    {currentFood.ingredients.map((ingredient, i) => (
+                      <li key={i} className="flex items-start gap-3 bg-gray-50 p-3 rounded-lg">
+                        <span className="text-amber-500 font-bold">•</span>
+                        <span className="text-gray-700">{ingredient}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Instructions Section */}
+              {currentFood.instructions && currentFood.instructions.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <ChefHat className="w-6 h-6 text-amber-500" />
+                    Cooking Instructions
+                  </h3>
+                  <ol className="space-y-4">
+                    {currentFood.instructions.map((step, i) => (
+                      <li key={i} className="flex items-start gap-4 bg-gradient-to-r from-amber-50 to-yellow-50 p-4 rounded-lg border-l-4 border-amber-400">
+                        <span className="bg-amber-500 text-white font-bold w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0">
+                          {i + 1}
+                        </span>
+                        <span className="text-gray-700 pt-1">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {/* Fallback to old recipe format for cultural recipes */}
+              {(!currentFood.ingredients || currentFood.ingredients.length === 0) &&
+               (!currentFood.instructions || currentFood.instructions.length === 0) &&
+               currentFood.recipe && currentFood.recipe.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <ChefHat className="w-6 h-6 text-amber-500" />
+                    Recipe
+                  </h3>
+                  <ul className="space-y-2">
+                    {currentFood.recipe.map((step, i) => (
+                      <li key={i} className="flex items-start gap-3 bg-gray-50 p-3 rounded-lg">
+                        <span className="text-amber-500 font-bold">•</span>
+                        <span className="text-gray-700">{step}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Tags and Allergens */}
+              {currentFood.type === "community" && (
+                <div className="grid md:grid-cols-2 gap-6 mb-8">
+                  {currentFood.tags && currentFood.tags.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-bold text-gray-800 mb-3">Tags</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {currentFood.tags.map((tag, i) => (
+                          <span key={i} className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {currentFood.allergens && currentFood.allergens.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-bold text-gray-800 mb-3">Allergens</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {currentFood.allergens.map((allergen, i) => (
+                          <span key={i} className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-medium">
+                            ⚠️ {allergen}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Notes */}
+              {currentFood.notes && (
+                <div className="mb-6">
+                  <h4 className="text-lg font-bold text-gray-800 mb-2">Notes</h4>
+                  <p className="text-gray-700 bg-yellow-50 border border-yellow-200 p-4 rounded-lg italic">
+                    {currentFood.notes}
+                  </p>
+                </div>
+              )}
+
+              {/* Close Button */}
+              <div className="flex justify-end pt-4 border-t">
+                <button
+                  onClick={() => setShowRecipeDetails(false)}
+                  className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white font-bold px-8 py-3 rounded-xl shadow-lg transition-all duration-200 transform hover:scale-105"
+                >
+                  Close
+                </button>
               </div>
             </div>
           </div>

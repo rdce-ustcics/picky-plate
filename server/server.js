@@ -27,6 +27,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/admin', require('./routes/admin')); // ⬅️ mount admin routes
 app.use('/api/recipes', require('./routes/recipes'));
 app.use('/api/cultural-recipes', require('./routes/culturalRecipes'));
+app.use('/api/surprise', require('./routes/surprise'));
 
 const debugRoutes = require('./routes/debug');
 app.use('/api/debug', debugRoutes);
