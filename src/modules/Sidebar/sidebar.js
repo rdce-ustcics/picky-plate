@@ -2,14 +2,14 @@
 import { useState, useEffect } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { FiGrid, FiUser, FiUsers, FiGlobe, FiSettings, FiMessageCircle, FiMenu, FiX, FiBookOpen, FiMapPin } from "react-icons/fi";
-import { useAuth } from "../../auth/AuthContext"; // ✅ FIXED PATH - Changed from "../auth/AuthContext"
+import { useAuth } from "../../auth/AuthContext";
 import "./sidebar.css";
 
 const Sidebar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-    // ADD THESE DEBUG LINES
+  // ADD THESE DEBUG LINES
   console.log('🔍 Sidebar Debug:');
   console.log('User:', user);
   console.log('User Role:', user?.role);
@@ -38,6 +38,7 @@ const Sidebar = () => {
   
   console.log('📋 Items array:', items);
   console.log('📋 Items count:', items.length);
+  
   return (
     <>
       {/* Mobile Menu Button */}
@@ -55,13 +56,13 @@ const Sidebar = () => {
       {/* Sidebar */}
       <aside className={`pap-sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
         <Link to="/" className="pap-logo-container" onClick={closeMobileMenu}>
+          {/* 🔄 CHANGED: Using picklogo.png instead of emoji */}
           <div className="pap-logo-image">
-            <div style={{
-              width: 48, height: 48, borderRadius: "50%", background: "#FFC42D",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: "24px"
-            }}>
-              🍽️
-            </div>
+            <img 
+              src="/images/picklogo.png" 
+              alt="PickAPlate Logo" 
+              className="pap-logo-img"
+            />
           </div>
 
           <div className="pap-logo-text">

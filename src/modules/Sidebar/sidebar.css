@@ -110,8 +110,8 @@
 }
 
 .pap-logo-img{
-  width: 48px;
-  height: 48px;
+  width: 100px;
+  height: 100px;
   object-fit: contain;
 }
 
@@ -150,15 +150,15 @@
   line-height: 0.8;
 }
 
-/* Nav container */
+/* Nav container - CHANGED: removed flex: 1 */
 .pap-nav{
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
-  flex: 1;
   overflow-y: auto;
   padding-right: 4px;
+  margin-bottom: 24px; /* Added spacing before login card */
 }
 
 /* Base links */
@@ -261,9 +261,8 @@
   border-radius: 16px;
 }
 
-/* Login card */
+/* Login card - CHANGED: removed margin-top: auto */
 .pap-login-card{
-  margin-top: auto;
   background: linear-gradient(135deg, var(--pap-yellow) 0%, var(--pap-orange) 100%);
   border-radius: 20px;
   padding: 20px;
@@ -463,5 +462,5 @@ body.mobile-menu-open {
 }
 
 .pap-sidebar.mobile-open {
-  animation: slideIn 0.4s cu  bic-bezier(0.4, 0, 0.2, 1);
+  animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
