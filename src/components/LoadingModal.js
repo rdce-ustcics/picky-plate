@@ -10,7 +10,13 @@ const LoadingModal = ({ message = "Loading..." }) => {
           <div className="spinner-ring"></div>
           <div className="spinner-ring"></div>
           <div className="spinner-ring"></div>
-          <div className="spinner-emoji">🍽️</div>
+
+          {/* Logo in the center of the spinner */}
+          <img
+            src="/images/picklogo.png"
+            alt="Pick-A-Plate Logo"
+            className="spinner-logo"
+          />
         </div>
         <p className="loading-message">{message}</p>
       </div>

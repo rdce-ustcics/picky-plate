@@ -1,11 +1,9 @@
 /* src/components/LoadingModal.css */
+
 .loading-modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);  /* dim background */
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -14,68 +12,103 @@
   animation: fadeIn 0.2s ease-in-out;
 }
 
+/* Light yellow card like your account panel */
 .loading-modal-content {
-  background: white;
-  padding: 3rem 4rem;
-  border-radius: 24px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  position: relative;
+  background: linear-gradient(145deg, #fff9e6 0%, #ffecc4 40%, #ffe3a3 100%);
+  padding: 2.75rem 3.5rem;
+  border-radius: 28px;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 215, 140, 0.9);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1.5rem;
   animation: scaleIn 0.3s ease-out;
+  overflow: hidden;
+}
+
+/* soft white highlight */
+.loading-modal-content::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 10% 0%,
+    rgba(255, 255, 255, 0.95),
+    transparent 60%
+  );
+  pointer-events: none;
 }
 
 .loading-spinner {
-  position: relative;
+  position: relative;          /* important for centering the logo absolutely */
   width: 120px;
   height: 120px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 999px;
+  background: #fffdf5;
 }
 
+/* bright yellow rings */
 .spinner-ring {
   position: absolute;
+  border-radius: 50%;
+  border: 4px solid transparent;
   width: 100%;
   height: 100%;
-  border: 4px solid transparent;
-  border-radius: 50%;
   animation: spin 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
 }
 
 .spinner-ring:nth-child(1) {
-  border-top-color: #FFC42D;
+  border-top-color: #ffc42d;
   animation-delay: 0s;
 }
 
 .spinner-ring:nth-child(2) {
-  border-right-color: #FFD666;
-  animation-delay: 0.3s;
-  width: 85%;
-  height: 85%;
+  width: 82%;
+  height: 82%;
+  border-right-color: #ffdd73;
+  animation-delay: 0.25s;
 }
 
 .spinner-ring:nth-child(3) {
-  border-bottom-color: #FFAA00;
-  animation-delay: 0.6s;
-  width: 70%;
-  height: 70%;
+  width: 64%;
+  height: 64%;
+  border-bottom-color: #ffae17;
+  animation-delay: 0.5s;
 }
 
-.spinner-emoji {
-  font-size: 2.5rem;
-  animation: pulse 1.5s ease-in-out infinite;
+/* center logo exactly */
+.spinner-logo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 54px;
+  height: 54px;
+  border-radius: 999px;
+  object-fit: contain;
+  background: #fff7db;
+  padding: 6px;
+  box-shadow: 0 0 0 3px rgba(255, 196, 45, 0.4);
   z-index: 1;
+  animation: pulse 1.5s ease-in-out infinite;
 }
 
+/* Text styling */
 .loading-message {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #78350F;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #8a3b00;
   margin: 0;
   text-align: center;
+  letter-spacing: 0.03em;
 }
+
+/* Animations */
 
 @keyframes fadeIn {
   from {
@@ -88,11 +121,11 @@
 
 @keyframes scaleIn {
   from {
-    transform: scale(0.8);
+    transform: scale(0.9) translateY(8px);
     opacity: 0;
   }
   to {
-    transform: scale(1);
+    transform: scale(1) translateY(0);
     opacity: 1;
   }
 }
@@ -111,14 +144,16 @@
     transform: scale(1);
   }
   50% {
-    transform: scale(1.1);
+    transform: scale(1.08);
   }
 }
 
 /* Responsive */
+
 @media (max-width: 640px) {
   .loading-modal-content {
-    padding: 2rem 3rem;
+    padding: 2rem 2.5rem;
+    border-radius: 22px;
   }
 
   .loading-spinner {
@@ -126,8 +161,9 @@
     height: 100px;
   }
 
-  .spinner-emoji {
-    font-size: 2rem;
+  .spinner-logo {
+    width: 46px;
+    height: 46px;
   }
 
   .loading-message {
