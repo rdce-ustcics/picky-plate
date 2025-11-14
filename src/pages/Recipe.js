@@ -399,457 +399,463 @@ export default function CommunityRecipes() {
     <>
       {loading && <LoadingModal message="Loading community recipes..." />}
 
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen" style={{ background: 'linear-gradient(to bottom, #FEF3C7 0%, #FDE68A 50%, #FEF3C7 100%)' }}>
         {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-800">
-              Community Recipes
-            </h1>
+        <div className="bg-gradient-to-r from-amber-400 to-yellow-500 shadow-lg">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
+              <div>
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2">
+                  Community Recipes
+                </h1>
+                <p className="text-amber-100 text-sm sm:text-base">
+                  Discover and share delicious meals with the community
+                </p>
+              </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => { setShowMine((v) => !v); setPage(1); }}
-                className={`px-4 py-2 rounded-full border text-sm transition ${
-                  showMine
-                    ? "bg-yellow-400 text-white border-yellow-400"
-                    : "bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
-                }`}
-                title="Show only recipes you uploaded"
-              >
-                {showMine ? "My Recipes" : "All Recipes"}
-              </button>
-
-              <Link
-                to="/recipes/upload"
-                className="w-full sm:w-auto bg-yellow-400 hover:bg-yellow-500 text-white font-semibold px-4 sm:px-6 py-2 sm:py-3 rounded-full flex items-center justify-center gap-2 transition shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
-              >
-                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-                Upload Recipe
-              </Link>
-            </div>
-          </div>
-
-          {/* REDESIGNED FILTERS - Simple and Clean */}
-          <div className="mt-6 space-y-4">
-            {/* Main Search Bar - Most Prominent */}
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                className="w-full border-2 border-gray-200 rounded-2xl pl-12 pr-4 py-4 text-base outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition"
-                placeholder="Search recipes by title, ingredients, or description..."
-              />
-            </div>
-
-            {/* Quick Filters Row */}
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Tag Picker - Primary Filter */}
-              <div className="relative" ref={tagMenuRef}>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
                 <button
-                  onClick={() => setShowTagMenu((s) => !s)}
-                  className="border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-gray-50 hover:border-gray-300 transition bg-white"
+                  onClick={() => { setShowMine((v) => !v); setPage(1); }}
+                  className={`px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-md ${
+                    showMine
+                      ? "bg-white text-amber-600 shadow-lg scale-105"
+                      : "bg-amber-300 text-amber-800 hover:bg-amber-200"
+                  }`}
+                  title="Show only recipes you uploaded"
                 >
-                  <span className="font-medium">
-                    {selectedTags.length > 0 ? `Tags (${selectedTags.length})` : "Filter by Tags"}
-                  </span>
-                  <ChevronDown className={`w-4 h-4 text-gray-500 transition ${showTagMenu ? 'rotate-180' : ''}`} />
+                  {showMine ? " My Recipes" : " All Recipes"}
                 </button>
-                {showTagMenu && (
-                  <div className="absolute z-20 mt-2 w-80 bg-white border-2 border-gray-200 rounded-xl shadow-xl p-4 max-h-96 overflow-auto">
-                    <div className="flex flex-wrap gap-2">
-                      {TAG_OPTIONS.map((tag) => {
-                        const active = selectedTags.includes(tag);
-                        return (
-                          <button
-                            key={tag}
-                            type="button"
-                            onClick={() => toggleTag(tag)}
-                            className={`px-3 py-1.5 rounded-full text-sm border-2 transition font-medium
-                              ${active 
-                                ? "bg-yellow-500 text-white border-yellow-500 shadow-sm"
-                                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                              }`}
-                          >
-                            #{tag}
-                          </button>
-                        );
-                      })}
+
+                <Link
+                  to="/recipes/upload"
+                  className="bg-white hover:bg-amber-50 text-amber-600 font-bold px-5 py-2.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
+                >
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                  Upload Recipe
+                </Link>
+              </div>
+            </div>
+
+            {/* FILTERS SECTION */}
+            <div className="mt-8 space-y-4">
+              {/* Main Search Bar */}
+              <div className="relative">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-600" />
+                <input
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  className="w-full bg-white border-2 border-amber-200 rounded-3xl pl-14 pr-6 py-4 text-base outline-none focus:ring-4 focus:ring-amber-300 focus:border-amber-400 transition shadow-md placeholder-amber-400"
+                  placeholder="Search for delicious recipes..."
+                />
+              </div>
+
+              {/* Quick Filters Row */}
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Tag Picker */}
+                <div className="relative" ref={tagMenuRef}>
+                  <button
+                    onClick={() => setShowTagMenu((s) => !s)}
+                    className="bg-white border-2 border-amber-200 rounded-2xl px-5 py-3 text-sm font-semibold flex items-center gap-2 hover:bg-amber-50 hover:border-amber-300 transition shadow-md text-amber-800"
+                  >
+                    <span>
+                      {selectedTags.length > 0 ? `🏷️ Tags (${selectedTags.length})` : " Filter by Tags"}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-amber-600 transition ${showTagMenu ? 'rotate-180' : ''}`} />
+                  </button>
+                  {showTagMenu && (
+                    <div className="absolute z-20 mt-2 w-80 bg-white border-2 border-amber-200 rounded-2xl shadow-2xl p-5 max-h-96 overflow-auto">
+                      <div className="flex flex-wrap gap-2">
+                        {TAG_OPTIONS.map((tag) => {
+                          const active = selectedTags.includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => toggleTag(tag)}
+                              className={`px-4 py-2 rounded-full text-sm border-2 transition font-semibold
+                                ${active 
+                                  ? "bg-gradient-to-r from-amber-400 to-yellow-500 text-white border-amber-400 shadow-md"
+                                  : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100 hover:border-amber-300"
+                                }`}
+                            >
+                              #{tag}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Advanced Filters Toggle */}
+                <button
+                  onClick={() => setShowAdvancedFilters((v) => !v)}
+                  className={`border-2 rounded-2xl px-5 py-3 text-sm flex items-center gap-2 transition font-semibold shadow-md
+                    ${showAdvancedFilters || activeFiltersCount > 0
+                      ? "bg-amber-100 border-amber-300 text-amber-800"
+                      : "bg-white border-amber-200 text-amber-800 hover:bg-amber-50 hover:border-amber-300"
+                    }`}
+                >
+                  <Filter className="w-4 h-4" />
+                  Advanced Filters
+                  {activeFiltersCount > 0 && (
+                    <span className="ml-1 bg-gradient-to-r from-amber-400 to-yellow-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center shadow-md">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </button>
+
+                {/* Clear Filters */}
+                {(search || activeFiltersCount > 0 || showMine) && (
+                  <button
+                    onClick={resetFilters}
+                    className="bg-white border-2 border-amber-200 rounded-2xl px-5 py-3 text-sm hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition font-semibold shadow-md"
+                  >
+                    ✕ Clear All
+                  </button>
+                )}
+              </div>
+
+              {/* Advanced Filters - Collapsible */}
+              {showAdvancedFilters && (
+                <div className="bg-white border-2 border-amber-200 rounded-3xl p-6 space-y-5 shadow-lg">
+                  <h3 className="text-sm font-bold text-amber-900 uppercase tracking-wide">Advanced Filters</h3>
+                  
+                  {/* Time & Difficulty Filters */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <select
+                      value={prepFilter}
+                      onChange={(e) => { setPrepFilter(e.target.value); setPage(1); }}
+                      className="border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-amber-50 hover:border-amber-300 transition font-medium text-amber-900"
+                    >
+                      <option value=""> Prep Time (Any)</option>
+                      {PREP_TIME_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                    
+                    <select
+                      value={cookFilter}
+                      onChange={(e) => { setCookFilter(e.target.value); setPage(1); }}
+                      className="border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-amber-50 hover:border-amber-300 transition font-medium text-amber-900"
+                    >
+                      <option value=""> Cook Time (Any)</option>
+                      {COOK_TIME_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                    
+                    <select
+                      value={difficultyFilter}
+                      onChange={(e) => { setDifficultyFilter(e.target.value); setPage(1); }}
+                      className="border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-amber-50 hover:border-amber-300 transition font-medium text-amber-900"
+                    >
+                      <option value=""> Difficulty (Any)</option>
+                      <option>Easy</option>
+                      <option>Medium</option>
+                      <option>Hard</option>
+                    </select>
+                    
+                    <select
+                      value={servingsFilter}
+                      onChange={(e) => { setServingsFilter(e.target.value); setPage(1); }}
+                      className="border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-amber-50 hover:border-amber-300 transition font-medium text-amber-900"
+                    >
+                      <option value=""> Servings (Any)</option>
+                      {SERVING_SIZE_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Allergen Exclusions */}
+                  <div>
+                    <div className="relative" ref={allergenMenuRef}>
+                      <button
+                        onClick={() => setShowAllergenMenu((s) => !s)}
+                        className="w-full sm:w-auto bg-amber-50 border-2 border-amber-200 rounded-2xl px-5 py-3 text-sm flex items-center gap-2 hover:bg-white hover:border-amber-300 transition font-semibold text-amber-900"
+                      >
+                        <span>
+                          {excludeAllergens.length > 0 
+                            ? `🚫 Excluding ${excludeAllergens.length} allergen${excludeAllergens.length > 1 ? 's' : ''}`
+                            : "🚫 Exclude Allergens"
+                          }
+                        </span>
+                        <ChevronDown className={`w-4 h-4 text-amber-600 transition ${showAllergenMenu ? 'rotate-180' : ''}`} />
+                      </button>
+                      {showAllergenMenu && (
+                        <div className="absolute z-20 mt-2 w-full sm:w-96 bg-white border-2 border-amber-200 rounded-2xl shadow-2xl p-5 max-h-72 overflow-auto">
+                          <div className="flex flex-wrap gap-2">
+                            {ALLERGENS.map((a) => {
+                              const active = excludeAllergens.includes(a);
+                              return (
+                                <button
+                                  key={a}
+                                  type="button"
+                                  onClick={() => toggleExcludeAllergen(a)}
+                                  className={`px-4 py-2 rounded-full text-sm border-2 transition font-semibold
+                                    ${active 
+                                      ? "bg-red-500 text-white border-red-500 shadow-md"
+                                      : "bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100 hover:border-amber-300"
+                                    }`}
+                                >
+                                  {a}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* Advanced Filters Toggle */}
-              <button
-                onClick={() => setShowAdvancedFilters((v) => !v)}
-                className={`border-2 rounded-xl px-4 py-2.5 text-sm flex items-center gap-2 transition font-medium
-                  ${showAdvancedFilters || activeFiltersCount > 0
-                    ? "bg-yellow-50 border-yellow-300 text-yellow-700"
-                    : "border-gray-200 text-gray-700 bg-white hover:bg-gray-50 hover:border-gray-300"
-                  }`}
-              >
-                <Filter className="w-4 h-4" />
-                Advanced Filters
-                {activeFiltersCount > 0 && (
-                  <span className="ml-1 bg-yellow-400 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
-                    {activeFiltersCount}
-                  </span>
-                )}
-              </button>
-
-              {/* Clear Filters - Only show if filters are active */}
-              {(search || activeFiltersCount > 0 || showMine) && (
-                <button
-                  onClick={resetFilters}
-                  className="border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition font-medium"
-                >
-                  Clear All
-                </button>
+                  {/* Custom Exclude Terms */}
+                  <div>
+                    <label className="block text-xs font-bold text-amber-900 mb-2 uppercase tracking-wide">
+                       Exclude Custom Terms
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        value={excludeInput}
+                        onChange={(e) => setExcludeInput(e.target.value)}
+                        onKeyDown={onExcludeInputKeyDown}
+                        className="flex-1 bg-amber-50 border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-4 focus:ring-amber-300 focus:border-amber-400 transition placeholder-amber-400 font-medium"
+                        placeholder="e.g., cilantro, mushroom..."
+                      />
+                      <button
+                        type="button"
+                        onClick={addExcludeTerm}
+                        className="px-5 py-3 bg-white border-2 border-amber-200 rounded-2xl text-sm hover:bg-amber-50 hover:border-amber-300 transition font-semibold flex items-center gap-2 shadow-md text-amber-900"
+                        title="Add exclude term"
+                      >
+                        <PlusCircle className="w-4 h-4" />
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                </div>
               )}
-            </div>
 
-            {/* Advanced Filters - Collapsible */}
-            {showAdvancedFilters && (
-              <div className="bg-gray-50 border-2 border-gray-200 rounded-2xl p-5 space-y-4 animate-fadeIn">
-                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Advanced Filters</h3>
-                
-                {/* Time & Difficulty Filters */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  <select
-                    value={prepFilter}
-                    onChange={(e) => { setPrepFilter(e.target.value); setPage(1); }}
-                    className="border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white hover:border-gray-300 transition"
-                  >
-                    <option value="">Prep Time (Any)</option>
-                    {PREP_TIME_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                  
-                  <select
-                    value={cookFilter}
-                    onChange={(e) => { setCookFilter(e.target.value); setPage(1); }}
-                    className="border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white hover:border-gray-300 transition"
-                  >
-                    <option value="">Cook Time (Any)</option>
-                    {COOK_TIME_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
-                  
-                  <select
-                    value={difficultyFilter}
-                    onChange={(e) => { setDifficultyFilter(e.target.value); setPage(1); }}
-                    className="border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white hover:border-gray-300 transition"
-                  >
-                    <option value="">Difficulty (Any)</option>
-                    <option>Easy</option>
-                    <option>Medium</option>
-                    <option>Hard</option>
-                  </select>
-                  
-                  <select
-                    value={servingsFilter}
-                    onChange={(e) => { setServingsFilter(e.target.value); setPage(1); }}
-                    className="border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm bg-white hover:border-gray-300 transition"
-                  >
-                    <option value="">Servings (Any)</option>
-                    {SERVING_SIZE_OPTIONS.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+              {/* Active Filter Chips */}
+              {(selectedTags.length > 0 || excludeAllergens.length > 0 || excludeTerms.length > 0) && (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {selectedTags.map((tag) => (
+                    <span key={`tag-${tag}`} className="chip inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md">
+                      #{tag}
+                      <button className="hover:bg-white/30 rounded-full p-1 transition" onClick={() => removeTagChip(tag)} aria-label={`Remove tag ${tag}`}>
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {excludeAllergens.map((a) => (
+                    <span key={`alg-${a}`} className="chip inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-red-500 text-white shadow-md">
+                      No {a}
+                      <button className="hover:bg-white/30 rounded-full p-1 transition" onClick={() => removeAllergenChip(a)} aria-label={`Remove allergen ${a}`}>
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                  {excludeTerms.map((t) => (
+                    <span key={`ext-${t}`} className="chip inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-amber-200 text-amber-900 shadow-md">
+                      No {t}
+                      <button className="hover:bg-amber-300 rounded-full p-1 transition" onClick={() => removeExcludeTermChip(t)} aria-label={`Remove exclude term ${t}`}>
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
                 </div>
+              )}
 
-                {/* Allergen Exclusions */}
-                <div>
-                  <div className="relative" ref={allergenMenuRef}>
-                    <button
-                      onClick={() => setShowAllergenMenu((s) => !s)}
-                      className="w-full sm:w-auto border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm flex items-center gap-2 hover:bg-white hover:border-gray-300 transition bg-gray-50"
-                    >
-                      <span className="font-medium">
-                        {excludeAllergens.length > 0 
-                          ? `Excluding ${excludeAllergens.length} allergen${excludeAllergens.length > 1 ? 's' : ''}`
-                          : "Exclude Allergens"
-                        }
-                      </span>
-                      <ChevronDown className={`w-4 h-4 text-gray-500 transition ${showAllergenMenu ? 'rotate-180' : ''}`} />
-                    </button>
-                    {showAllergenMenu && (
-                      <div className="absolute z-20 mt-2 w-full sm:w-96 bg-white border-2 border-gray-200 rounded-xl shadow-xl p-4 max-h-72 overflow-auto">
-                        <div className="flex flex-wrap gap-2">
-                          {ALLERGENS.map((a) => {
-                            const active = excludeAllergens.includes(a);
-                            return (
-                              <button
-                                key={a}
-                                type="button"
-                                onClick={() => toggleExcludeAllergen(a)}
-                                className={`px-3 py-1.5 rounded-full text-sm border-2 transition font-medium
-                                  ${active 
-                                    ? "bg-red-500 text-white border-red-500 shadow-sm"
-                                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
-                                  }`}
-                              >
-                                {a}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Custom Exclude Terms */}
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
-                    Exclude Custom Terms
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      value={excludeInput}
-                      onChange={(e) => setExcludeInput(e.target.value)}
-                      onKeyDown={onExcludeInputKeyDown}
-                      className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition bg-white"
-                      placeholder="e.g., cilantro, mushroom..."
-                    />
-                    <button
-                      type="button"
-                      onClick={addExcludeTerm}
-                      className="px-4 py-2.5 border-2 border-gray-200 rounded-xl text-sm hover:bg-yellow-50 hover:border-yellow-300 transition font-medium flex items-center gap-2"
-                      title="Add exclude term"
-                    >
-                      <PlusCircle className="w-4 h-4" />
-                      Add
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Active Filter Chips - Only show if filters are active */}
-            {(selectedTags.length > 0 || excludeAllergens.length > 0 || excludeTerms.length > 0) && (
-              <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200">
-                {selectedTags.map((tag) => (
-                  <span key={`tag-${tag}`} className="chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border-2 border-yellow-200">
-                    #{tag}
-                    <button className="hover:bg-yellow-200 rounded-full p-0.5 transition" onClick={() => removeTagChip(tag)} aria-label={`Remove tag ${tag}`}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-                {excludeAllergens.map((a) => (
-                  <span key={`alg-${a}`} className="chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border-2 border-red-200">
-                    No {a}
-                    <button className="hover:bg-red-200 rounded-full p-0.5 transition" onClick={() => removeAllergenChip(a)} aria-label={`Remove allergen ${a}`}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-                {excludeTerms.map((t) => (
-                  <span key={`ext-${t}`} className="chip inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border-2 border-gray-200">
-                    No {t}
-                    <button className="hover:bg-gray-200 rounded-full p-0.5 transition" onClick={() => removeExcludeTermChip(t)} aria-label={`Remove exclude term ${t}`}>
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Stats - Cleaner Display */}
-            <div className="flex items-center justify-between pt-2">
-              <p className="text-sm font-medium text-gray-600">
-                {total === 0 ? "No recipes found" : (
-                  <>
-                    <span className="text-gray-900 font-bold">{total}</span> recipe{total === 1 ? "" : "s"} found
-                  </>
-                )}
-              </p>
-              {pages > 1 && (
-                <p className="text-sm text-gray-500">
-                  Page {page} of {pages}
+              {/* Stats */}
+              <div className="flex items-center justify-between pt-2">
+                <p className="text-sm font-semibold text-amber-900">
+                  {total === 0 ? "No recipes found " : (
+                    <>
+                      <span className="text-amber-700 font-bold text-base">{total}</span> delicious recipe{total === 1 ? "" : "s"} found 🎉
+                    </>
+                  )}
                 </p>
-              )}
+                {pages > 1 && (
+                  <p className="text-sm text-amber-700 font-medium">
+                    Page {page} of {pages}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Recipe Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {items.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="mb-4">
-              <ChefHat className="w-16 h-16 mx-auto text-gray-300" />
+        {/* Recipe Grid */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+          {items.length === 0 ? (
+            <div className="text-center py-20 bg-white rounded-3xl shadow-lg border-2 border-amber-200">
+              <div className="mb-6">
+                <ChefHat className="w-20 h-20 mx-auto text-amber-300" />
+              </div>
+              <h3 className="text-2xl font-bold text-amber-900 mb-3">No recipes found</h3>
+              <p className="text-amber-700 mb-6 text-lg">
+                Try adjusting your filters or{" "}
+                <Link to="/recipes/upload" className="text-amber-600 font-bold hover:underline">
+                  be the first to add one! 🌟
+                </Link>
+              </p>
             </div>
-            <h3 className="text-xl font-bold text-gray-800 mb-2">No recipes found</h3>
-            <p className="text-gray-500 mb-6">
-              Try adjusting your filters or{" "}
-              <Link to="/recipes/upload" className="text-yellow-600 font-semibold hover:underline">
-                be the first to add one!
-              </Link>
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            {items.map((recipe) => (
-              <div
-                key={recipe._id}
-                className="bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition cursor-pointer group"
-                onClick={() => setSelectedRecipe(recipe)}
-              >
-                <div className="relative overflow-hidden">
-                  <img
-                    crossOrigin="anonymous"
-                    src={recipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
-                    alt={recipe.title}
-                    className="w-full h-48 sm:h-56 object-cover group-hover:scale-110 transition duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
-                </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {items.map((recipe) => (
+                <div
+                  key={recipe._id}
+                  className="bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all cursor-pointer group border-2 border-amber-100 hover:border-amber-300 transform hover:scale-[1.02]"
+                  onClick={() => setSelectedRecipe(recipe)}
+                >
+                  <div className="relative overflow-hidden">
+                    <img
+                      crossOrigin="anonymous"
+                      src={recipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
+                      alt={recipe.title}
+                      className="w-full h-56 object-cover group-hover:scale-110 transition duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
+                  </div>
 
-                <div className="p-4 sm:p-5">
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-2 group-hover:text-yellow-500 transition">
-                    {recipe.title}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-500 mb-3">
-                    By{" "}
-                    <span className="text-gray-700 font-medium">
-                      {recipe.author || "anonymous"}
-                    </span>
-                  </p>
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold text-amber-900 mb-2 group-hover:text-amber-600 transition">
+                      {recipe.title}
+                    </h3>
+                    <p className="text-sm text-amber-700 mb-4">
+                      By{" "}
+                      <span className="text-amber-900 font-semibold">
+                        {recipe.author || "anonymous"}
+                      </span>
+                    </p>
 
-                  {/* tags */}
-                  {recipe.tags?.length ? (
-                    <div className="mb-3 flex flex-wrap gap-2">
-                      {recipe.tags.slice(0, 6).map((t, i) => (
-                        <span
-                          key={i}
-                          className="chip text-[11px] px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200"
-                        >
-                          #{t}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
+                    {/* tags */}
+                    {recipe.tags?.length ? (
+                      <div className="mb-4 flex flex-wrap gap-2">
+                        {recipe.tags.slice(0, 6).map((t, i) => (
+                          <span
+                            key={i}
+                            className="chip text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200 font-semibold"
+                          >
+                            #{t}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
 
-                  <div className="flex items-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>Prep: {recipe.prepTime || "—"}</span>
-                    </div>
-                    <span>•</span>
-                    <div className="flex items-center gap-1">
-                      <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>{recipe.difficulty || "Easy"}</span>
+                    <div className="flex items-center gap-4 text-sm text-amber-700 font-medium">
+                      <div className="flex items-center gap-1.5">
+                        <Clock className="w-4 h-4 text-amber-500" />
+                        <span>Prep: {recipe.prepTime || "—"}</span>
+                      </div>
+                      <span className="text-amber-400">•</span>
+                      <div className="flex items-center gap-1.5">
+                        <TrendingUp className="w-4 h-4 text-amber-500" />
+                        <span>{recipe.difficulty || "Easy"}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {pages > 1 && (
-          <div className="mt-8 flex items-center justify-center gap-2">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page <= 1}
-              className="px-4 py-2 rounded-xl border-2 border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition"
-            >
-              Previous
-            </button>
-            <div className="px-4 py-2 text-sm font-medium text-gray-700">
-              Page {page} of {pages}
+              ))}
             </div>
-            <button
-              onClick={() => setPage((p) => Math.min(pages, p + 1))}
-              disabled={page >= pages}
-              className="px-4 py-2 rounded-xl border-2 border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm transition"
-            >
-              Next
-            </button>
-          </div>
-        )}
+          )}
+
+          {/* Pagination */}
+          {pages > 1 && (
+            <div className="mt-10 flex items-center justify-center gap-3">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="px-6 py-3 rounded-2xl bg-white border-2 border-amber-200 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm transition shadow-md text-amber-900"
+              >
+                ← Previous
+              </button>
+              <div className="px-6 py-3 text-sm font-bold text-amber-900 bg-white rounded-2xl border-2 border-amber-300 shadow-md">
+                Page {page} of {pages}
+              </div>
+              <button
+                onClick={() => setPage((p) => Math.min(pages, p + 1))}
+                disabled={page >= pages}
+                className="px-6 py-3 rounded-2xl bg-white border-2 border-amber-200 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm transition shadow-md text-amber-900"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Recipe Modal */}
       {selectedRecipe && (
         <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto"
+          className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 overflow-y-auto"
           onClick={() => setSelectedRecipe(null)}
         >
           <div
             ref={modalRef}
-            className="bg-white rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl my-4"
+            className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-3xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl my-4 border-4 border-amber-300"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header with Image */}
-            <div className="relative h-48 sm:h-64">
+            <div className="relative h-64">
               <img
                 crossOrigin="anonymous"
                 src={selectedRecipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
                 alt={selectedRecipe.title}
                 className="w-full h-full object-cover object-center"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
               <button
                 onClick={() => setSelectedRecipe(null)}
-                className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-white/90 hover:bg-white rounded-full p-2 transition"
+                className="absolute top-4 right-4 bg-white hover:bg-amber-50 rounded-full p-2.5 transition shadow-lg"
               >
-                <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-800" />
+                <X className="w-6 h-6 text-amber-900" />
               </button>
-              <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 text-center w-[90%]">
-                <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-1 sm:mb-2">
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-center w-[90%]">
+                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-2 drop-shadow-lg">
                   {selectedRecipe.title}
                 </h2>
-                <p className="text-sm sm:text-base text-white/90">
+                <p className="text-base text-white/95 font-medium">
                   By {selectedRecipe.author || "anonymous"}
                 </p>
               </div>
             </div>
 
             {/* Modal Content */}
-            <div className="p-4 sm:p-6 md:p-8">
+            <div className="p-6 sm:p-8">
               {/* Description */}
               {selectedRecipe.description && (
-                <div className="mb-4 sm:mb-6">
-                  <p className="text-gray-700 text-sm sm:text-base md:text-lg leading-relaxed text-center">
+                <div className="mb-6 bg-white rounded-2xl p-5 shadow-md border-2 border-amber-200">
+                  <p className="text-amber-900 text-base leading-relaxed text-center font-medium">
                     {selectedRecipe.description}
                   </p>
                 </div>
               )}
 
               {/* Quick Info */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8 p-3 sm:p-4 bg-yellow-50 rounded-xl">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8 p-5 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-2xl shadow-lg">
                 <div className="text-center">
-                  <Clock className="svg-only w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
-                  <p className="text-xs text-gray-600 mb-1">Prep Time</p>
-                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.prepTime || "—"}</p>
+                  <Clock className="svg-only w-6 h-6 mx-auto mb-2 text-white" />
+                  <p className="text-xs text-white/90 mb-1 font-semibold">Prep Time</p>
+                  <p className="text-sm font-bold text-white">{selectedRecipe.prepTime || "—"}</p>
                 </div>
 
                 <div className="text-center">
-                  <Clock className="svg-only w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
-                  <p className="text-xs text-gray-600 mb-1">Cook Time</p>
-                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.cookTime || "—"}</p>
+                  <Clock className="svg-only w-6 h-6 mx-auto mb-2 text-white" />
+                  <p className="text-xs text-white/90 mb-1 font-semibold">Cook Time</p>
+                  <p className="text-sm font-bold text-white">{selectedRecipe.cookTime || "—"}</p>
                 </div>
 
                 <div className="text-center">
-                  <TrendingUp className="svg-only w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
-                  <p className="text-xs text-gray-600 mb-1">Difficulty</p>
-                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.difficulty || "Easy"}</p>
+                  <TrendingUp className="svg-only w-6 h-6 mx-auto mb-2 text-white" />
+                  <p className="text-xs text-white/90 mb-1 font-semibold">Difficulty</p>
+                  <p className="text-sm font-bold text-white">{selectedRecipe.difficulty || "Easy"}</p>
                 </div>
 
                 <div className="text-center">
-                  <Users className="svg-only w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 sm:mb-2 text-yellow-600" />
-                  <p className="text-xs text-gray-600 mb-1">Servings</p>
-                  <p className="text-sm font-semibold text-gray-800">{selectedRecipe.servings || "—"}</p>
+                  <Users className="svg-only w-6 h-6 mx-auto mb-2 text-white" />
+                  <p className="text-xs text-white/90 mb-1 font-semibold">Servings</p>
+                  <p className="text-sm font-bold text-white">{selectedRecipe.servings || "—"}</p>
                 </div>
               </div>
 
@@ -859,7 +865,7 @@ export default function CommunityRecipes() {
                   {selectedRecipe.tags.map((t, i) => (
                     <span
                       key={i}
-                      className="chip text-[11px] px-2 py-1 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200"
+                      className="chip text-xs px-3 py-1.5 rounded-full bg-amber-200 text-amber-900 border border-amber-300 font-bold"
                     >
                       #{t}
                     </span>
@@ -869,17 +875,17 @@ export default function CommunityRecipes() {
 
               {/* Ingredients */}
               {selectedRecipe.ingredients?.length ? (
-                <div className="mb-6 sm:mb-8">
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center justify-center gap-2">
-                    <ChefHat className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500" />
+                <div className="mb-8">
+                  <h3 className="text-2xl font-bold text-amber-900 mb-4 flex items-center justify-center gap-2">
+                    <ChefHat className="w-6 h-6 text-amber-600" />
                     Ingredients
                   </h3>
-                  <div className="bg-gray-50 rounded-xl p-4 sm:p-6">
-                    <ul className="space-y-2">
+                  <div className="bg-white rounded-2xl p-6 shadow-md border-2 border-amber-200">
+                    <ul className="space-y-3">
                       {selectedRecipe.ingredients.map((ingredient, index) => (
-                        <li key={index} className="flex items-start gap-2 sm:gap-3">
-                          <span className="text-yellow-500 mt-1">•</span>
-                          <span className="text-sm sm:text-base text-gray-700">{ingredient}</span>
+                        <li key={index} className="flex items-start gap-3">
+                          <span className="text-amber-500 font-bold text-lg mt-0.5">•</span>
+                          <span className="text-base text-amber-900 font-medium">{ingredient}</span>
                         </li>
                       ))}
                     </ul>
@@ -889,17 +895,17 @@ export default function CommunityRecipes() {
 
               {/* Instructions */}
               {selectedRecipe.instructions?.length ? (
-                <div className="mb-6 sm:mb-8">
-                  <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4 text-center">
-                    Step-by-Step Instructions
+                <div className="mb-8">
+                  <h3 className="text-2xl font-bold text-amber-900 mb-4 text-center">
+                    📝 Step-by-Step Instructions
                   </h3>
-                  <div className="space-y-3 sm:space-y-4">
+                  <div className="space-y-4">
                     {selectedRecipe.instructions.map((instruction, index) => (
-                      <div key={index} className="flex gap-3 sm:gap-4 items-start">
-                        <div className="circle-badge rounded-full w-7 h-7 sm:w-8 sm:h-8 bg-yellow-400 text-white font-bold text-sm sm:text-base leading-none">
+                      <div key={index} className="flex gap-4 items-start bg-white rounded-2xl p-5 shadow-md border-2 border-amber-200">
+                        <div className="circle-badge rounded-full w-9 h-9 bg-gradient-to-r from-amber-400 to-yellow-500 text-white font-bold text-base leading-none flex items-center justify-center shadow-md flex-shrink-0">
                           {index + 1}
                         </div>
-                        <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                        <p className="text-base text-amber-900 leading-relaxed font-medium pt-1">
                           {instruction}
                         </p>
                       </div>
@@ -910,44 +916,44 @@ export default function CommunityRecipes() {
 
               {/* Notes */}
               {selectedRecipe.notes ? (
-                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 sm:p-6 rounded-r-xl mb-6">
-                  <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-2">
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-r-2xl mb-6 shadow-md">
+                  <h3 className="text-lg font-bold text-blue-900 mb-2 flex items-center gap-2">
                     💡 Chef's Notes
                   </h3>
-                  <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                  <p className="text-base text-blue-800 leading-relaxed font-medium">
                     {selectedRecipe.notes}
                   </p>
                 </div>
               ) : null}
 
-              {/* PDF Actions (hidden while capturing) */}
+              {/* PDF Actions */}
               <div className="no-pdf flex flex-wrap justify-center gap-3 mt-6 mb-4">
                 <button
                   onClick={previewRecipePdf}
-                  className="bg-white border border-yellow-500 text-yellow-700 hover:bg-yellow-50 font-semibold px-6 py-2 rounded-full shadow-sm transition"
+                  className="bg-white border-2 border-amber-400 text-amber-700 hover:bg-amber-50 font-bold px-6 py-3 rounded-2xl shadow-md transition"
                 >
-                  Preview PDF
+                  👁️ Preview PDF
                 </button>
                 <button
                   onClick={downloadRecipePdf}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-6 py-2 rounded-full shadow transition"
+                  className="bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-white font-bold px-6 py-3 rounded-2xl shadow-lg transition"
                 >
-                  Download PDF
+                  ⬇️ Download PDF
                 </button>
 
                 {/* Report button */}
                 <button
                   onClick={openReport}
                   disabled={!!selectedRecipe?.reportedByMe}
-                  className={`flex items-center gap-2 px-6 py-2 rounded-full shadow-sm transition border
+                  className={`flex items-center gap-2 px-6 py-3 rounded-2xl shadow-md transition border-2 font-bold
                     ${selectedRecipe?.reportedByMe
-                      ? "bg-gray-200 border-gray-200 text-gray-500 cursor-not-allowed"
-                      : "bg-white hover:bg-gray-50 text-gray-700 border-gray-200"
+                      ? "bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-white hover:bg-red-50 text-amber-700 border-amber-200 hover:border-red-300 hover:text-red-700"
                     }`}
                   title={selectedRecipe?.reportedByMe ? "You have already reported this recipe" : "Report this recipe"}
                 >
                   <Flag className="w-4 h-4" />
-                  {selectedRecipe?.reportedByMe ? "Reported" : "Report recipe"}
+                  {selectedRecipe?.reportedByMe ? "Reported" : "🚩 Report recipe"}
                 </button>
               </div>
             </div>
@@ -962,25 +968,25 @@ export default function CommunityRecipes() {
           onClick={closeReport}
         >
           <div
-            className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-5 sm:p-6"
+            className="w-full max-w-md bg-gradient-to-br from-amber-50 to-yellow-50 rounded-3xl shadow-2xl p-6 border-4 border-amber-300"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-yellow-50 border border-yellow-200 flex items-center justify-center">
-                <Flag className="w-4 h-4 text-yellow-600" />
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-11 h-11 rounded-2xl bg-amber-400 flex items-center justify-center shadow-md">
+                <Flag className="w-5 h-5 text-white" />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-gray-800">Report recipe</h3>
+              <h3 className="text-xl font-bold text-amber-900">Report Recipe</h3>
             </div>
 
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-amber-800 mb-5 font-medium">
               Help us keep the community healthy. Choose a reason and (optionally) add more details.
             </p>
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+            <label className="block text-sm font-bold text-amber-900 mb-2">Reason</label>
             <select
               value={reportReason}
               onChange={(e) => setReportReason(e.target.value)}
-              className="w-full border rounded-xl px-3 py-2.5 text-sm bg-white mb-3 outline-none focus:ring-2 focus:ring-yellow-400"
+              className="w-full border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-white mb-4 outline-none focus:ring-4 focus:ring-amber-300 font-medium text-amber-900"
             >
               <option value="">Select a reason…</option>
               {REPORT_REASONS.map((r) => (
@@ -988,42 +994,41 @@ export default function CommunityRecipes() {
               ))}
             </select>
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Additional comment (optional)</label>
+            <label className="block text-sm font-bold text-amber-900 mb-2">Additional comment (optional)</label>
             <textarea
               value={reportComment}
               onChange={(e) => setReportComment(e.target.value)}
               rows={4}
-              className="w-full border rounded-xl px-3 py-2 text-sm mb-4 outline-none focus:ring-2 focus:ring-yellow-400"
+              className="w-full border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm mb-5 outline-none focus:ring-4 focus:ring-amber-300 font-medium text-amber-900"
               placeholder="Add more context (optional)…"
             />
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-3">
               <button
                 onClick={closeReport}
-                className="px-4 py-2 text-sm rounded-xl border border-gray-200 hover:bg-gray-50"
+                className="px-5 py-2.5 text-sm rounded-2xl border-2 border-amber-200 hover:bg-white font-bold text-amber-900 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={submitReport}
                 disabled={!reportReason || reportLoading}
-                className={`px-4 py-2 text-sm rounded-xl text-white ${
+                className={`px-5 py-2.5 text-sm rounded-2xl text-white font-bold shadow-lg transition ${
                   (!reportReason || reportLoading)
-                    ? "bg-yellow-300 cursor-not-allowed"
-                    : "bg-yellow-500 hover:bg-yellow-600"
+                    ? "bg-amber-300 cursor-not-allowed"
+                    : "bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600"
                 }`}
               >
-                {reportLoading ? "Submitting…" : "Submit report"}
+                {reportLoading ? "Submitting…" : "Submit Report"}
               </button>
             </div>
 
-            <p className="text-[11px] text-gray-500 mt-3">
+            <p className="text-xs text-amber-700 mt-4 font-medium">
               You can report a recipe only once. Reaching 20 total reports (lifetime) or 5 reports in a week flags it for review.
             </p>
           </div>
         </div>
       )}
-      </div>
     </>
   );
 }

@@ -113,11 +113,11 @@ export default function UploadRecipe() {
       image: image || "",
       ingredients: ingredients.map(i => i.trim()).filter(Boolean),
       instructions: instructions.map(i => i.trim()).filter(Boolean),
-      prepTime,          // dropdown value
-      cookTime,          // dropdown value
+      prepTime,
+      cookTime,
       difficulty,
       notes: personalNotes.trim(),
-      servings,          // dropdown value
+      servings,
       tags: selectedTags,
       allergens: selectedAllergens
     };
@@ -168,34 +168,35 @@ export default function UploadRecipe() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-[#FEF3C7] py-8 px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-sm p-8">
+        <div className="bg-white rounded-xl border-2 border-[#FCD34D] p-6 sm:p-8">
           {/* Header */}
-          <h1 className="text-4xl font-bold text-center text-gray-800 mb-8">
-            Add <span className="text-yellow-400">A</span> Plate
+          <h1 className="text-3xl sm:text-4xl font-bold text-center text-[#B45309] mb-2">
+            Add <span className="text-[#FFBF00]">A</span> Plate
           </h1>
+          <p className="text-center text-[#92400E] mb-8">Share your culinary creation with the community</p>
 
           {/* Dish Name */}
           <div className="mb-6">
-            <label className="block text-gray-800 font-semibold mb-2">Dish Name</label>
+            <label className="block text-[#92400E] font-semibold mb-2">Dish Name</label>
             <input
               type="text"
               value={dishName}
               onChange={(e) => setDishName(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-400 focus:outline-none transition"
+              className="w-full px-4 py-3 border-2 border-[#FCD34D] rounded-xl focus:border-[#F59E0B] focus:outline-none transition bg-white"
               placeholder="Enter dish name"
             />
           </div>
 
           {/* Description */}
           <div className="mb-6">
-            <label className="block text-gray-800 font-semibold mb-2">Description</label>
+            <label className="block text-[#92400E] font-semibold mb-2">Description</label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-400 focus:outline-none transition"
+              className="w-full px-4 py-3 border-2 border-[#FCD34D] rounded-xl focus:border-[#F59E0B] focus:outline-none transition bg-white"
               placeholder="Brief description of your dish"
             />
           </div>
@@ -204,7 +205,7 @@ export default function UploadRecipe() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* Ingredients */}
             <div>
-              <label className="block text-gray-800 font-semibold mb-2">Ingredients</label>
+              <label className="block text-[#92400E] font-semibold mb-2">Ingredients</label>
               <div className="space-y-3">
                 {ingredients.map((ingredient, index) => (
                   <div key={index} className="flex gap-2">
@@ -212,15 +213,15 @@ export default function UploadRecipe() {
                       type="text"
                       value={ingredient}
                       onChange={(e) => updateIngredient(index, e.target.value)}
-                      className="flex-1 px-4 py-3 border-2 border-yellow-300 rounded-lg focus:border-yellow-400 focus:outline-none transition"
+                      className="flex-1 px-4 py-3 border-2 border-[#FCD34D] rounded-xl focus:border-[#F59E0B] focus:outline-none transition bg-white"
                       placeholder="e.g., ½ cup coconut milk"
                     />
                     <button
                       type="button"
                       onClick={() => removeIngredient(index)}
-                      className="w-12 h-12 flex items-center justify-center bg-yellow-100 hover:bg-yellow-200 rounded-lg transition"
+                      className="w-12 h-12 flex items-center justify-center bg-[#FEF3C7] hover:bg-[#FCD34D] rounded-xl transition border-2 border-[#FCD34D]"
                     >
-                      <X className="w-5 h-5 text-yellow-600" />
+                      <X className="w-5 h-5 text-[#92400E]" />
                     </button>
                   </div>
                 ))}
@@ -228,7 +229,7 @@ export default function UploadRecipe() {
               <button
                 type="button"
                 onClick={addIngredient}
-                className="mt-3 text-yellow-500 hover:text-yellow-600 font-medium flex items-center gap-1 transition"
+                className="mt-3 text-[#F59E0B] hover:text-[#D97706] font-semibold flex items-center gap-1 transition"
               >
                 <Plus className="w-4 h-4" />
                 Add Ingredient
@@ -237,20 +238,20 @@ export default function UploadRecipe() {
 
             {/* Upload Photo */}
             <div>
-              <label className="block text-gray-800 font-semibold mb-2 opacity-0">Photo</label>
+              <label className="block text-[#92400E] font-semibold mb-2">Photo (optional)</label>
               <div className="relative">
                 <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="photo-upload" />
                 <label
                   htmlFor="photo-upload"
-                  className="block border-2 border-dashed border-gray-300 rounded-xl h-64 flex flex-col items-center justify-center cursor-pointer hover:border-yellow-400 transition"
+                  className="block border-2 border-dashed border-[#FCD34D] rounded-xl h-64 flex flex-col items-center justify-center cursor-pointer hover:border-[#F59E0B] transition bg-white"
                 >
                   {image ? (
                     <img src={image} alt="Preview" className="w-full h-full object-cover rounded-xl" />
                   ) : (
                     <>
-                      <Camera className="w-16 h-16 text-gray-400 mb-3" />
-                      <p className="text-gray-600 font-medium">Upload a photo</p>
-                      <p className="text-gray-400 text-sm">(optional)</p>
+                      <Camera className="w-16 h-16 text-[#F59E0B] mb-3" />
+                      <p className="text-[#92400E] font-medium">Upload a photo</p>
+                      <p className="text-[#B45309] text-sm mt-1">Click to browse</p>
                     </>
                   )}
                 </label>
@@ -260,29 +261,28 @@ export default function UploadRecipe() {
 
           {/* Instructions */}
           <div className="mb-6">
-            <label className="block text-gray-800 font-semibold mb-2 flex items-center gap-2">
+            <label className="block text-[#92400E] font-semibold mb-2">
               Instructions
-              <span className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-white text-xs">?</span>
             </label>
             <div className="space-y-3">
               {instructions.map((instruction, index) => (
                 <div key={index} className="flex gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center font-bold text-white text-sm mt-2">
+                  <div className="flex-shrink-0 w-8 h-8 bg-[#F59E0B] rounded-full flex items-center justify-center font-bold text-white text-sm mt-2">
                     {index + 1}
                   </div>
                   <input
                     type="text"
                     value={instruction}
                     onChange={(e) => updateInstruction(index, e.target.value)}
-                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-400 focus:outline-none transition"
+                    className="flex-1 px-4 py-3 border-2 border-[#FCD34D] rounded-xl focus:border-[#F59E0B] focus:outline-none transition bg-white"
                     placeholder={`Step ${index + 1}`}
                   />
                   <button
                     type="button"
                     onClick={() => removeInstruction(index)}
-                    className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-lg transition"
+                    className="w-10 h-10 flex items-center justify-center hover:bg-[#FEF3C7] rounded-xl transition"
                   >
-                    <X className="w-5 h-5 text-gray-400" />
+                    <X className="w-5 h-5 text-[#92400E]" />
                   </button>
                 </div>
               ))}
@@ -290,7 +290,7 @@ export default function UploadRecipe() {
             <button
               type="button"
               onClick={addInstruction}
-              className="mt-3 text-yellow-500 hover:text-yellow-600 font-medium flex items-center gap-1 transition"
+              className="mt-3 text-[#F59E0B] hover:text-[#D97706] font-semibold flex items-center gap-1 transition"
             >
               <Plus className="w-4 h-4" />
               Add Instruction
@@ -298,14 +298,14 @@ export default function UploadRecipe() {
           </div>
 
           {/* Times / Difficulty / Servings */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            {/* Prep Time (DROPDOWN) */}
-            <div className="md:col-span-1">
-              <label className="block text-gray-800 font-semibold mb-2">Prep Time</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {/* Prep Time */}
+            <div>
+              <label className="block text-[#92400E] font-semibold mb-2">Prep Time</label>
               <select
                 value={prepTime}
                 onChange={(e) => setPrepTime(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-400 focus:outline-none transition bg-white"
+                className="w-full px-4 py-3 border-2 border-[#FCD34D] rounded-xl focus:border-[#F59E0B] focus:outline-none transition bg-white text-[#92400E]"
               >
                 <option value="">Select range…</option>
                 {PREP_TIME_OPTIONS.map((opt) => (
@@ -315,12 +315,12 @@ export default function UploadRecipe() {
             </div>
 
             {/* Cook Time */}
-            <div className="md:col-span-1">
-              <label className="block text-gray-800 font-semibold mb-2">Cook Time</label>
+            <div>
+              <label className="block text-[#92400E] font-semibold mb-2">Cook Time</label>
               <select
                 value={cookTime}
                 onChange={(e) => setCookTime(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-400 focus:outline-none transition bg-white"
+                className="w-full px-4 py-3 border-2 border-[#FCD34D] rounded-xl focus:border-[#F59E0B] focus:outline-none transition bg-white text-[#92400E]"
               >
                 <option value="">Select range…</option>
                 {COOK_TIME_OPTIONS.map((opt) => (
@@ -330,12 +330,12 @@ export default function UploadRecipe() {
             </div>
 
             {/* Difficulty */}
-            <div className="md:col-span-1">
-              <label className="block text-gray-800 font-semibold mb-2">Difficulty</label>
+            <div>
+              <label className="block text-[#92400E] font-semibold mb-2">Difficulty</label>
               <select
                 value={difficulty}
                 onChange={(e) => setDifficulty(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-400 focus:outline-none transition bg-white"
+                className="w-full px-4 py-3 border-2 border-[#FCD34D] rounded-xl focus:border-[#F59E0B] focus:outline-none transition bg-white text-[#92400E]"
               >
                 <option>Easy</option>
                 <option>Medium</option>
@@ -344,12 +344,12 @@ export default function UploadRecipe() {
             </div>
 
             {/* Servings */}
-            <div className="md:col-span-1">
-              <label className="block text-gray-800 font-semibold mb-2">Serving Size</label>
+            <div>
+              <label className="block text-[#92400E] font-semibold mb-2">Serving Size</label>
               <select
                 value={servings}
                 onChange={(e) => setServings(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-400 focus:outline-none transition bg-white"
+                className="w-full px-4 py-3 border-2 border-[#FCD34D] rounded-xl focus:border-[#F59E0B] focus:outline-none transition bg-white text-[#92400E]"
               >
                 <option value="">Select…</option>
                 {SERVING_SIZE_OPTIONS.map((opt) => (
@@ -361,7 +361,7 @@ export default function UploadRecipe() {
 
           {/* Tag chips */}
           <div className="mb-6">
-            <label className="block text-gray-800 font-semibold mb-2">Tags (optional)</label>
+            <label className="block text-[#92400E] font-semibold mb-2">Tags (optional)</label>
             <div className="flex flex-wrap gap-2">
               {TAG_OPTIONS.map((tag) => {
                 const active = selectedTags.includes(tag);
@@ -370,10 +370,10 @@ export default function UploadRecipe() {
                     type="button"
                     key={tag}
                     onClick={() => toggleTag(tag)}
-                    className={`px-3 py-1 rounded-full text-sm border transition
+                    className={`px-3 py-1.5 rounded-full text-sm border-2 transition font-semibold
                       ${active
-                        ? "bg-yellow-500 text-white border-yellow-500"
-                        : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"}`}
+                        ? "bg-[#F59E0B] text-white border-[#F59E0B]"
+                        : "bg-[#FEF3C7] text-[#92400E] border-[#FCD34D] hover:border-[#F59E0B]"}`}
                   >
                     #{tag}
                   </button>
@@ -384,7 +384,7 @@ export default function UploadRecipe() {
 
           {/* Allergen chips */}
           <div className="mb-6">
-            <label className="block text-gray-800 font-semibold mb-2">Allergens (optional)</label>
+            <label className="block text-[#92400E] font-semibold mb-2">Allergens (optional)</label>
             <div className="flex flex-wrap gap-2">
               {ALLERGENS.map((a) => {
                 const active = selectedAllergens.includes(a);
@@ -393,10 +393,10 @@ export default function UploadRecipe() {
                     type="button"
                     key={a}
                     onClick={() => toggleAllergen(a)}
-                    className={`px-3 py-1 rounded-full text-sm border transition
+                    className={`px-3 py-1.5 rounded-full text-sm border-2 transition font-semibold
                       ${active
                         ? "bg-red-500 text-white border-red-500"
-                        : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200"}`}
+                        : "bg-[#FEF3C7] text-[#92400E] border-[#FCD34D] hover:border-[#F59E0B]"}`}
                   >
                     {a}
                   </button>
@@ -407,21 +407,21 @@ export default function UploadRecipe() {
 
           {/* Personal Notes */}
           <div className="mb-8">
-            <label className="block text-gray-800 font-semibold mb-2">Personal Notes (optional)</label>
+            <label className="block text-[#92400E] font-semibold mb-2">Personal Notes (optional)</label>
             <textarea
               value={personalNotes}
               onChange={(e) => setPersonalNotes(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-yellow-400 focus:outline-none transition resize-none h-20"
-              placeholder="Optional notes..."
+              className="w-full px-4 py-3 border-2 border-[#FCD34D] rounded-xl focus:border-[#F59E0B] focus:outline-none transition resize-none h-24 bg-white"
+              placeholder="Add any cooking tips or variations..."
             />
           </div>
 
           {/* Submit */}
           <button
             onClick={handleSubmit}
-            className="w-full bg-yellow-400 hover:bg-yellow-500 text-white font-bold py-4 rounded-full transition shadow-lg hover:shadow-xl transform hover:scale-105"
+            className="w-full bg-[#F59E0B] hover:bg-[#D97706] text-white font-bold py-4 rounded-xl transition"
           >
-            Submit
+            Upload Recipe
           </button>
         </div>
       </div>
