@@ -3,10 +3,13 @@ import { useLocation } from 'react-router-dom';
 import { Heart, RefreshCw, Users, MessageSquare, Bot, ChefHat, Calendar, MapPin, Utensils, Sparkles, X, Star, Send } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import LoadingModal from '../components/LoadingModal';
+import { useAuth } from "../auth/AuthContext";
+
 
 export default function Dashboard() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { authHeaders } = useAuth();  // ✅ get JWT headers
 
   // API base configuration
   const API = process.env.REACT_APP_API_BASE || "";
@@ -92,7 +95,6 @@ export default function Dashboard() {
     setOnboardingError("");
     try {
       const payload = {
-        userId: activeUserId,
         likes: selectedCuisines,
         dislikes: selectedDislikes,
         diets: selectedDiets,
@@ -100,14 +102,14 @@ export default function Dashboard() {
         onboardingDone: true
       };
 
-      const res = await fetch(`${API}/api/preferences/me`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": activeUserId
-        },
-        body: JSON.stringify(payload)
-      });
+    const res = await fetch(`${API}/api/preferences/me`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(),   // ✅ adds Authorization: Bearer <token>
+      },
+      body: JSON.stringify(payload)
+    });
 
       if (!res.ok) {
         const txt = await res.text();

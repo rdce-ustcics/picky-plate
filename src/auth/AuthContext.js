@@ -40,11 +40,20 @@ export const AuthProvider = ({ children }) => {
         return { success: false, message: data?.message || 'Login failed' };
       }
 
-      // Save token and user in localStorage on successful login
+      // Save token, user, and active user id (for preferences) on successful login
       try {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user)); // Save user data to localStorage
+
+        // 🔑 This is the ID we'll use for UserPreferences.userId
+        const userIdForPrefs =
+          data?.user?._id || data?.user?.id || data?.user?.email || '';
+
+        if (userIdForPrefs) {
+          localStorage.setItem('pap:activeUserId', userIdForPrefs);
+        }
       } catch {}
+
       setToken(data.token);
       setUser(data.user);
 

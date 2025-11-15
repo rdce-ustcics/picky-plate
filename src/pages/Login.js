@@ -115,7 +115,6 @@ export default function Login() {
         if (!result?.success) throw new Error(result?.message || "Signup failed");
 
         try {
-          localStorage.setItem("pap:activeUserId", formData.email);
           sessionStorage.setItem("pap:onboardingTrigger", "1");
           localStorage.setItem("pap:onboardingForce", "1");
         } catch {}

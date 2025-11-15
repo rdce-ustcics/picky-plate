@@ -1,34 +1,61 @@
+// server/routes/preferences.js
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const router = express.Router();
-const { LikePref, DislikePref, DietPref, AllergenPref, FavoritePref } = require('../models/prefs');
-const KiddieMeal = require('../models/kiddieMeal');
+const UserPreferences = require('../models/UserPreferences');
 
-const getUserId = (req) =>
-  req.header('x-user-id') || req.query.userId || (req.body && req.body.userId) || null;
+// 🔐 Require JWT auth for all preferences routes
+function requireAuth(req, res, next) {
+  const h = req.headers.authorization || '';
+  if (!h.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'auth_required' });
+  }
 
+  const token = h.split(' ')[1];
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!decoded?.id) {
+      return res.status(401).json({ error: 'invalid_token' });
+    }
+    req.user = { id: String(decoded.id) };
+    next();
+  } catch (e) {
+    console.error('preferences_auth_error:', e);
+    return res.status(401).json({ error: 'invalid_token' });
+  }
+}
+
+router.use(requireAuth);
+
+// GET /api/preferences/me
 router.get('/me', async (req, res) => {
   try {
-    const userId = getUserId(req);
-    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const userId = req.user.id; // ✅ always JWT id
 
-    const [likes, dislikes, diets, allergens, favorites, kiddieMeal] = await Promise.all([
-      LikePref.findOne({ userId }).lean(),
-      DislikePref.findOne({ userId }).lean(),
-      DietPref.findOne({ userId }).lean(),
-      AllergenPref.findOne({ userId }).lean(),
-      FavoritePref.findOne({ userId }).lean(),
-      KiddieMeal.findOne({ userId }).lean(),
-    ]);
+    const prefs = await UserPreferences.findOne({ userId }).lean();
+
+    if (!prefs) {
+      return res.json({
+        userId,
+        likes: [],
+        dislikes: [],
+        favorites: [],
+        diets: [],
+        allergens: [],
+        kiddieMeal: false,
+        onboardingDone: false,
+      });
+    }
 
     res.json({
-      userId,
-      likes: likes?.items ?? [],
-      dislikes: dislikes?.items ?? [],
-      favorites: favorites?.items ?? [],
-      diets: diets?.items ?? [],
-      allergens: allergens?.items ?? [],
-      kiddieMeal: kiddieMeal?.enabled ?? false,
-      onboardingDone: Boolean(likes || dislikes || diets || allergens),
+      userId: prefs.userId,
+      likes: prefs.likes || [],
+      dislikes: prefs.dislikes || [],
+      favorites: prefs.favorites || [],
+      diets: prefs.diets || [],
+      allergens: prefs.allergens || [],
+      kiddieMeal: prefs.kiddieMeal === true,
+      onboardingDone: !!prefs.onboardingDone,
     });
   } catch (e) {
     console.error('GET /preferences/me error:', e);
@@ -36,56 +63,51 @@ router.get('/me', async (req, res) => {
   }
 });
 
+// PUT /api/preferences/me
 router.put('/me', async (req, res) => {
   try {
-    const userId = getUserId(req);
-    if (!userId) return res.status(400).json({ error: 'userId required' });
+    const userId = req.user.id; // ✅ always JWT id
 
-    const upsert = (Model, items) =>
-      Model.findOneAndUpdate(
-        { userId },
-        { $set: { items: Array.isArray(items) ? items : [] } },
-        { new: true, upsert: true, setDefaultsOnInsert: true }
-      ).lean();
+    const {
+      likes,
+      dislikes,
+      diets,
+      allergens,
+      favorites,
+      kiddieMeal,
+      onboardingDone,
+    } = req.body;
 
-    const jobs = [];
-    if ('likes' in req.body)     jobs.push(upsert(LikePref, req.body.likes));
-    if ('dislikes' in req.body)  jobs.push(upsert(DislikePref, req.body.dislikes));
-    if ('diets' in req.body)     jobs.push(upsert(DietPref, req.body.diets));
-    if ('allergens' in req.body) jobs.push(upsert(AllergenPref, req.body.allergens));
-    if ('favorites' in req.body) jobs.push(upsert(FavoritePref, req.body.favorites));
+    const update = {};
 
-    // Handle kiddieMeal separately as it's a boolean, not an array
-    if ('kiddieMeal' in req.body) {
-      jobs.push(
-        KiddieMeal.findOneAndUpdate(
-          { userId },
-          { $set: { enabled: req.body.kiddieMeal === true } },
-          { new: true, upsert: true, setDefaultsOnInsert: true }
-        ).lean()
-      );
+    if ('likes' in req.body)      update.likes      = Array.isArray(likes) ? likes : [];
+    if ('dislikes' in req.body)   update.dislikes   = Array.isArray(dislikes) ? dislikes : [];
+    if ('diets' in req.body)      update.diets      = Array.isArray(diets) ? diets : [];
+    if ('allergens' in req.body)  update.allergens  = Array.isArray(allergens) ? allergens : [];
+    if ('favorites' in req.body)  update.favorites  = Array.isArray(favorites) ? favorites : [];
+    if ('kiddieMeal' in req.body) update.kiddieMeal = kiddieMeal === true;
+
+    if ('onboardingDone' in req.body) {
+      update.onboardingDone = !!onboardingDone;
+    } else {
+      update.onboardingDone = true;
     }
 
-    await Promise.all(jobs);
-
-    const [likes, dislikes, diets, allergens, favorites, kiddieMeal] = await Promise.all([
-      LikePref.findOne({ userId }).lean(),
-      DislikePref.findOne({ userId }).lean(),
-      DietPref.findOne({ userId }).lean(),
-      AllergenPref.findOne({ userId }).lean(),
-      FavoritePref.findOne({ userId }).lean(),
-      KiddieMeal.findOne({ userId }).lean(),
-    ]);
+    const prefs = await UserPreferences.findOneAndUpdate(
+      { userId },
+      { $set: update },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    ).lean();
 
     res.json({
-      userId,
-      likes: likes?.items ?? [],
-      dislikes: dislikes?.items ?? [],
-      favorites: favorites?.items ?? [],
-      diets: diets?.items ?? [],
-      allergens: allergens?.items ?? [],
-      kiddieMeal: kiddieMeal?.enabled ?? false,
-      onboardingDone: true,
+      userId: prefs.userId,
+      likes: prefs.likes || [],
+      dislikes: prefs.dislikes || [],
+      favorites: prefs.favorites || [],
+      diets: prefs.diets || [],
+      allergens: prefs.allergens || [],
+      kiddieMeal: prefs.kiddieMeal === true,
+      onboardingDone: !!prefs.onboardingDone,
     });
   } catch (e) {
     console.error('PUT /preferences/me error:', e);
