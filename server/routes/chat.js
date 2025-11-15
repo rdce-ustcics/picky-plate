@@ -6,8 +6,9 @@ const jwt = require("jsonwebtoken");
 const router = express.Router();
 const openai = require("../openaiClient");
 
-// ⬇️ NEW: unified preferences model
+// Unified preferences + food history models
 const UserPreferences = require("../models/UserPreferences");
+const FoodHistory = require("../models/FoodHistory");
 
 /**
  * Soft authentication middleware
@@ -46,7 +47,7 @@ router.use(softAuth);
 
 /**
  * POST /api/chat
- * Body: { message, history?, chatId?, sessionId? }
+ * Body: { message, history?, chatId?, sessionId?, mood? }
  */
 router.post("/chat", async (req, res) => {
   try {
@@ -56,12 +57,40 @@ router.post("/chat", async (req, res) => {
     const chats = db.collection("chats");
     const ownerInfo = getOwner(req);
     if (!ownerInfo) return res.status(400).json({ error: "missing_owner" });
-    const { owner } = ownerInfo;
+    const { owner, sessionId } = ownerInfo;
 
-    const userMessage = (req.body?.message || "").toString().trim();
+    let userMessage = (req.body?.message || "").toString().trim();
     const rawHistory = Array.isArray(req.body?.history) ? req.body.history : [];
-    if (!userMessage)
+    const mood = (req.body?.mood || "").toString().trim(); // optional emoji/text
+
+    if (!userMessage) {
       return res.status(400).json({ error: "message_required" });
+    }
+
+    // Hard safety guard for message length
+    const MAX_MESSAGE_LENGTH = 200;
+    if (userMessage.length > MAX_MESSAGE_LENGTH) {
+      userMessage = userMessage.slice(0, MAX_MESSAGE_LENGTH);
+    }
+
+    // 🔒 Guest limit: max 5 user messages total (across all chats for this session)
+    if (!owner.userId && sessionId) {
+      const used = await chats
+        .aggregate([
+          { $match: { sessionId, archived: false } },
+          { $unwind: "$messages" },
+          { $match: { "messages.role": "user" } },
+          { $count: "total" },
+        ])
+        .toArray();
+
+      const totalUserMessages = used[0]?.total || 0;
+      if (totalUserMessages >= 5) {
+        return res
+          .status(403)
+          .json({ error: "guest_limit_reached", remaining: 0 });
+      }
+    }
 
     // Clean conversation history
     const cleanHistory = rawHistory
@@ -92,11 +121,37 @@ router.post("/chat", async (req, res) => {
         }
       } catch (e) {
         console.error("chat_preferences_fetch_error:", e);
-        // fail-soft: just don't send prefs, but still answer
+        // fail-soft
       }
     }
 
-    // 🧠 Build system messages, including preferences context if available
+    // 🔁 Fetch recent Food History (last 7 days, up to 10 items)
+    let recentHistory = [];
+    try {
+      const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // last 7 days
+      if (owner.userId) {
+        recentHistory = await FoodHistory.find({
+          userId: owner.userId,
+          decidedAt: { $gte: since },
+        })
+          .sort({ decidedAt: -1 })
+          .limit(10)
+          .lean();
+      } else if (sessionId) {
+        recentHistory = await FoodHistory.find({
+          sessionId,
+          decidedAt: { $gte: since },
+        })
+          .sort({ decidedAt: -1 })
+          .limit(10)
+          .lean();
+      }
+    } catch (e) {
+      console.error("food_history_fetch_error:", e);
+      // fail-soft
+    }
+
+    // 🧠 Build system messages (core + mood + prefs + history)
     const systemMessages = [
       {
         role: "system",
@@ -105,12 +160,26 @@ router.post("/chat", async (req, res) => {
       },
     ];
 
+    if (mood) {
+      systemMessages.push({
+        role: "system",
+        content:
+          `The user selected this mood indicator for the current conversation: ${mood}. ` +
+          "Tailor your tone and recommendations to match this mood while staying clear and helpful.",
+      });
+    } else {
+      systemMessages.push({
+        role: "system",
+        content:
+          "No explicit mood emoji was selected. Infer the user's current mood with sentiment analysis from their recent messages (happy, stressed, sad, tired, excited, hungry, etc.) and gently mirror that mood in your tone.",
+      });
+    }
+
     if (prefsForPrompt) {
       systemMessages.push({
         role: "system",
         content:
-          "Here are the user's saved food preferences in JSON format. " +
-          "Always respect allergens and dislikes. Prefer likes and diets when suggesting meals:\n" +
+          "Here are the user's saved food preferences in JSON format. Always respect allergens and dislikes. Prefer likes and diets when suggesting meals:\n" +
           JSON.stringify(prefsForPrompt),
       });
     } else {
@@ -118,6 +187,23 @@ router.post("/chat", async (req, res) => {
         role: "system",
         content:
           "No saved preferences are available for this user. Ask gentle follow-up questions about their likes, dislikes, allergies, and diet if needed.",
+      });
+    }
+
+    if (recentHistory && recentHistory.length) {
+      const simpleHistory = recentHistory.map((h) => ({
+        label: h.label,
+        type: h.type || "generic",
+        decidedAt: h.decidedAt,
+      }));
+
+      systemMessages.push({
+        role: "system",
+        content:
+          "Here is the user's recent food decision history in JSON (last 7 days). " +
+          "Avoid recommending the exact same dishes again if they appear here and are very recent. " +
+          "However, you may suggest similar or related dishes, flavors, or restaurants instead:\n" +
+          JSON.stringify(simpleHistory),
       });
     }
 
@@ -142,7 +228,7 @@ router.post("/chat", async (req, res) => {
         ? new ObjectId(req.body.chatId)
         : new ObjectId();
 
-    // ⚙️ Upsert chat — remove messages from $setOnInsert to avoid conflicts
+    // ⚙️ Upsert chat
     await chats.updateOne(
       { _id: chatId, ...owner },
       {
@@ -155,6 +241,7 @@ router.post("/chat", async (req, res) => {
             userMessage.slice(0, 100) ||
             "New Chat",
           archived: false,
+          closed: false,
           createdAt: new Date(),
         },
         $push: {
@@ -177,6 +264,70 @@ router.post("/chat", async (req, res) => {
       return res.status(429).json({ error: "quota_or_rate_limit" });
     }
     return res.status(500).json({ error: "chat_failed" });
+  }
+});
+
+/**
+ * POST /api/history
+ * Body: { label, type?, chatId?, mood? }
+ * - Saves a chosen recommendation into FoodHistory.
+ * - Also marks the given chat as closed so it's locked even after refresh.
+ */
+router.post("/history", async (req, res) => {
+  try {
+    const ownerInfo = getOwner(req);
+    if (!ownerInfo) return res.status(400).json({ error: "missing_owner" });
+    const { owner, sessionId } = ownerInfo;
+
+    const db = req.app.locals.db;
+    if (!db) return res.status(500).json({ error: "db_not_initialized" });
+    const chats = db.collection("chats");
+
+    const rawLabel = (req.body?.label || "").toString().trim();
+    if (!rawLabel) {
+      return res.status(400).json({ error: "label_required" });
+    }
+
+    const MAX_LABEL_LENGTH = 200;
+    const label =
+      rawLabel.length > MAX_LABEL_LENGTH
+        ? rawLabel.slice(0, MAX_LABEL_LENGTH)
+        : rawLabel;
+
+    const type = (req.body?.type || "generic").toString().trim();
+    const chatIdRaw = (req.body?.chatId || "").toString().trim();
+    const mood = (req.body?.mood || "").toString().trim() || null;
+
+    const doc = new FoodHistory({
+      userId: owner.userId || null,
+      sessionId: sessionId || owner.sessionId || null,
+      label,
+      type: ["recipe", "restaurant", "generic"].includes(type)
+        ? type
+        : "generic",
+      sourceChatId: chatIdRaw || null,
+      mood,
+      decidedAt: new Date(),
+    });
+
+    await doc.save();
+
+    // 🔒 Also mark the chat as closed so it's locked even after refresh
+    if (chatIdRaw && ObjectId.isValid(chatIdRaw)) {
+      try {
+        await chats.updateOne(
+          { _id: new ObjectId(chatIdRaw), ...owner },
+          { $set: { closed: true, updatedAt: new Date() } }
+        );
+      } catch (e) {
+        console.error("history_close_chat_error:", e);
+      }
+    }
+
+    return res.json({ success: true, historyId: doc._id.toString() });
+  } catch (e) {
+    console.error("save_history_error:", e);
+    return res.status(500).json({ error: "history_save_failed" });
   }
 });
 
@@ -232,7 +383,9 @@ router.get("/chats/:id", async (req, res) => {
   }
 });
 
-// DELETE /api/chats/:id  → archive a chat you own
+/**
+ * DELETE /api/chats/:id  → archive a chat you own
+ */
 router.delete("/chats/:id", async (req, res) => {
   try {
     const db = req.app.locals.db;
@@ -246,7 +399,7 @@ router.delete("/chats/:id", async (req, res) => {
     if (!ObjectId.isValid(id))
       return res.status(400).json({ error: "invalid_id" });
 
-    // Soft delete by archiving (so lists that filter archived:false won't return it)
+    // Soft delete by archiving
     const r = await chats.updateOne(
       { _id: new ObjectId(id), ...ownerInfo.owner },
       { $set: { archived: true, updatedAt: new Date() } }

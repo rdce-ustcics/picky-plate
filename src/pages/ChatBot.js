@@ -1,6 +1,17 @@
+// src/pages/ChatBot.js
 import React, { useState, useRef, useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import { BookOpen, Plus, Search, Image, User, Send, Sparkles, X, ChevronRight } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  BookOpen,
+  Plus,
+  Search,
+  Image,
+  User,
+  Send,
+  Sparkles,
+  X,
+  ChevronRight,
+} from "lucide-react";
 import {
   getSessionId,
   saveChatsToLocal,
@@ -14,24 +25,66 @@ const BOT_PNG = `${process.env.PUBLIC_URL || ""}/images/PickAPlate.png`;
 const API_BASE = "http://localhost:4000";
 const SESSION_ID = getSessionId();
 
-const brand = { 
-  primary: "#FFC42D", 
-  secondary: "#FFF7DA", 
-  text: "#8B4513", 
-  darkText: "#2b2b2b", 
-  bg: "#FFF9E6", 
-  cardBg: "#FFFBF0" 
+const brand = {
+  primary: "#FFC42D",
+  secondary: "#FFF7DA",
+  text: "#8B4513",
+  darkText: "#2b2b2b",
+  bg: "#FFF9E6",
+  cardBg: "#FFFBF0",
 };
+
+const MOOD_OPTIONS = [
+  { emoji: "😄", label: "Happy" },
+  { emoji: "😊", label: "Chill" },
+  { emoji: "😣", label: "Stressed" },
+  { emoji: "😔", label: "Sad" },
+  { emoji: "🤩", label: "Adventurous" },
+  { emoji: "🤤", label: "Very hungry" },
+];
 
 function BotLogo() {
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, userSelect: "none" }}>
-      <img src={BOT_PNG} alt="PickAPlate" style={{ width: 160, height: 160, objectFit: "contain", filter: "drop-shadow(0 0 30px rgba(255,196,45,.65))" }} />
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 16,
+        userSelect: "none",
+      }}
+    >
+      <img
+        src={BOT_PNG}
+        alt="PickAPlate"
+        style={{
+          width: 160,
+          height: 160,
+          objectFit: "contain",
+          filter: "drop-shadow(0 0 30px rgba(255,196,45,.65))",
+        }}
+      />
       <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: "2rem", fontWeight: 800, letterSpacing: "-0.02em", color: brand.darkText }}>
-          Pick<span style={{ color: brand.primary }}>A</span>Plate<span style={{ color: brand.primary }}>.</span>
+        <div
+          style={{
+            fontSize: "2rem",
+            fontWeight: 800,
+            letterSpacing: "-0.02em",
+            color: brand.darkText,
+          }}
+        >
+          Pick<span style={{ color: brand.primary }}>A</span>Plate
+          <span style={{ color: brand.primary }}>.</span>
         </div>
-        <div style={{ fontSize: "0.95rem", color: brand.text, marginTop: 8 }}>Your personal food companion</div>
+        <div
+          style={{
+            fontSize: "0.95rem",
+            color: brand.text,
+            marginTop: 8,
+          }}
+        >
+          Your personal food companion
+        </div>
       </div>
     </div>
   );
@@ -39,19 +92,114 @@ function BotLogo() {
 
 function SmallBotAvatar({ mode }) {
   return (
-    <div style={{ width: 72, height: 72, position: "relative", flexShrink: 0 }}>
-      <img src={BOT_PNG} alt="" style={{ width: "100%", height: "100%", display: "block", objectFit: "contain", filter: "drop-shadow(0 2px 4px rgba(0,0,0,.15))" }} />
-      <div style={{ "--face": "#FFE39B", position: "absolute", left: "50%", top: "58%", transform: "translate(-50%,-50%)", width: "22%", height: "11%", background: "var(--face)", borderRadius: 8, boxShadow: "0 0 0 1px var(--face)" }} />
-      <div className={`small-mouth ${mode === "talking" ? "talking" : ""}`} style={{ position: "absolute", left: "50%", top: "58%", transform: "translate(-50%,-50%)", width: "18%", height: "8%", background: "#111", borderRadius: "0 0 8px 8px", transformOrigin: "top center" }} />
+    <div
+      style={{ width: 72, height: 72, position: "relative", flexShrink: 0 }}
+    >
+      <img
+        src={BOT_PNG}
+        alt=""
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "block",
+          objectFit: "contain",
+          filter: "drop-shadow(0 2px 4px rgba(0,0,0,.15))",
+        }}
+      />
+      <div
+        style={{
+          "--face": "#FFE39B",
+          position: "absolute",
+          left: "50%",
+          top: "58%",
+          transform: "translate(-50%,-50%)",
+          width: "22%",
+          height: "11%",
+          background: "var(--face)",
+          borderRadius: 8,
+          boxShadow: "0 0 0 1px var(--face)",
+        }}
+      />
+      <div
+        className={`small-mouth ${mode === "talking" ? "talking" : ""}`}
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "58%",
+          transform: "translate(-50%,-50%)",
+          width: "18%",
+          height: "8%",
+          background: "#111",
+          borderRadius: "0 0 8px 8px",
+          transformOrigin: "top center",
+        }}
+      />
       {mode === "thinking" && (
         <>
-          <div className="thinking-hand" style={{ position: "absolute", left: "65%", top: "35%", width: "28%", height: "28%", transformOrigin: "bottom center" }}>
-            <div style={{ position: "absolute", bottom: "15%", left: "50%", transform: "translateX(-50%) rotate(-25deg)", width: "28%", height: "45%", background: "linear-gradient(to bottom, #FFD700, #FFA500)", borderRadius: "6px" }} />
-            <div style={{ position: "absolute", top: "5%", left: "50%", transform: "translateX(-50%)", width: "50%", height: "50%", background: "#FFD700", borderRadius: "40%", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }} />
-            <div style={{ position: "absolute", top: "-5%", left: "55%", fontSize: "14px" }}>💭</div>
+          <div
+            className="thinking-hand"
+            style={{
+              position: "absolute",
+              left: "65%",
+              top: "35%",
+              width: "28%",
+              height: "28%",
+              transformOrigin: "bottom center",
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                bottom: "15%",
+                left: "50%",
+                transform: "translateX(-50%) rotate(-25deg)",
+                width: "28%",
+                height: "45%",
+                background: "linear-gradient(to bottom, #FFD700, #FFA500)",
+                borderRadius: "6px",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                top: "5%",
+                left: "50%",
+                transform: "translateX(-50%)",
+                width: "50%",
+                height: "50%",
+                background: "#FFD700",
+                borderRadius: "40%",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+              }}
+            />
+            <div
+              style={{
+                position: "absolute",
+                top: "-5%",
+                left: "55%",
+                fontSize: "14px",
+              }}
+            >
+              💭
+            </div>
           </div>
-          <div className="thinking-dots" style={{ position: "absolute", top: -12, right: -12, background: "white", borderRadius: 12, padding: "4px 8px", boxShadow: "0 2px 8px rgba(0,0,0,0.15)", display: "flex", gap: 3 }}>
-            <span className="dot">•</span><span className="dot">•</span><span className="dot">•</span>
+          <div
+            className="thinking-dots"
+            style={{
+              position: "absolute",
+              top: -12,
+              right: -12,
+              background: "white",
+              borderRadius: 12,
+              padding: "4px 8px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+              display: "flex",
+              gap: 3,
+            }}
+          >
+            <span className="dot">•</span>
+            <span className="dot">•</span>
+            <span className="dot">•</span>
           </div>
         </>
       )}
@@ -59,9 +207,20 @@ function SmallBotAvatar({ mode }) {
   );
 }
 
+// Extract numbered/bulleted items from assistant reply (1., -, •)
+function extractRecommendationOptions(text) {
+  if (!text) return [];
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /^(\d+\.|-|•)\s+/.test(line))
+    .map((line) => line.replace(/^(\d+\.|-|•)\s+/, ""));
+}
+
 export default function ChatBot() {
   const { isAuthenticated, authHeaders } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const [input, setInput] = useState("");
   const [chats, setChats] = useState([]);
@@ -74,7 +233,19 @@ export default function ChatBot() {
   const [isTalking, setIsTalking] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [chatPendingDelete, setChatPendingDelete] = useState(null);
-  const [hasProcessedInitialMessage, setHasProcessedInitialMessage] = useState(false);
+  const [hasProcessedInitialMessage, setHasProcessedInitialMessage] =
+    useState(false);
+
+  const [selectedMood, setSelectedMood] = useState(null);
+  const [moodMenuOpen, setMoodMenuOpen] = useState(false);
+
+  const [showAnonLimitModal, setShowAnonLimitModal] = useState(false);
+  const [guestLimitReached, setGuestLimitReached] = useState(false);
+
+  const [pendingChoice, setPendingChoice] = useState(null);
+  const [showConfirmChoiceModal, setShowConfirmChoiceModal] = useState(false);
+  const [chosenRecommendation, setChosenRecommendation] = useState(null);
+  const [postDecisionStep, setPostDecisionStep] = useState(null); // "awaitingType" | "done" | null
 
   const prevAuthRef = useRef(isAuthenticated);
   const suppressLocalLoadRef = useRef(false);
@@ -95,23 +266,34 @@ export default function ChatBot() {
       ? { "Content-Type": "application/json", ...authHeaders() }
       : { "Content-Type": "application/json" };
   }
-  
-  function buildPayload({ message, history, chatId }) {
-    return isAuthenticated ? { message, history, chatId } : { message, history, chatId, sessionId: SESSION_ID };
+
+  function buildPayload({ message, history, chatId, mood }) {
+    const base = { message, history, chatId };
+    if (mood) base.mood = mood;
+
+    return isAuthenticated ? base : { ...base, sessionId: SESSION_ID };
   }
-  
+
   function oneChatUrl(serverId) {
     return isAuthenticated
       ? `${API_BASE}/api/chats/${serverId}`
-      : `${API_BASE}/api/chats/${serverId}?sessionId=${encodeURIComponent(SESSION_ID)}`;
+      : `${API_BASE}/api/chats/${serverId}?sessionId=${encodeURIComponent(
+          SESSION_ID
+        )}`;
   }
 
   const chatsListUrlStr = React.useMemo(
-    () => (isAuthenticated ? `${API_BASE}/api/chats` : `${API_BASE}/api/chats?sessionId=${encodeURIComponent(SESSION_ID)}`),
+    () =>
+      isAuthenticated
+        ? `${API_BASE}/api/chats`
+        : `${API_BASE}/api/chats?sessionId=${encodeURIComponent(SESSION_ID)}`,
     [isAuthenticated]
   );
-  
-  const headersForList = React.useMemo(() => (isAuthenticated ? authHeaders() : {}), [isAuthenticated, authHeaders]);
+
+  const headersForList = React.useMemo(
+    () => (isAuthenticated ? authHeaders() : {}),
+    [isAuthenticated, authHeaders]
+  );
 
   useEffect(() => {
     const wasAuth = prevAuthRef.current;
@@ -122,9 +304,14 @@ export default function ChatBot() {
     clearLocalChatStorage();
     setActiveChatId(null);
     setChats([]);
+    setChosenRecommendation(null);
+    setPostDecisionStep(null);
+    setGuestLimitReached(false);
 
     if (wasAuth && !nowAuth) {
-      window.location.replace(window.location.pathname + window.location.search);
+      window.location.replace(
+        window.location.pathname + window.location.search
+      );
       return;
     }
 
@@ -134,25 +321,49 @@ export default function ChatBot() {
     return () => clearTimeout(t);
   }, [isAuthenticated]);
 
-  const activeChat = chats.find((c) => c.id === activeChatId);
+  const activeChat = chats.find((c) => c.id === activeChatId) || null;
+  const isChatLocked = !!activeChat && !!activeChat.closed;
+  const isInputLocked =
+    (isAuthenticated && isChatLocked) ||
+    (!isAuthenticated && guestLimitReached);
 
-  async function apiChat({ message, history = [], chatId = null }) {
+  async function apiChat({ message, history = [], chatId = null, mood = null }) {
     const recent = history
-      .filter((m) => m && typeof m.content === "string" && m.content.trim())
+      .filter(
+        (m) =>
+          m &&
+          typeof m.content === "string" &&
+          m.content.trim()
+      )
       .slice(-8)
       .map((m) => ({ role: m.role, content: m.content.trim() }));
 
     const res = await fetch(`${API_BASE}/api/chat`, {
       method: "POST",
       headers: buildHeaders(),
-      body: JSON.stringify(buildPayload({ message, history: recent, chatId })),
+      body: JSON.stringify(
+        buildPayload({
+          message,
+          history: recent,
+          chatId,
+          mood,
+        })
+      ),
     });
 
     if (!res.ok) {
-      const text = await res.text();
-      console.error("Chat API error ->", res.status, text);
-      throw new Error(`Chat API failed (${res.status})`);
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = { raw: await res.text() };
+      }
+      const error = new Error("Chat API failed");
+      error.status = res.status;
+      error.data = data;
+      throw error;
     }
+
     return res.json();
   }
 
@@ -171,6 +382,7 @@ export default function ChatBot() {
             chatId: doc._id,
             title: doc.title || "Chat",
             messages: [],
+            closed: !!doc.closed,
           }));
           setChats(uiChats);
           setActiveChatId(null);
@@ -181,7 +393,12 @@ export default function ChatBot() {
         if (canUseLocal) {
           const cached = loadChatsFromLocal();
           if (Array.isArray(cached) && cached.length) {
-            setChats(cached.map((c) => ({ ...c, messages: c.messages || [] })));
+            setChats(
+              cached.map((c) => ({
+                ...c,
+                messages: c.messages || [],
+              }))
+            );
             setActiveChatId(null);
             return;
           }
@@ -195,7 +412,12 @@ export default function ChatBot() {
         if (canUseLocal) {
           const cached = loadChatsFromLocal();
           if (Array.isArray(cached) && cached.length) {
-            setChats(cached.map((c) => ({ ...c, messages: c.messages || [] })));
+            setChats(
+              cached.map((c) => ({
+                ...c,
+                messages: c.messages || [],
+              }))
+            );
             setActiveChatId(loadActiveChatId() || cached[0]?.id || null);
             return;
           }
@@ -208,7 +430,8 @@ export default function ChatBot() {
   }, [chatsListUrlStr, headersForList, isAuthenticated]);
 
   useEffect(() => {
-    if (!isAuthenticated && !suppressLocalLoadRef.current) saveChatsToLocal(chats);
+    if (!isAuthenticated && !suppressLocalLoadRef.current)
+      saveChatsToLocal(chats);
   }, [chats, isAuthenticated]);
 
   useEffect(() => {
@@ -216,11 +439,43 @@ export default function ChatBot() {
   }, [activeChatId]);
 
   function createNewChat(initialMessage = null) {
-    const newChat = { id: Date.now(), title: initialMessage || "New Chat", messages: [], chatId: null };
+    // Guests: only allowed to create ONE chat total
+    if (!isAuthenticated) {
+      if (chats.length === 0) {
+        const newChat = {
+          id: Date.now(),
+          title: initialMessage || "New Chat",
+          messages: [],
+          chatId: null,
+          closed: false,
+        };
+        setChats((prev) => [newChat, ...prev]);
+        setActiveChatId(newChat.id);
+        setShowSidebar(false);
+
+        if (initialMessage) {
+          sendMessage(initialMessage, newChat.id);
+        }
+      } else {
+        setShowAnonLimitModal(true);
+      }
+      return;
+    }
+
+    const newChat = {
+      id: Date.now(),
+      title: initialMessage || "New Chat",
+      messages: [],
+      chatId: null,
+      closed: false,
+    };
     setChats((prev) => [newChat, ...prev]);
     setActiveChatId(newChat.id);
     setShowSidebar(false);
-    if (initialMessage) sendMessage(initialMessage, newChat.id);
+
+    if (initialMessage) {
+      sendMessage(initialMessage, newChat.id);
+    }
   }
 
   useEffect(() => {
@@ -240,45 +495,108 @@ export default function ChatBot() {
   async function sendMessage(text = null, chatLocalId = null) {
     const messageText = (text ?? input).trim();
     const targetChatId = chatLocalId ?? activeChatId;
+
     if (!messageText || !targetChatId) return;
+
+    // If locked or guest-limit reached, prevent sending
+    if (isInputLocked) return;
 
     const targetChat = chats.find((c) => c.id === targetChatId);
     const history = targetChat?.messages || [];
+    const isFirstMessage = history.length === 0;
 
     setInput("");
     setIsTyping(true);
 
+    // Update title on first message (especially for logged-in new chat)
     setChats((prev) =>
       prev.map((chat) =>
-        chat.id === targetChatId ? { ...chat, messages: [...chat.messages, { role: "user", content: messageText }] } : chat
+        chat.id === targetChatId
+          ? {
+              ...chat,
+              title:
+                isFirstMessage &&
+                (chat.title === "New Chat" || !chat.title)
+                  ? messageText.slice(0, 60)
+                  : chat.title,
+              messages: [
+                ...chat.messages,
+                { role: "user", content: messageText },
+              ],
+            }
+          : chat
       )
     );
+
+    // Mood now can be selected anytime; if none selected, we send null
+    const moodEmoji = selectedMood || null;
 
     try {
       const { reply, chatId: persistedId } = await apiChat({
         message: messageText,
         history,
         chatId: targetChat?.chatId || null,
+        mood: moodEmoji,
       });
 
-      const aiText = (reply || "").trim() || "Got it! What cuisine are you craving?";
+      const aiText =
+        (reply || "").trim() || "Got it! What cuisine are you craving?";
 
       setChats((prev) =>
         prev.map((chat) =>
           chat.id === targetChatId
-            ? { ...chat, chatId: chat.chatId || persistedId || null, messages: [...chat.messages, { role: "assistant", content: aiText }] }
+            ? {
+                ...chat,
+                chatId: chat.chatId || persistedId || null,
+                messages: [
+                  ...chat.messages,
+                  { role: "assistant", content: aiText },
+                ],
+              }
             : chat
         )
       );
     } catch (e) {
       console.error(e);
-      setChats((prev) =>
-        prev.map((chat) =>
-          chat.id === targetChatId
-            ? { ...chat, messages: [...chat.messages, { role: "assistant", content: "Server error. Please try again." }] }
-            : chat
-        )
-      );
+
+      if (e.status === 403 && e.data?.error === "guest_limit_reached") {
+        setGuestLimitReached(true);
+        setShowAnonLimitModal(true);
+        setChats((prev) =>
+          prev.map((chat) =>
+            chat.id === targetChatId
+              ? {
+                  ...chat,
+                  messages: [
+                    ...chat.messages,
+                    {
+                      role: "assistant",
+                      content:
+                        "You’ve reached the limit of 5 messages as a guest. Please sign up or log in to continue chatting 🚀",
+                    },
+                  ],
+                }
+              : chat
+          )
+        );
+      } else {
+        setChats((prev) =>
+          prev.map((chat) =>
+            chat.id === targetChatId
+              ? {
+                  ...chat,
+                  messages: [
+                    ...chat.messages,
+                    {
+                      role: "assistant",
+                      content: "Server error. Please try again.",
+                    },
+                  ],
+                }
+              : chat
+          )
+        );
+      }
     } finally {
       setIsTyping(false);
       setIsTalking(true);
@@ -291,11 +609,14 @@ export default function ChatBot() {
     setShowSidebar(false);
 
     const chat = chats.find((c) => c.id === localId);
-    const serverId = chat?.chatId || (typeof localId === "string" ? null : localId);
+    const serverId =
+      chat?.chatId || (typeof localId === "string" ? null : localId);
 
     if (serverId && chat && chat.messages.length === 0) {
       try {
-        const res = await fetch(oneChatUrl(serverId), { headers: isAuthenticated ? authHeaders() : {} });
+        const res = await fetch(oneChatUrl(serverId), {
+          headers: isAuthenticated ? authHeaders() : {},
+        });
         if (!res.ok) throw new Error(await res.text());
         const full = await res.json();
 
@@ -306,7 +627,11 @@ export default function ChatBot() {
                   ...c,
                   chatId: full._id,
                   title: full.title || c.title,
-                  messages: (Array.isArray(full.messages) ? full.messages : []).map((m) => ({ role: m.role, content: m.content })),
+                  messages: (Array.isArray(full.messages)
+                    ? full.messages
+                    : []
+                  ).map((m) => ({ role: m.role, content: m.content })),
+                  closed: !!full.closed,
                 }
               : c
           )
@@ -318,7 +643,9 @@ export default function ChatBot() {
   }
 
   useEffect(() => {
-    if (scrollerRef.current) scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
+    if (scrollerRef.current) {
+      scrollerRef.current.scrollTop = scrollerRef.current.scrollHeight;
+    }
   }, [activeChat?.messages, isTyping]);
 
   function openDeleteDialog(chat) {
@@ -331,12 +658,18 @@ export default function ChatBot() {
     if (!chat) return;
 
     try {
-      const serverId = chat.chatId || (typeof chat.id === "string" ? chat.id : null);
+      const serverId =
+        chat.chatId || (typeof chat.id === "string" ? chat.id : null);
       if (serverId) {
         const url = isAuthenticated
           ? `${API_BASE}/api/chats/${serverId}`
-          : `${API_BASE}/api/chats/${serverId}?sessionId=${encodeURIComponent(SESSION_ID)}`;
-        const res = await fetch(url, { method: "DELETE", headers: buildHeaders() });
+          : `${API_BASE}/api/chats/${serverId}?sessionId=${encodeURIComponent(
+              SESSION_ID
+            )}`;
+        const res = await fetch(url, {
+          method: "DELETE",
+          headers: buildHeaders(),
+        });
         if (!res.ok) {
           const t = await res.text();
           console.error("Delete failed ->", res.status, t);
@@ -347,7 +680,8 @@ export default function ChatBot() {
 
       setChats((prev) => {
         const next = prev.filter((c) => c.id !== chat.id);
-        if (!isAuthenticated && !suppressLocalLoadRef.current) saveChatsToLocal(next);
+        if (!isAuthenticated && !suppressLocalLoadRef.current)
+          saveChatsToLocal(next);
         return next;
       });
 
@@ -363,6 +697,214 @@ export default function ChatBot() {
       setConfirmDeleteOpen(false);
       setChatPendingDelete(null);
     }
+  }
+
+  function handleChooseRecommendation(text) {
+    if (!isAuthenticated || !activeChatId) return;
+    if (!text) return;
+    setPendingChoice(text);
+    setShowConfirmChoiceModal(true);
+  }
+
+  async function confirmRecommendationChoice() {
+    if (!activeChatId || !pendingChoice) return;
+
+    const chat = chats.find((c) => c.id === activeChatId);
+    const sourceChatId = chat?.chatId || null;
+
+    try {
+      await fetch(`${API_BASE}/api/history`, {
+        method: "POST",
+        headers: buildHeaders(),
+        body: JSON.stringify({
+          label: pendingChoice,
+          type: "recipe",
+          chatId: sourceChatId,
+          mood: selectedMood || null,
+        }),
+      });
+    } catch (e) {
+      console.error("history_save_error:", e);
+    }
+
+    setChosenRecommendation(pendingChoice);
+    setShowConfirmChoiceModal(false);
+    setPostDecisionStep("awaitingType");
+
+    const followup = `Nice choice! Let's lock in "${pendingChoice}". Are you looking for a recipe you can cook at home, or a restaurant that serves something like this?`;
+
+    setChats((prev) =>
+      prev.map((chatItem) =>
+        chatItem.id === activeChatId
+          ? {
+              ...chatItem,
+              closed: true, // lock locally; backend also sets closed: true
+              messages: [
+                ...chatItem.messages,
+                { role: "assistant", content: followup },
+              ],
+            }
+          : chatItem
+      )
+    );
+
+    setPendingChoice(null);
+  }
+
+  function goToRecipePage() {
+    if (!chosenRecommendation) return;
+    const q = encodeURIComponent(chosenRecommendation);
+    setPostDecisionStep("done");
+    navigate(`/recipes?q=${q}`);
+  }
+
+  async function fetchRestaurantsForChoice() {
+    if (!chosenRecommendation || !activeChatId) return;
+
+    const chat = chats.find((c) => c.id === activeChatId);
+    const history = chat?.messages || [];
+
+    setIsTyping(true);
+    setPostDecisionStep("done");
+
+    try {
+      const { reply } = await apiChat({
+        message: `The user finalized their decision: "${chosenRecommendation}". Please suggest 3–5 restaurants in Metro Manila (Philippines) that match this choice. Respond with a short bulleted list of restaurant names plus a tiny note each.`,
+        history,
+        chatId: chat?.chatId || null,
+        mood: null,
+      });
+
+      const aiText =
+        (reply || "").trim() ||
+        "Here are some restaurant ideas you can try:";
+
+      setChats((prev) =>
+        prev.map((c) =>
+          c.id === activeChatId
+            ? {
+                ...c,
+                messages: [
+                  ...c.messages,
+                  { role: "assistant", content: aiText },
+                ],
+              }
+            : c
+        )
+      );
+    } catch (e) {
+      console.error("restaurant_flow_error:", e);
+      setChats((prev) =>
+        prev.map((c) =>
+          c.id === activeChatId
+            ? {
+                ...c,
+                messages: [
+                  ...c.messages,
+                  {
+                    role: "assistant",
+                    content:
+                      "Sorry, something went wrong while fetching restaurant ideas.",
+                  },
+                ],
+              }
+            : c
+        )
+      );
+    } finally {
+      setIsTyping(false);
+      setIsTalking(true);
+      setTimeout(() => setIsTalking(false), 3000);
+    }
+  }
+
+  const currentInputLength = input.length;
+
+  // Mood helper for the pill
+  const currentMoodOption =
+    MOOD_OPTIONS.find((m) => m.emoji === selectedMood) || null;
+  const moodDisplayEmoji = currentMoodOption?.emoji || "🙂";
+  const moodDisplayLabel = currentMoodOption?.label || "Mood";
+
+  function renderMoodPill() {
+    if (isInputLocked) return null;
+
+    return (
+      <div
+        style={{
+          position: "absolute",
+          left: 8,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 20,
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setMoodMenuOpen((v) => !v)}
+          style={{
+            borderRadius: 999,
+            border: "1px solid #F4E4C1",
+            background: "#FFFFFF",
+            padding: "4px 10px",
+            fontSize: 12,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+          }}
+        >
+          <span style={{ fontSize: 16 }}>{moodDisplayEmoji}</span>
+          <span style={{ fontSize: 11, color: brand.text }}>
+            {moodDisplayLabel}
+          </span>
+        </button>
+        {moodMenuOpen && (
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: "110%",
+              background: "#FFFFFF",
+              borderRadius: 12,
+              border: "1px solid #F4E4C1",
+              padding: 6,
+              boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
+              zIndex: 30,
+              minWidth: 180,
+            }}
+          >
+            {MOOD_OPTIONS.map((m) => (
+              <button
+                key={m.label}
+                type="button"
+                onClick={() => {
+                  setSelectedMood(m.emoji);
+                  setMoodMenuOpen(false);
+                }}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "flex-start",
+                  gap: 8,
+                  padding: "6px 8px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                <span style={{ fontSize: 18 }}>{m.emoji}</span>
+                <span>{m.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -397,75 +939,301 @@ export default function ChatBot() {
       {/* Mobile swipe indicator */}
       <div
         className="swipe-indicator"
-        style={{ position: "fixed", left: 0, top: "50%", transform: "translateY(-50%)", background: brand.primary, padding: "12px 8px 12px 4px", borderRadius: "0 12px 12px 0", boxShadow: "2px 0 8px rgba(0,0,0,0.1)", zIndex: 998, display: "none", flexDirection: "column", alignItems: "center", gap: 4, cursor: "pointer", animation: "pulse 2s infinite" }}
+        style={{
+          position: "fixed",
+          left: 0,
+          top: "50%",
+          transform: "translateY(-50%)",
+          background: brand.primary,
+          padding: "12px 8px 12px 4px",
+          borderRadius: "0 12px 12px 0",
+          boxShadow: "2px 0 8px rgba(0,0,0,0.1)",
+          zIndex: 998,
+          display: "none",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 4,
+          cursor: "pointer",
+          animation: "pulse 2s infinite",
+        }}
         onClick={() => setShowSidebar(true)}
       >
         <ChevronRight size={20} color="white" />
-        <div style={{ fontSize: 10, color: "white", fontWeight: 600, writingMode: "vertical-rl", textOrientation: "mixed", letterSpacing: "1px" }}>
+        <div
+          style={{
+            fontSize: 10,
+            color: "white",
+            fontWeight: 600,
+            writingMode: "vertical-rl",
+            textOrientation: "mixed",
+            letterSpacing: "1px",
+          }}
+        >
           HISTORY
         </div>
       </div>
 
       {showSidebar && (
-        <div onClick={() => setShowSidebar(false)} style={{ position: "fixed", inset: 0, background: "rgba(0, 0, 0, 0.5)", zIndex: 999, display: "none" }} className="sidebar-overlay" />
+        <div
+          onClick={() => setShowSidebar(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.5)",
+            zIndex: 999,
+            display: "none",
+          }}
+          className="sidebar-overlay"
+        />
       )}
 
       <div
-        style={{ minHeight: "100vh", width: "100%", display: "flex", background: brand.bg, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}
+        style={{
+          minHeight: "100vh",
+          width: "100%",
+          display: "flex",
+          background: brand.bg,
+          fontFamily:
+            '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        }}
         onTouchStart={(e) => setTouchStart(e.targetTouches[0].clientX)}
         onTouchMove={(e) => setTouchEnd(e.targetTouches[0].clientX)}
         onTouchEnd={() => {
           if (touchStart - touchEnd > 75) setShowSidebar(false);
-          if (touchStart - touchEnd < -75 && touchStart < 50) setShowSidebar(true);
+          if (touchStart - touchEnd < -75 && touchStart < 50)
+            setShowSidebar(true);
         }}
       >
         {/* Sidebar */}
-        <div className={`chat-sidebar ${showSidebar ? "show" : ""}`} style={{ width: 256, minWidth: 256, background: brand.cardBg, borderRight: "1px solid #F4E4C1", display: "flex", flexDirection: "column", flexShrink: 0, height: "100vh", position: "sticky", top: 0 }}>
-          <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", background: "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)", borderRadius: "0 0 16px 16px", marginBottom: 12 }}>
+        <div
+          className={`chat-sidebar ${showSidebar ? "show" : ""}`}
+          style={{
+            width: 256,
+            minWidth: 256,
+            background: brand.cardBg,
+            borderRight: "1px solid #F4E4C1",
+            display: "flex",
+            flexDirection: "column",
+            flexShrink: 0,
+            height: "100vh",
+            position: "sticky",
+            top: 0,
+          }}
+        >
+          <div
+            style={{
+              padding: "16px 20px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              background: "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)",
+              borderRadius: "0 0 16px 16px",
+              marginBottom: 12,
+            }}
+          >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <BookOpen size={24} color="white" />
-              <span style={{ fontSize: 14, fontWeight: 600, color: "white" }}>Chat History</span>
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 600,
+                  color: "white",
+                }}
+              >
+                Chat History
+              </span>
             </div>
-            <button onClick={() => setShowSidebar(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", cursor: "pointer", padding: 4, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <button
+              onClick={() => setShowSidebar(false)}
+              style={{
+                background: "rgba(255,255,255,0.2)",
+                border: "none",
+                cursor: "pointer",
+                padding: 4,
+                borderRadius: 6,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
               <X size={20} color="white" />
             </button>
           </div>
 
-          <div style={{ padding: "0 12px", display: "flex", flexDirection: "column", gap: 4 }}>
-            <button onClick={() => createNewChat()} style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 14, cursor: "pointer", background: "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)", border: "none", fontWeight: 500, color: "white", boxShadow: "0 2px 4px rgba(255,196,45,0.3)" }}>
+          <div
+            style={{
+              padding: "0 12px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 4,
+            }}
+          >
+            <button
+              onClick={() => createNewChat()}
+              disabled={!isAuthenticated}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                fontSize: 14,
+                cursor: !isAuthenticated ? "not-allowed" : "pointer",
+                background:
+                  "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)",
+                border: "none",
+                fontWeight: 500,
+                color: "white",
+                boxShadow: "0 2px 4px rgba(255,196,45,0.3)",
+                opacity: !isAuthenticated ? 0.5 : 1,
+              }}
+            >
               <Plus size={20} color="white" />
               <span>New Chat</span>
             </button>
-            <button style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 14, cursor: "pointer", background: "transparent", border: "1px solid #F4E4C1", fontWeight: 500, color: brand.text }}>
+            <button
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                fontSize: 14,
+                cursor: "pointer",
+                background: "transparent",
+                border: "1px solid #F4E4C1",
+                fontWeight: 500,
+                color: brand.text,
+              }}
+            >
               <Search size={20} color={brand.primary} />
               <span>Search Chats</span>
             </button>
-            <button style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", padding: "10px 12px", borderRadius: 10, fontSize: 14, cursor: "pointer", background: "transparent", border: "1px solid #F4E4C1", fontWeight: 500, color: brand.text }}>
+            <button
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                width: "100%",
+                padding: "10px 12px",
+                borderRadius: 10,
+                fontSize: 14,
+                cursor: "pointer",
+                background: "transparent",
+                border: "1px solid #F4E4C1",
+                fontWeight: 500,
+                color: brand.text,
+              }}
+            >
               <Image size={20} color={brand.primary} />
               <span>Library</span>
             </button>
           </div>
 
-          <div style={{ marginTop: 24, padding: "0 12px", flex: 1, overflowY: "auto" }}>
-            <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.05em", color: brand.text, padding: "0 12px", marginBottom: 12, fontWeight: 600 }}>
+          <div
+            style={{
+              marginTop: 24,
+              padding: "0 12px",
+              flex: 1,
+              overflowY: "auto",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 11,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                color: brand.text,
+                padding: "0 12px",
+                marginBottom: 12,
+                fontWeight: 600,
+              }}
+            >
               CHATS
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 2,
+              }}
+            >
               {chats.map((chat) => (
-                <div key={chat.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "6px 8px", borderRadius: 8, background: activeChatId === chat.id ? brand.secondary : "transparent", border: activeChatId === chat.id ? "1px solid #FEF3C7" : "1px solid transparent" }}>
+                <div
+                  key={chat.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                    padding: "6px 8px",
+                    borderRadius: 8,
+                    background:
+                      activeChatId === chat.id
+                        ? brand.secondary
+                        : "transparent",
+                    border:
+                      activeChatId === chat.id
+                        ? "1px solid #FEF3C7"
+                        : "1px solid transparent",
+                  }}
+                >
                   <button
                     onClick={() => selectChat(chat.id)}
-                    style={{ flex: 1, textAlign: "left", border: "none", background: "transparent", color: activeChatId === chat.id ? brand.darkText : brand.text, fontWeight: activeChatId === chat.id ? 600 : 400, fontSize: 14, cursor: "pointer", padding: "8px 6px" }}
+                    style={{
+                      flex: 1,
+                      textAlign: "left",
+                      border: "none",
+                      background: "transparent",
+                      color:
+                        activeChatId === chat.id
+                          ? brand.darkText
+                          : brand.text,
+                      fontWeight:
+                        activeChatId === chat.id ? 600 : 400,
+                      fontSize: 14,
+                      cursor: "pointer",
+                      padding: "8px 6px",
+                    }}
                   >
                     {chat.title}
+                    {chat.closed && (
+                      <span
+                        style={{
+                          marginLeft: 6,
+                          fontSize: 11,
+                          color: "#9CA3AF",
+                        }}
+                      >
+                        (closed)
+                      </span>
+                    )}
                   </button>
 
                   <button
                     onClick={() => openDeleteDialog(chat)}
                     title="Delete chat"
-                    style={{ border: "none", background: "transparent", color: "#D4A574", cursor: "pointer", padding: 6, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center" }}
-                    onMouseOver={(e) => (e.currentTarget.style.background = brand.secondary)}
-                    onMouseOut={(e) => (e.currentTarget.style.background = "transparent")}
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      color: "#D4A574",
+                      cursor: "pointer",
+                      padding: 6,
+                      borderRadius: 6,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                    onMouseOver={(e) =>
+                      (e.currentTarget.style.background =
+                        brand.secondary)
+                    }
+                    onMouseOut={(e) =>
+                      (e.currentTarget.style.background =
+                        "transparent")
+                    }
                     aria-label={`Delete ${chat.title}`}
                   >
                     <X size={16} />
@@ -475,94 +1243,492 @@ export default function ChatBot() {
             </div>
           </div>
 
-          <div style={{ padding: 16, borderTop: "1px solid #F4E4C1", background: brand.secondary }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 2px 4px rgba(255,196,45,0.3)" }}>
+          <div
+            style={{
+              padding: 16,
+              borderTop: "1px solid #F4E4C1",
+              background: brand.secondary,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: "50%",
+                  background:
+                    "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  boxShadow:
+                    "0 2px 4px rgba(255,196,45,0.3)",
+                }}
+              >
                 <User size={20} color="white" />
               </div>
-              <span style={{ fontSize: 14, fontWeight: 500, color: brand.darkText }}>Username</span>
+              <span
+                style={{
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: brand.darkText,
+                }}
+              >
+                Username
+              </span>
             </div>
           </div>
         </div>
 
         {/* Main */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            minWidth: 0,
+          }}
+        >
           {!activeChatId ? (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}>
+            // Landing view – no active chat
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: 20,
+              }}
+            >
               <BotLogo />
-              <div style={{ width: "100%", maxWidth: 672, marginTop: 32 }}>
+              <div
+                style={{
+                  width: "100%",
+                  maxWidth: 672,
+                  marginTop: 32,
+                }}
+              >
                 <div style={{ position: "relative" }}>
+                  {renderMoodPill()}
                   <input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter" && input.trim()) createNewChat(input); }}
-                    style={{ width: "100%", borderRadius: 16, border: "2px solid #F4E4C1", background: "white", padding: "14px 56px 14px 20px", fontSize: 14, outline: "none", boxShadow: "0 2px 8px rgba(255,196,45,0.1)", boxSizing: "border-box" }}
-                    placeholder="Ask me anything about food..."
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && input.trim()) {
+                        createNewChat(input);
+                      }
+                    }}
+                    style={{
+                      width: "100%",
+                      borderRadius: 16,
+                      border: "2px solid #F4E4C1",
+                      background: isInputLocked ? "#F5F5F5" : "white",
+                      padding: "14px 56px 14px 88px", // extra left padding for mood pill
+                      fontSize: 14,
+                      outline: "none",
+                      boxShadow:
+                        "0 2px 8px rgba(255,196,45,0.1)",
+                      boxSizing: "border-box",
+                      pointerEvents: isInputLocked ? "none" : "auto",
+                    }}
+                    placeholder={
+                      guestLimitReached
+                        ? "Guest chat limit reached. Please signup or login to continue."
+                        : "Ask me anything about food..."
+                    }
+                    maxLength={200}
+                    disabled={isInputLocked}
                   />
                   <button
-                    onClick={() => { if (input.trim()) createNewChat(input); }}
-                    style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", borderRadius: 12, padding: 10, background: "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 4px rgba(255,196,45,0.3)" }}
+                    onClick={() => {
+                      if (input.trim()) createNewChat(input);
+                    }}
+                    disabled={isInputLocked}
+                    style={{
+                      position: "absolute",
+                      right: 10,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      borderRadius: 12,
+                      padding: 10,
+                      background:
+                        "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)",
+                      border: "none",
+                      cursor: isInputLocked
+                        ? "not-allowed"
+                        : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow:
+                        "0 2px 4px rgba(255,196,45,0.3)",
+                      opacity: isInputLocked ? 0.6 : 1,
+                    }}
                   >
                     <Send size={18} color="white" />
                   </button>
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: 10,
+                      bottom: -18,
+                      fontSize: 11,
+                      color: brand.text,
+                      opacity: 0.7,
+                    }}
+                  >
+                    {currentInputLength}/200
+                  </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", background: brand.cardBg }}>
-              <div style={{ padding: "12px 16px", borderBottom: "2px solid #F4E4C1", display: "flex", alignItems: "center", gap: 8, background: "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)" }}>
+            // Active chat view
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                background: brand.cardBg,
+              }}
+            >
+              <div
+                style={{
+                  padding: "12px 16px",
+                  borderBottom: "2px solid #F4E4C1",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  background:
+                    "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)",
+                }}
+              >
                 <Sparkles size={18} color="white" />
-                <span style={{ fontWeight: 600, fontSize: 14, color: "white" }}>{activeChat?.title || "Chat"}</span>
+                <span
+                  style={{
+                    fontWeight: 600,
+                    fontSize: 14,
+                    color: "white",
+                  }}
+                >
+                  {activeChat?.title || "Chat"}
+                  {activeChat?.closed && " (closed)"}
+                </span>
               </div>
 
-              <div ref={scrollerRef} style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+              <div
+                ref={scrollerRef}
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: 16,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 12,
+                }}
+              >
                 {activeChat?.messages?.length ? (
-                  activeChat.messages.map((m, idx) => (
-                    <div key={idx} style={{ display: "flex", justifyContent: m.role === "user" ? "flex-end" : "flex-start", alignItems: "flex-start", gap: 8 }}>
-                      {m.role === "assistant" && <SmallBotAvatar mode={isTalking && idx === activeChat.messages.length - 1 ? "talking" : "idle"} />}
-                      <div style={{ maxWidth: "85%", borderRadius: 14, padding: "10px 14px", fontSize: 14, lineHeight: 1.5, background: m.role === "user" ? "#ffffff" : "#FFF7DA", border: m.role === "user" ? "1px solid #F4E4C1" : "1px solid #FEF3C7", boxShadow: "0 1px 2px rgba(0,0,0,0.05)" }}>
-                        {m.content}
+                  activeChat.messages.map((m, idx) => {
+                    const isLast =
+                      idx === activeChat.messages.length - 1;
+
+                    let options = [];
+                    let showChoiceButtons = false;
+
+                    if (
+                      isAuthenticated &&
+                      !isChatLocked &&
+                      m.role === "assistant" &&
+                      isLast
+                    ) {
+                      options = extractRecommendationOptions(
+                        m.content
+                      );
+                      if (options.length > 0) {
+                        showChoiceButtons = true;
+                      }
+                    }
+
+                    return (
+                      <div
+                        key={idx}
+                        style={{
+                          display: "flex",
+                          justifyContent:
+                            m.role === "user"
+                              ? "flex-end"
+                              : "flex-start",
+                          alignItems: "flex-start",
+                          gap: 8,
+                        }}
+                      >
+                        {m.role === "assistant" && (
+                          <SmallBotAvatar
+                            mode={
+                              isTalking &&
+                              idx ===
+                                activeChat.messages.length - 1
+                                ? "talking"
+                                : "idle"
+                            }
+                          />
+                        )}
+                        <div
+                          style={{
+                            maxWidth: "85%",
+                            borderRadius: 14,
+                            padding: "10px 14px",
+                            fontSize: 14,
+                            lineHeight: 1.5,
+                            background:
+                              m.role === "user"
+                                ? "#ffffff"
+                                : "#FFF7DA",
+                            border:
+                              m.role === "user"
+                                ? "1px solid #F4E4C1"
+                                : "1px solid #FEF3C7",
+                            boxShadow:
+                              "0 1px 2px rgba(0,0,0,0.05)",
+                          }}
+                        >
+                          {m.content}
+                          {showChoiceButtons && (
+                            <div
+                              style={{
+                                marginTop: 8,
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 6,
+                              }}
+                            >
+                              {options.map((opt, i) => (
+                                <div
+                                  key={i}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 8,
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      flex: 1,
+                                      fontSize: 13,
+                                    }}
+                                  >
+                                    {opt}
+                                  </span>
+                                  <button
+                                    onClick={() =>
+                                      handleChooseRecommendation(
+                                        opt
+                                      )
+                                    }
+                                    style={{
+                                      borderRadius: 999,
+                                      padding: "4px 10px",
+                                      border:
+                                        "1px solid #FDBA74",
+                                      background: "#FFFBEB",
+                                      fontSize: 11,
+                                      cursor: "pointer",
+                                      fontWeight: 600,
+                                      whiteSpace: "nowrap",
+                                    }}
+                                  >
+                                    I&apos;m choosing this!
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
-                  <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: brand.text }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: brand.text,
+                    }}
+                  >
                     Start the conversation
                   </div>
                 )}
 
                 {isTyping && (
-                  <div style={{ display: "flex", justifyContent: "flex-start", alignItems: "flex-start", gap: 8 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "flex-start",
+                      alignItems: "flex-start",
+                      gap: 8,
+                    }}
+                  >
                     <SmallBotAvatar mode="thinking" />
                   </div>
                 )}
               </div>
 
-              <div style={{ padding: "12px 16px", borderTop: "2px solid #F4E4C1", background: brand.secondary }}>
-                <div style={{ position: "relative", maxWidth: 768, margin: "0 auto" }}>
+              <div
+                style={{
+                  padding: "12px 16px",
+                  borderTop: "2px solid #F4E4C1",
+                  background: brand.secondary,
+                }}
+              >
+                {/* Post-decision CTA buttons */}
+                {isAuthenticated &&
+                  isChatLocked &&
+                  postDecisionStep === "awaitingType" &&
+                  chosenRecommendation && (
+                    <div
+                      style={{
+                        maxWidth: 768,
+                        margin: "0 auto 8px",
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 8,
+                        justifyContent: "center",
+                      }}
+                    >
+                      <button
+                        onClick={goToRecipePage}
+                        style={{
+                          padding: "8px 12px",
+                          borderRadius: 999,
+                          border: "1px solid #F4E4C1",
+                          background: "#FFFFFF",
+                          fontSize: 13,
+                          cursor: "pointer",
+                          fontWeight: 500,
+                        }}
+                      >
+                        I want a recipe for this
+                      </button>
+                      <button
+                        onClick={fetchRestaurantsForChoice}
+                        style={{
+                          padding: "8px 12px",
+                          borderRadius: 999,
+                          border: "none",
+                          background:
+                            "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)",
+                          color: "#fff",
+                          fontSize: 13,
+                          cursor: "pointer",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Show me restaurants
+                      </button>
+                    </div>
+                  )}
+
+                <div
+                  style={{
+                    position: "relative",
+                    maxWidth: 768,
+                    margin: "0 auto",
+                  }}
+                >
+                  {renderMoodPill()}
                   <input
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                    style={{ width: "100%", borderRadius: 16, border: "2px solid #F4E4C1", background: "white", padding: "10px 48px 10px 16px", fontSize: 14, outline: "none", boxSizing: "border-box", boxShadow: "0 2px 4px rgba(255,196,45,0.1)" }}
-                    placeholder="Type your message…"
+                    style={{
+                      width: "100%",
+                      borderRadius: 16,
+                      border: "2px solid #F4E4C1",
+                      background: isInputLocked ? "#F5F5F5" : "white",
+                      padding: "10px 48px 10px 88px",
+                      fontSize: 14,
+                      outline: "none",
+                      boxSizing: "border-box",
+                      boxShadow:
+                        "0 2px 4px rgba(255,196,45,0.1)",
+                      pointerEvents: isInputLocked ? "none" : "auto",
+                    }}
+                    placeholder={
+                      isChatLocked
+                        ? "You’ve locked this recommendation. Read the conversation above or use the buttons when available."
+                        : guestLimitReached
+                        ? "Guest chat limit reached. Please signup or login to continue."
+                        : "Type your message…"
+                    }
+                    disabled={isTyping || isInputLocked}
+                    maxLength={200}
                   />
                   <button
                     onClick={() => sendMessage()}
-                    disabled={isTyping}
-                    style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", borderRadius: 12, padding: 8, background: "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", opacity: isTyping ? 0.8 : 1, boxShadow: "0 2px 4px rgba(255,196,45,0.3)" }}
+                    disabled={isTyping || isInputLocked}
+                    style={{
+                      position: "absolute",
+                      right: 8,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      borderRadius: 12,
+                      padding: 8,
+                      background:
+                        "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)",
+                      border: "none",
+                      cursor:
+                        isTyping || isInputLocked
+                          ? "not-allowed"
+                          : "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      opacity:
+                        isTyping || isInputLocked ? 0.6 : 1,
+                      boxShadow:
+                        "0 2px 4px rgba(255,196,45,0.3)",
+                    }}
                     aria-label="Send"
-                    title={isTyping ? "Sending…" : "Send"}
+                    title={
+                      isTyping
+                        ? "Sending…"
+                        : isChatLocked || guestLimitReached
+                        ? "Input disabled"
+                        : "Send"
+                    }
                   >
                     <Send size={16} color="white" />
                   </button>
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: 10,
+                      bottom: -16,
+                      fontSize: 11,
+                      color: brand.text,
+                      opacity: 0.7,
+                    }}
+                  >
+                    {currentInputLength}/200
+                  </div>
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
-      
+
+      {/* Modal: confirm delete chat */}
       {confirmDeleteOpen && (
         <div
           role="dialog"
@@ -594,7 +1760,14 @@ export default function ChatBot() {
               border: "2px solid #F4E4C1",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 10,
+              }}
+            >
               <div
                 style={{
                   width: 34,
@@ -609,16 +1782,44 @@ export default function ChatBot() {
               >
                 <X size={18} color="#ef4444" />
               </div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: brand.darkText }}>Delete chat?</div>
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: brand.darkText,
+                }}
+              >
+                Delete chat?
+              </div>
             </div>
 
-            <div style={{ fontSize: 14, color: brand.text, lineHeight: 1.5, marginBottom: 16 }}>
+            <div
+              style={{
+                fontSize: 14,
+                color: brand.text,
+                lineHeight: 1.5,
+                marginBottom: 16,
+              }}
+            >
               Are you sure you want to delete{" "}
-              <span style={{ fontWeight: 600, color: brand.darkText }}>{chatPendingDelete?.title || "this chat"}</span>? This action
-              cannot be undone.
+              <span
+                style={{
+                  fontWeight: 600,
+                  color: brand.darkText,
+                }}
+              >
+                {chatPendingDelete?.title || "this chat"}
+              </span>
+              ? This action cannot be undone.
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+              }}
+            >
               <button
                 onClick={() => {
                   setConfirmDeleteOpen(false);
@@ -651,6 +1852,235 @@ export default function ChatBot() {
                 }}
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: guest chat limit / no new chats */}
+      {showAnonLimitModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            zIndex: 1500,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowAnonLimitModal(false);
+            }
+          }}
+        >
+          <div
+            style={{
+              width: "min(92vw, 420px)",
+              background: brand.cardBg,
+              borderRadius: 16,
+              padding: 20,
+              boxShadow: "0 12px 30px rgba(0,0,0,.2)",
+              border: "2px solid #F4E4C1",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 18,
+                fontWeight: 700,
+                color: brand.darkText,
+                marginBottom: 8,
+              }}
+            >
+              Chat limit reached
+            </div>
+            <div
+              style={{
+                fontSize: 14,
+                color: brand.text,
+                lineHeight: 1.5,
+                marginBottom: 16,
+              }}
+            >
+              You can chat up to 5 times while using Pick-A-Plate as a guest,
+              and you only get one chat thread. Please{" "}
+              <strong>sign up or log in</strong> to start more chats and save
+              your food history.
+            </div>
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 8,
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                onClick={() => setShowAnonLimitModal(false)}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 10,
+                  border: "1px solid #F4E4C1",
+                  background: "#fff",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  color: brand.text,
+                  fontWeight: 500,
+                }}
+              >
+                Close
+              </button>
+              <button
+                onClick={() => navigate("/dashboard")}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 10,
+                  border: "1px solid #F4E4C1",
+                  background: "#FFFFFF",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  color: brand.darkText,
+                  fontWeight: 500,
+                }}
+              >
+                Go back to home
+              </button>
+              <button
+                onClick={() => navigate("/login")}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 10,
+                  border: "none",
+                  background:
+                    "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  color: "#fff",
+                  fontWeight: 600,
+                }}
+              >
+                Signup or Login
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: confirm recommendation choice */}
+      {showConfirmChoiceModal && pendingChoice && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            zIndex: 1500,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowConfirmChoiceModal(false);
+              setPendingChoice(null);
+            }
+          }}
+        >
+          <div
+            style={{
+              width: "min(92vw, 460px)",
+              background: brand.cardBg,
+              borderRadius: 16,
+              padding: 20,
+              boxShadow: "0 12px 30px rgba(0,0,0,.2)",
+              border: "2px solid #F4E4C1",
+            }}
+          >
+            <div
+              style={{
+                fontSize: 16,
+                fontWeight: 700,
+                color: brand.darkText,
+                marginBottom: 8,
+              }}
+            >
+              Lock in this recommendation?
+            </div>
+            <div
+              style={{
+                fontSize: 14,
+                color: brand.text,
+                lineHeight: 1.5,
+                marginBottom: 16,
+              }}
+            >
+              You chose:
+              <br />
+              <span
+                style={{
+                  display: "inline-block",
+                  marginTop: 6,
+                  padding: "6px 10px",
+                  borderRadius: 10,
+                  background: "#FFF7DA",
+                  border: "1px solid #FEF3C7",
+                  fontWeight: 500,
+                }}
+              >
+                {pendingChoice}
+              </span>
+              <br />
+              <br />
+              Are you sure with your decision? After confirming, you won&apos;t
+              be able to send new messages in this chat, and we&apos;ll help you
+              get a recipe or restaurant for it.
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+              }}
+            >
+              <button
+                onClick={() => {
+                  setShowConfirmChoiceModal(false);
+                  setPendingChoice(null);
+                }}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 10,
+                  border: "1px solid #F4E4C1",
+                  background: "#fff",
+                  fontSize: 13,
+                  cursor: "pointer",
+                  color: brand.text,
+                  fontWeight: 500,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRecommendationChoice}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 10,
+                  border: "none",
+                  background: "#22c55e",
+                  color: "#fff",
+                  fontWeight: 600,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                Yes, I&apos;m sure
               </button>
             </div>
           </div>
