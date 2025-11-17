@@ -834,11 +834,9 @@ function renderMoodPill() {
   return (
     <div
       style={{
-        position: "absolute",
-        left: 8,
-        top: "50%",
-        transform: "translateY(-50%)",
-        zIndex: 20,
+        position: "relative",
+        display: "inline-flex",
+        alignItems: "center",
       }}
     >
       <button
@@ -868,8 +866,7 @@ function renderMoodPill() {
           style={{
             position: "absolute",
             left: 0,
-            bottom: "110%",           // 👈 pops UP
-            top: "auto",              // make sure top is not used
+            bottom: "110%", // pops up above the chip
             background: "#FFFFFF",
             borderRadius: 12,
             border: "1px solid #F4E4C1",
@@ -1320,76 +1317,83 @@ function renderMoodPill() {
                   marginTop: 32,
                 }}
               >
-                <div style={{ position: "relative" }}>
-                  {renderMoodPill()}
-                  <input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && input.trim()) {
-                        createNewChat(input);
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                  }}
+                >
+                  {/* mood chip on the left */}
+                  <div style={{ flexShrink: 0 }}>{renderMoodPill()}</div>
+
+                  {/* input + send on the right */}
+                  <div style={{ position: "relative", flex: 1 }}>
+                    <input
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && input.trim()) {
+                          createNewChat(input);
+                        }
+                      }}
+                      style={{
+                        width: "100%",
+                        borderRadius: 16,
+                        border: "2px solid #F4E4C1",
+                        background: isInputLocked ? "#F5F5F5" : "white",
+                        padding: "14px 56px 14px 20px", // normal left padding now
+                        fontSize: 14,
+                        outline: "none",
+                        boxShadow: "0 2px 8px rgba(255,196,45,0.1)",
+                        boxSizing: "border-box",
+                        pointerEvents: isInputLocked ? "none" : "auto",
+                      }}
+                      placeholder={
+                        guestLimitReached
+                          ? "Guest chat limit reached. Please signup or login to continue."
+                          : "Ask me anything about food..."
                       }
-                    }}
-                    style={{
-                      width: "100%",
-                      borderRadius: 16,
-                      border: "2px solid #F4E4C1",
-                      background: isInputLocked ? "#F5F5F5" : "white",
-                      padding: "14px 56px 14px 88px", // extra left padding for mood pill
-                      fontSize: 14,
-                      outline: "none",
-                      boxShadow:
-                        "0 2px 8px rgba(255,196,45,0.1)",
-                      boxSizing: "border-box",
-                      pointerEvents: isInputLocked ? "none" : "auto",
-                    }}
-                    placeholder={
-                      guestLimitReached
-                        ? "Guest chat limit reached. Please signup or login to continue."
-                        : "Ask me anything about food..."
-                    }
-                    maxLength={200}
-                    disabled={isInputLocked}
-                  />
-                  <button
-                    onClick={() => {
-                      if (input.trim()) createNewChat(input);
-                    }}
-                    disabled={isInputLocked}
-                    style={{
-                      position: "absolute",
-                      right: 10,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      borderRadius: 12,
-                      padding: 10,
-                      background:
-                        "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)",
-                      border: "none",
-                      cursor: isInputLocked
-                        ? "not-allowed"
-                        : "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      boxShadow:
-                        "0 2px 4px rgba(255,196,45,0.3)",
-                      opacity: isInputLocked ? 0.6 : 1,
-                    }}
-                  >
-                    <Send size={18} color="white" />
-                  </button>
-                  <div
-                    style={{
-                      position: "absolute",
-                      right: 10,
-                      bottom: -18,
-                      fontSize: 11,
-                      color: brand.text,
-                      opacity: 0.7,
-                    }}
-                  >
-                    {currentInputLength}/200
+                      maxLength={200}
+                      disabled={isInputLocked}
+                    />
+                    <button
+                      onClick={() => {
+                        if (input.trim()) createNewChat(input);
+                      }}
+                      disabled={isInputLocked}
+                      style={{
+                        position: "absolute",
+                        right: 10,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        borderRadius: 12,
+                        padding: 10,
+                        background:
+                          "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)",
+                        border: "none",
+                        cursor: isInputLocked ? "not-allowed" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 2px 4px rgba(255,196,45,0.3)",
+                        opacity: isInputLocked ? 0.6 : 1,
+                      }}
+                    >
+                      <Send size={18} color="white" />
+                    </button>
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: 10,
+                        bottom: -18,
+                        fontSize: 11,
+                        color: brand.text,
+                        opacity: 0.7,
+                      }}
+                    >
+                      {currentInputLength}/200
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1644,86 +1648,90 @@ function renderMoodPill() {
 
                 <div
                   style={{
-                    position: "relative",
                     maxWidth: 768,
                     margin: "0 auto",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
                   }}
                 >
-                  {renderMoodPill()}
-                  <input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                    style={{
-                      width: "100%",
-                      borderRadius: 16,
-                      border: "2px solid #F4E4C1",
-                      background: isInputLocked ? "#F5F5F5" : "white",
-                      padding: "10px 48px 10px 88px",
-                      fontSize: 14,
-                      outline: "none",
-                      boxSizing: "border-box",
-                      boxShadow:
-                        "0 2px 4px rgba(255,196,45,0.1)",
-                      pointerEvents: isInputLocked ? "none" : "auto",
-                    }}
-                    placeholder={
-                      isChatLocked
-                        ? "You’ve locked this recommendation. Read the conversation above or use the buttons when available."
-                        : guestLimitReached
-                        ? "Guest chat limit reached. Please signup or login to continue."
-                        : "Type your message…"
-                    }
-                    disabled={isTyping || isInputLocked}
-                    maxLength={200}
-                  />
-                  <button
-                    onClick={() => sendMessage()}
-                    disabled={isTyping || isInputLocked}
-                    style={{
-                      position: "absolute",
-                      right: 8,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      borderRadius: 12,
-                      padding: 8,
-                      background:
-                        "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)",
-                      border: "none",
-                      cursor:
-                        isTyping || isInputLocked
-                          ? "not-allowed"
-                          : "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      opacity:
-                        isTyping || isInputLocked ? 0.6 : 1,
-                      boxShadow:
-                        "0 2px 4px rgba(255,196,45,0.3)",
-                    }}
-                    aria-label="Send"
-                    title={
-                      isTyping
-                        ? "Sending…"
-                        : isChatLocked || guestLimitReached
-                        ? "Input disabled"
-                        : "Send"
-                    }
-                  >
-                    <Send size={16} color="white" />
-                  </button>
-                  <div
-                    style={{
-                      position: "absolute",
-                      right: 10,
-                      bottom: -16,
-                      fontSize: 11,
-                      color: brand.text,
-                      opacity: 0.7,
-                    }}
-                  >
-                    {currentInputLength}/200
+                  {/* mood chip on the left */}
+                  <div style={{ flexShrink: 0 }}>{renderMoodPill()}</div>
+
+                  {/* chat input + send on the right */}
+                  <div style={{ position: "relative", flex: 1 }}>
+                    <input
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                      style={{
+                        width: "100%",
+                        borderRadius: 16,
+                        border: "2px solid #F4E4C1",
+                        background: isInputLocked ? "#F5F5F5" : "white",
+                        padding: "10px 48px 10px 16px",
+                        fontSize: 14,
+                        outline: "none",
+                        boxSizing: "border-box",
+                        boxShadow: "0 2px 4px rgba(255,196,45,0.1)",
+                        pointerEvents: isInputLocked ? "none" : "auto",
+                      }}
+                      placeholder={
+                        isChatLocked
+                          ? "You’ve locked this recommendation. Read the conversation above or use the buttons when available."
+                          : guestLimitReached
+                          ? "Guest chat limit reached. Please signup or login to continue."
+                          : "Type your message…"
+                      }
+                      disabled={isTyping || isInputLocked}
+                      maxLength={200}
+                    />
+                    <button
+                      onClick={() => sendMessage()}
+                      disabled={isTyping || isInputLocked}
+                      style={{
+                        position: "absolute",
+                        right: 8,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        borderRadius: 12,
+                        padding: 8,
+                        background:
+                          "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)",
+                        border: "none",
+                        cursor:
+                          isTyping || isInputLocked
+                            ? "not-allowed"
+                            : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        opacity: isTyping || isInputLocked ? 0.6 : 1,
+                        boxShadow: "0 2px 4px rgba(255,196,45,0.3)",
+                      }}
+                      aria-label="Send"
+                      title={
+                        isTyping
+                          ? "Sending…"
+                          : isChatLocked || guestLimitReached
+                          ? "Input disabled"
+                          : "Send"
+                      }
+                    >
+                      <Send size={16} color="white" />
+                    </button>
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: 10,
+                        bottom: -16,
+                        fontSize: 11,
+                        color: brand.text,
+                        opacity: 0.7,
+                      }}
+                    >
+                      {currentInputLength}/200
+                    </div>
                   </div>
                 </div>
               </div>
