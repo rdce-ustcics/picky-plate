@@ -61,8 +61,10 @@ async function extractAndSavePreferences({ owner, conversation }) {
         "You are an information extraction assistant for a food chatbot. " +
         "From the conversation, detect explicit, stable user food preferences. " +
         "Only capture statements where the user clearly says they like/dislike something, " +
-        "have an allergy, follow a diet, or calls something a favorite, or mentions they want kiddie meals. " +
-        "Do NOT guess or infer from a single casual mention. " +
+        "have an allergy, follow or stop following a diet, or call something a favorite, " +
+        "or mentions they want kiddie meals. " +
+        "If the user clearly says they NO LONGER like/dislike/follow something (e.g. 'I'm not vegetarian anymore'), " +
+        "put that item into the appropriate *_remove list. " +
         "Return ONLY valid JSON, no explanation.",
     },
     {
@@ -70,16 +72,21 @@ async function extractAndSavePreferences({ owner, conversation }) {
       content:
         "Conversation:\n" +
         transcript +
-        "\n\nExtract NEW preferences in this exact JSON shape:\n" +
+        "\n\nExtract NEW changes in this exact JSON shape:\n" +
         `{
-  "likes": ["string"],
-  "dislikes": ["string"],
-  "diets": ["string"],
-  "allergens": ["string"],
-  "favorites": ["string"],
+  "likes_add": ["string"],
+  "likes_remove": ["string"],
+  "dislikes_add": ["string"],
+  "dislikes_remove": ["string"],
+  "diets_add": ["string"],
+  "diets_remove": ["string"],
+  "allergens_add": ["string"],
+  "allergens_remove": ["string"],
+  "favorites_add": ["string"],
+  "favorites_remove": ["string"],
   "kiddieMeal": true | false | null
 }\n\n` +
-        "If you are not sure about a field, use an empty array for lists and null for kiddieMeal.",
+        "If you are not sure about a field, use an empty array for the lists and null for kiddieMeal.",
     },
   ];
 
@@ -115,22 +122,36 @@ async function extractAndSavePreferences({ owner, conversation }) {
         )
       : [];
 
-  const newLikes = normalizeArray(extracted.likes);
-  const newDislikes = normalizeArray(extracted.dislikes);
-  const newDiets = normalizeArray(extracted.diets);
-  const newAllergens = normalizeArray(extracted.allergens);
-  const newFavorites = normalizeArray(extracted.favorites);
+  // Backwards-compatible: if the model still returns old keys, treat them as *_add
+  const likesAdd = normalizeArray(extracted.likes_add || extracted.likes);
+  const likesRemove = normalizeArray(extracted.likes_remove);
+
+  const dislikesAdd = normalizeArray(extracted.dislikes_add || extracted.dislikes);
+  const dislikesRemove = normalizeArray(extracted.dislikes_remove);
+
+  const dietsAdd = normalizeArray(extracted.diets_add || extracted.diets);
+  const dietsRemove = normalizeArray(extracted.diets_remove);
+
+  const allergensAdd = normalizeArray(extracted.allergens_add || extracted.allergens);
+  const allergensRemove = normalizeArray(extracted.allergens_remove);
+
+  const favoritesAdd = normalizeArray(extracted.favorites_add || extracted.favorites);
+  const favoritesRemove = normalizeArray(extracted.favorites_remove);
+
   const newKiddieMeal =
-    typeof extracted.kiddieMeal === "boolean"
-      ? extracted.kiddieMeal
-      : null;
+    typeof extracted.kiddieMeal === "boolean" ? extracted.kiddieMeal : null;
 
   if (
-    !newLikes.length &&
-    !newDislikes.length &&
-    !newDiets.length &&
-    !newAllergens.length &&
-    !newFavorites.length &&
+    !likesAdd.length &&
+    !likesRemove.length &&
+    !dislikesAdd.length &&
+    !dislikesRemove.length &&
+    !dietsAdd.length &&
+    !dietsRemove.length &&
+    !allergensAdd.length &&
+    !allergensRemove.length &&
+    !favoritesAdd.length &&
+    !favoritesRemove.length &&
     newKiddieMeal === null
   ) {
     // Nothing to update
@@ -143,7 +164,7 @@ async function extractAndSavePreferences({ owner, conversation }) {
       prefs = new UserPreferences({ userId: owner.userId });
     }
 
-    const mergeField = (fieldName, additions) => {
+    const mergeFieldAdd = (fieldName, additions) => {
       if (!additions.length) return;
       const existing = prefs[fieldName] || [];
       const existingLower = new Set(
@@ -159,11 +180,31 @@ async function extractAndSavePreferences({ owner, conversation }) {
       prefs[fieldName] = existing;
     };
 
-    mergeField("likes", newLikes);
-    mergeField("dislikes", newDislikes);
-    mergeField("diets", newDiets);
-    mergeField("allergens", newAllergens);
-    mergeField("favorites", newFavorites);
+    const mergeFieldRemove = (fieldName, removals) => {
+      if (!removals.length) return;
+      const removeSet = new Set(
+        removals.map((v) => v.toLowerCase().trim())
+      );
+      const existing = prefs[fieldName] || [];
+      prefs[fieldName] = existing.filter(
+        (v) => !removeSet.has(v.toLowerCase().trim())
+      );
+    };
+
+    mergeFieldAdd("likes", likesAdd);
+    mergeFieldRemove("likes", likesRemove);
+
+    mergeFieldAdd("dislikes", dislikesAdd);
+    mergeFieldRemove("dislikes", dislikesRemove);
+
+    mergeFieldAdd("diets", dietsAdd);
+    mergeFieldRemove("diets", dietsRemove);
+
+    mergeFieldAdd("allergens", allergensAdd);
+    mergeFieldRemove("allergens", allergensRemove);
+
+    mergeFieldAdd("favorites", favoritesAdd);
+    mergeFieldRemove("favorites", favoritesRemove);
 
     if (newKiddieMeal !== null) {
       prefs.kiddieMeal = newKiddieMeal;
@@ -290,6 +331,17 @@ router.post("/chat", async (req, res) => {
           "You are Pick-A-Plate, a friendly food recommender in the Philippines. Include Filipino and non-Filipino cuisines. Be concise and track context (e.g., 'the second one'). Always prioritize safety and avoid allergens.",
       },
     ];
+
+    systemMessages.push({
+      role: "system",
+      content:
+        "IMPORTANT — When recommending food, ALWAYS return them in a clear numbered list. Use this exact structure:\n" +
+        "1. Dish Name: Short description.\n" +
+        "2. Dish Name: Short description.\n" +
+        "3. Dish Name: Short description.\n\n" +
+        "Never hide food suggestions inside paragraphs. Always use a numbered list so the client can reliably extract each dish option. Include the full description for every dish.",
+    });
+
 
     if (mood) {
       systemMessages.push({
@@ -423,12 +475,11 @@ router.post("/chat", async (req, res) => {
     }
 
 
-      return res.json({
-    reply: learnedSomething
-      ? reply + "\n\n✨ By the way, I learned something new about your food preferences!"
-      : reply,
-    chatId: chatId.toString(),
-  });
+    return res.json({
+      reply,
+      chatId: chatId.toString(),
+      learned: learnedSomething,  // 👈 tell the client, don't change the text
+    });
   } catch (err) {
     console.error("chat_error:", err?.message || err);
     if (String(err?.message || "").includes("429")) {
@@ -442,7 +493,8 @@ router.post("/chat", async (req, res) => {
  * POST /api/history
  * Body: { label, type?, chatId?, mood? }
  * - Saves a chosen recommendation into FoodHistory.
- * - Also marks the given chat as closed so it's locked even after refresh.
+ * - Also appends a follow-up assistant message to the chat
+ *   and marks the chat as having a final choice.
  */
 router.post("/history", async (req, res) => {
   try {
@@ -483,15 +535,31 @@ router.post("/history", async (req, res) => {
 
     await doc.save();
 
-    // 🔒 Also mark the chat as closed so it's locked even after refresh
+    // 🔁 Also update the related chat:
+    // - Mark that it has a final choice
+    // - Append the follow-up assistant message
     if (chatIdRaw && ObjectId.isValid(chatIdRaw)) {
       try {
+        const followup =
+          `Yum, great choice! Since you picked "${label}", ` +
+          "do you want me to suggest side dishes, drinks, or desserts that go well with it? " +
+          "You can also use the buttons below if you’d like a recipe or restaurants for this.";
+
         await chats.updateOne(
           { _id: new ObjectId(chatIdRaw), ...owner },
-          { $set: { closed: true, updatedAt: new Date() } }
+          {
+            $set: { hasFinalChoice: true, updatedAt: new Date() },
+            $push: {
+              messages: {
+                role: "assistant",
+                content: followup,
+                ts: new Date(),
+              },
+            },
+          }
         );
-      } catch (e) {
-        console.error("history_close_chat_error:", e);
+      } catch (err) {
+        console.error("history_chat_update_error:", err);
       }
     }
 

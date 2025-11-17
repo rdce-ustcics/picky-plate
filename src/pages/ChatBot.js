@@ -210,12 +210,69 @@ function SmallBotAvatar({ mode }) {
 
 // Extract numbered/bulleted items from assistant reply (1., -, •)
 function extractRecommendationOptions(text) {
-  if (!text) return [];
+  if (!text) return { cleanedText: text, options: [] };
+
+  const lines = text.split("\n");
+  const options = [];
+  const remaining = [];
+
+  for (let line of lines) {
+    const trimmed = line.trim();
+
+    // Match formats like:
+    // 1. Dish: Description
+    // - Dish: Description
+    // • Dish: Description
+    if (/^(\d+\.|-|•)\s+/.test(trimmed)) {
+      const fullOption = trimmed.replace(/^(\d+\.|-|•)\s+/, "");
+      options.push(fullOption);
+    } else {
+      remaining.push(line);
+    }
+  }
+
+  return {
+    cleanedText: remaining.join("\n").trim(),
+    options,
+  };
+}
+
+// 🔹 Get just the dish title (no description, no **)
+function getDishTitle(text) {
+  if (!text) return "";
+  let t = text.trim();
+
+  // Remove leading list markers just in case
+  t = t.replace(/^(\d+\.|-|•)\s+/, "");
+
+  // If there's a colon, keep only the left side (likely the name)
+  const colonIndex = t.indexOf(":");
+  if (colonIndex !== -1) {
+    t = t.slice(0, colonIndex).trim();
+  }
+
+  // Strip markdown bold/italics at the edges
+  if (/^\*\*(.+)\*\*$/.test(t)) {
+    t = t.replace(/^\*\*(.+)\*\*$/, "$1");
+  }
+  if (/^\*(.+)\*$/.test(t)) {
+    t = t.replace(/^\*(.+)\*$/, "$1");
+  }
+
+  // Remove any remaining ** inside
+  t = t.replace(/\*\*/g, "");
+
+  return t;
+}
+
+function stripRecommendationLines(text) {
+  if (!text) return "";
+
   return text
     .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => /^(\d+\.|-|•)\s+/.test(line))
-    .map((line) => line.replace(/^(\d+\.|-|•)\s+/, ""));
+    .filter((line) => !/^(\d+\.|-|•)\s+/.test(line.trim()))
+    .join("\n")
+    .trim();
 }
 
 export default function ChatBot() {
@@ -247,6 +304,8 @@ export default function ChatBot() {
   const [showConfirmChoiceModal, setShowConfirmChoiceModal] = useState(false);
   const [chosenRecommendation, setChosenRecommendation] = useState(null);
   const [postDecisionStep, setPostDecisionStep] = useState(null); // "awaitingType" | "done" | null
+  const [pendingChoiceMessageIndex, setPendingChoiceMessageIndex] = useState(null);
+
 
   const prevAuthRef = useRef(isAuthenticated);
   const suppressLocalLoadRef = useRef(false);
@@ -324,6 +383,7 @@ export default function ChatBot() {
 
   const activeChat = chats.find((c) => c.id === activeChatId) || null;
   const isChatLocked = !!activeChat && !!activeChat.closed;
+  const chatHasFinalChoice = !!activeChat && !!activeChat.hasFinalChoice;
   const isInputLocked =
     (isAuthenticated && isChatLocked) ||
     (!isAuthenticated && guestLimitReached);
@@ -384,6 +444,7 @@ export default function ChatBot() {
             title: doc.title || "Chat",
             messages: [],
             closed: !!doc.closed,
+            hasFinalChoice: !!doc.hasFinalChoice,
           }));
           setChats(uiChats);
           setActiveChatId(null);
@@ -449,6 +510,7 @@ export default function ChatBot() {
           messages: [],
           chatId: null,
           closed: false,
+          hasFinalChoice: false,
         };
         setChats((prev) => [newChat, ...prev]);
         setActiveChatId(newChat.id);
@@ -469,6 +531,7 @@ export default function ChatBot() {
       messages: [],
       chatId: null,
       closed: false,
+      hasFinalChoice: false,
     };
     setChats((prev) => [newChat, ...prev]);
     setActiveChatId(newChat.id);
@@ -633,6 +696,7 @@ export default function ChatBot() {
                     : []
                   ).map((m) => ({ role: m.role, content: m.content })),
                   closed: !!full.closed,
+                  hasFinalChoice: !!full.hasFinalChoice,
                 }
               : c
           )
@@ -700,10 +764,14 @@ export default function ChatBot() {
     }
   }
 
-  function handleChooseRecommendation(text) {
+  function handleChooseRecommendation(text, msgIndex) {
     if (!isAuthenticated || !activeChatId) return;
     if (!text) return;
-    setPendingChoice(text);
+
+    const titleOnly = getDishTitle(text);
+
+    setPendingChoice(titleOnly);
+    setPendingChoiceMessageIndex(msgIndex);
     setShowConfirmChoiceModal(true);
   }
 
@@ -712,13 +780,14 @@ export default function ChatBot() {
 
     const chat = chats.find((c) => c.id === activeChatId);
     const sourceChatId = chat?.chatId || null;
+    const titleOnly = pendingChoice; // already cleaned via getDishTitle
 
     try {
       await fetch(`${API_BASE}/api/history`, {
         method: "POST",
         headers: buildHeaders(),
         body: JSON.stringify({
-          label: pendingChoice,
+          label: titleOnly,
           type: "recipe",
           chatId: sourceChatId,
           mood: selectedMood || null,
@@ -728,28 +797,35 @@ export default function ChatBot() {
       console.error("history_save_error:", e);
     }
 
-    setChosenRecommendation(pendingChoice);
+    setChosenRecommendation(titleOnly);
     setShowConfirmChoiceModal(false);
     setPostDecisionStep("awaitingType");
 
-    const followup = `Nice choice! Let's lock in "${pendingChoice}". Are you looking for a recipe you can cook at home, or a restaurant that serves something like this?`;
+    const followup = `Yum, great choice! Since you picked "${titleOnly}", do you want me to suggest side dishes, drinks, or desserts that go well with it? You can also use the buttons below if you’d like a recipe or restaurants for this.`;
 
     setChats((prev) =>
-      prev.map((chatItem) =>
-        chatItem.id === activeChatId
+      prev.map((c) =>
+        c.id === activeChatId
           ? {
-              ...chatItem,
-              closed: true, // lock locally; backend also sets closed: true
-              messages: [
-                ...chatItem.messages,
-                { role: "assistant", content: followup },
-              ],
+              ...c,
+              hasFinalChoice: true,
+              messages: c.messages
+                .map((msg, index) =>
+                  index === pendingChoiceMessageIndex
+                    ? { ...msg, choiceLocked: true }
+                    : msg
+                )
+                .concat({
+                  role: "assistant",
+                  content: followup,
+                }),
             }
-          : chatItem
+          : c
       )
     );
 
     setPendingChoice(null);
+    setPendingChoiceMessageIndex(null);
   }
 
   function goToRecipePage() {
@@ -1445,24 +1521,16 @@ function renderMoodPill() {
               >
                 {activeChat?.messages?.length ? (
                   activeChat.messages.map((m, idx) => {
-                    const isLast =
-                      idx === activeChat.messages.length - 1;
+                    const options = [];
+                    const showLearnedNote = !!m.learned;
+                    let displayContent = m.content;
 
-                    let options = [];
-                    let showChoiceButtons = false;
-
-                    if (
-                      isAuthenticated &&
-                      !isChatLocked &&
-                      m.role === "assistant" &&
-                      isLast
-                    ) {
-                      options = extractRecommendationOptions(
-                        m.content
-                      );
-                      if (options.length > 0) {
-                        showChoiceButtons = true;
+                    if (isAuthenticated && m.role === "assistant") {
+                      const extracted = extractRecommendationOptions(m.content);
+                      if (extracted?.options?.length) {
+                        options.push(...extracted.options);
                       }
+                      displayContent = stripRecommendationLines(m.content);
                     }
 
                     return (
@@ -1471,9 +1539,7 @@ function renderMoodPill() {
                         style={{
                           display: "flex",
                           justifyContent:
-                            m.role === "user"
-                              ? "flex-end"
-                              : "flex-start",
+                            m.role === "user" ? "flex-end" : "flex-start",
                           alignItems: "flex-start",
                           gap: 8,
                         }}
@@ -1482,13 +1548,13 @@ function renderMoodPill() {
                           <SmallBotAvatar
                             mode={
                               isTalking &&
-                              idx ===
-                                activeChat.messages.length - 1
+                              idx === activeChat.messages.length - 1
                                 ? "talking"
                                 : "idle"
                             }
                           />
                         )}
+
                         <div
                           style={{
                             maxWidth: "85%",
@@ -1497,19 +1563,19 @@ function renderMoodPill() {
                             fontSize: 14,
                             lineHeight: 1.5,
                             background:
-                              m.role === "user"
-                                ? "#ffffff"
-                                : "#FFF7DA",
+                              m.role === "user" ? "#ffffff" : "#FFF7DA",
                             border:
                               m.role === "user"
                                 ? "1px solid #F4E4C1"
                                 : "1px solid #FEF3C7",
-                            boxShadow:
-                              "0 1px 2px rgba(0,0,0,0.05)",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
                           }}
                         >
-                          {m.content}
-                          {showChoiceButtons && (
+                          {/* Main text */}
+                          {displayContent}
+
+                          {/* Recommendation choices */}
+                          {isAuthenticated && options.length > 0 && (
                             <div
                               style={{
                                 marginTop: 8,
@@ -1518,45 +1584,85 @@ function renderMoodPill() {
                                 gap: 6,
                               }}
                             >
-                              {options.map((opt, i) => (
-                                <div
-                                  key={i}
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 8,
-                                  }}
-                                >
-                                  <span
+                              {options.map((opt, i) => {
+                                const titleOnly = getDishTitle(opt);
+                                const colonIndex = opt.indexOf(":");
+                                const description =
+                                  colonIndex !== -1
+                                    ? opt.slice(colonIndex + 1).trim()
+                                    : "";
+
+                                const hideButton =
+                                  m.choiceLocked ||
+                                  chatHasFinalChoice ||
+                                  isChatLocked;
+
+                                return (
+                                  <div
+                                    key={i}
                                     style={{
-                                      flex: 1,
-                                      fontSize: 13,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 8,
                                     }}
                                   >
-                                    {opt}
-                                  </span>
-                                  <button
-                                    onClick={() =>
-                                      handleChooseRecommendation(
-                                        opt
-                                      )
-                                    }
-                                    style={{
-                                      borderRadius: 999,
-                                      padding: "4px 10px",
-                                      border:
-                                        "1px solid #FDBA74",
-                                      background: "#FFFBEB",
-                                      fontSize: 11,
-                                      cursor: "pointer",
-                                      fontWeight: 600,
-                                      whiteSpace: "nowrap",
-                                    }}
-                                  >
-                                    I&apos;m choosing this!
-                                  </button>
-                                </div>
-                              ))}
+                                    <div
+                                      style={{
+                                        flex: 1,
+                                        fontSize: 13,
+                                        textAlign: "left",
+                                      }}
+                                    >
+                                      <div style={{ fontWeight: 600 }}>
+                                        {titleOnly}
+                                      </div>
+                                      {description && (
+                                        <div
+                                          style={{
+                                            fontSize: 12,
+                                            opacity: 0.85,
+                                            marginTop: 2,
+                                          }}
+                                        >
+                                          {description}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {!hideButton && (
+                                      <button
+                                        onClick={() =>
+                                          handleChooseRecommendation(opt, idx)
+                                        }
+                                        style={{
+                                          borderRadius: 999,
+                                          padding: "4px 10px",
+                                          border: "1px solid #FDBA74",
+                                          background: "#FFFBEB",
+                                          fontSize: 11,
+                                          cursor: "pointer",
+                                          fontWeight: 600,
+                                        }}
+                                      >
+                                        I&apos;m choosing this!
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Learned note */}
+                          {showLearnedNote && (
+                            <div
+                              style={{
+                                marginTop: 6,
+                                fontSize: 11,
+                                color: "#6B7280",
+                              }}
+                            >
+                              Chatbot just learned something about you!
                             </div>
                           )}
                         </div>
