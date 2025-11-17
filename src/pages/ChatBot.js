@@ -181,7 +181,6 @@ function SmallBotAvatar({ mode }) {
                 fontSize: "14px",
               }}
             >
-              💭
             </div>
           </div>
           <div
