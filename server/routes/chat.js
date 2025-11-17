@@ -45,6 +45,137 @@ function getOwner(req) {
 
 router.use(softAuth);
 
+async function extractAndSavePreferences({ owner, conversation }) {
+  // Only for logged-in users
+  if (!owner.userId) return;
+
+  // Turn convo into a plain text transcript
+  const transcript = conversation
+    .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
+    .join("\n");
+
+  const extractionInput = [
+    {
+      role: "system",
+      content:
+        "You are an information extraction assistant for a food chatbot. " +
+        "From the conversation, detect explicit, stable user food preferences. " +
+        "Only capture statements where the user clearly says they like/dislike something, " +
+        "have an allergy, follow a diet, or calls something a favorite, or mentions they want kiddie meals. " +
+        "Do NOT guess or infer from a single casual mention. " +
+        "Return ONLY valid JSON, no explanation.",
+    },
+    {
+      role: "user",
+      content:
+        "Conversation:\n" +
+        transcript +
+        "\n\nExtract NEW preferences in this exact JSON shape:\n" +
+        `{
+  "likes": ["string"],
+  "dislikes": ["string"],
+  "diets": ["string"],
+  "allergens": ["string"],
+  "favorites": ["string"],
+  "kiddieMeal": true | false | null
+}\n\n` +
+        "If you are not sure about a field, use an empty array for lists and null for kiddieMeal.",
+    },
+  ];
+
+  let extractionReply;
+  try {
+    const r = await openai.responses.create({
+      model: "gpt-4o-mini",
+      input: extractionInput,
+      max_output_tokens: 200,
+    });
+    extractionReply = (r?.output_text || "").trim();
+  } catch (e) {
+    console.error("pref_extraction_openai_error:", e);
+    return;
+  }
+
+  let extracted;
+  try {
+    extracted = JSON.parse(extractionReply || "{}");
+  } catch (e) {
+    console.error("pref_extraction_parse_error:", e, extractionReply);
+    return;
+  }
+
+  const normalizeArray = (arr) =>
+    Array.isArray(arr)
+      ? Array.from(
+          new Set(
+            arr
+              .map((v) => String(v || "").trim())
+              .filter(Boolean)
+          )
+        )
+      : [];
+
+  const newLikes = normalizeArray(extracted.likes);
+  const newDislikes = normalizeArray(extracted.dislikes);
+  const newDiets = normalizeArray(extracted.diets);
+  const newAllergens = normalizeArray(extracted.allergens);
+  const newFavorites = normalizeArray(extracted.favorites);
+  const newKiddieMeal =
+    typeof extracted.kiddieMeal === "boolean"
+      ? extracted.kiddieMeal
+      : null;
+
+  if (
+    !newLikes.length &&
+    !newDislikes.length &&
+    !newDiets.length &&
+    !newAllergens.length &&
+    !newFavorites.length &&
+    newKiddieMeal === null
+  ) {
+    // Nothing to update
+    return;
+  }
+
+  try {
+    let prefs = await UserPreferences.findOne({ userId: owner.userId });
+    if (!prefs) {
+      prefs = new UserPreferences({ userId: owner.userId });
+    }
+
+    const mergeField = (fieldName, additions) => {
+      if (!additions.length) return;
+      const existing = prefs[fieldName] || [];
+      const existingLower = new Set(
+        existing.map((v) => v.toLowerCase().trim())
+      );
+      additions.forEach((item) => {
+        const key = item.toLowerCase().trim();
+        if (!existingLower.has(key)) {
+          existing.push(item);
+          existingLower.add(key);
+        }
+      });
+      prefs[fieldName] = existing;
+    };
+
+    mergeField("likes", newLikes);
+    mergeField("dislikes", newDislikes);
+    mergeField("diets", newDiets);
+    mergeField("allergens", newAllergens);
+    mergeField("favorites", newFavorites);
+
+    if (newKiddieMeal !== null) {
+      prefs.kiddieMeal = newKiddieMeal;
+    }
+
+    await prefs.save();
+  } catch (e) {
+    console.error("pref_extraction_save_error:", e);
+  }
+}
+
+
 /**
  * POST /api/chat
  * Body: { message, history?, chatId?, sessionId?, mood? }
@@ -257,7 +388,47 @@ router.post("/chat", async (req, res) => {
       { upsert: true }
     );
 
-    return res.json({ reply, chatId: chatId.toString() });
+        // add here: extract preferences from this turn and save to UserPreferences
+    let learnedSomething = false;
+
+    try {
+      const before = await UserPreferences.findOne({ userId: owner.userId }).lean();
+
+      await extractAndSavePreferences({
+        owner,
+        conversation: [
+          ...cleanHistory,
+          { role: "user", content: userMessage },
+          { role: "assistant", content: reply },
+        ],
+      });
+
+      const after = await UserPreferences.findOne({ userId: owner.userId }).lean();
+
+      // detect if anything changed
+      if (before && after) {
+        if (
+          JSON.stringify(before.likes) !== JSON.stringify(after.likes) ||
+          JSON.stringify(before.dislikes) !== JSON.stringify(after.dislikes) ||
+          JSON.stringify(before.diets) !== JSON.stringify(after.diets) ||
+          JSON.stringify(before.allergens) !== JSON.stringify(after.allergens) ||
+          JSON.stringify(before.favorites) !== JSON.stringify(after.favorites) ||
+          before.kiddieMeal !== after.kiddieMeal
+        ) {
+          learnedSomething = true;
+        }
+      }
+    } catch (e) {
+      console.error("pref_extraction_wrapper_error:", e);
+    }
+
+
+      return res.json({
+    reply: learnedSomething
+      ? reply + "\n\n✨ By the way, I learned something new about your food preferences!"
+      : reply,
+    chatId: chatId.toString(),
+  });
   } catch (err) {
     console.error("chat_error:", err?.message || err);
     if (String(err?.message || "").includes("429")) {

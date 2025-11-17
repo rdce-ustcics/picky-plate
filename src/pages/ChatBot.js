@@ -35,6 +35,7 @@ const brand = {
 };
 
 const MOOD_OPTIONS = [
+  { emoji: "😐", label: "Neutral" },   // 👈 new
   { emoji: "😄", label: "Happy" },
   { emoji: "😊", label: "Chill" },
   { emoji: "😣", label: "Stressed" },
@@ -823,89 +824,92 @@ export default function ChatBot() {
   // Mood helper for the pill
   const currentMoodOption =
     MOOD_OPTIONS.find((m) => m.emoji === selectedMood) || null;
-  const moodDisplayEmoji = currentMoodOption?.emoji || "🙂";
-  const moodDisplayLabel = currentMoodOption?.label || "Mood";
 
-  function renderMoodPill() {
-    if (isInputLocked) return null;
+  const moodDisplayEmoji = currentMoodOption?.emoji || "😐";     // was 🙂 before
+  const moodDisplayLabel = currentMoodOption?.label || "Neutral";
 
-    return (
-      <div
+function renderMoodPill() {
+  if (isInputLocked) return null;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: 8,
+        top: "50%",
+        transform: "translateY(-50%)",
+        zIndex: 20,
+      }}
+    >
+      <button
+        type="button"
+        onClick={() => setMoodMenuOpen((v) => !v)}
         style={{
-          position: "absolute",
-          left: 8,
-          top: "50%",
-          transform: "translateY(-50%)",
-          zIndex: 20,
+          borderRadius: 999,
+          border: "1px solid #F4E4C1",
+          background: "#FFFFFF",
+          padding: "4px 10px",
+          fontSize: 12,
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
         }}
       >
-        <button
-          type="button"
-          onClick={() => setMoodMenuOpen((v) => !v)}
+        <span style={{ fontSize: 16 }}>{moodDisplayEmoji}</span>
+        <span style={{ fontSize: 11, color: brand.text }}>
+          {moodDisplayLabel}
+        </span>
+      </button>
+
+      {moodMenuOpen && (
+        <div
           style={{
-            borderRadius: 999,
-            border: "1px solid #F4E4C1",
+            position: "absolute",
+            left: 0,
+            bottom: "110%",           // 👈 pops UP
+            top: "auto",              // make sure top is not used
             background: "#FFFFFF",
-            padding: "4px 10px",
-            fontSize: 12,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
+            borderRadius: 12,
+            border: "1px solid #F4E4C1",
+            padding: 6,
+            boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
+            zIndex: 30,
+            minWidth: 180,
           }}
         >
-          <span style={{ fontSize: 16 }}>{moodDisplayEmoji}</span>
-          <span style={{ fontSize: 11, color: brand.text }}>
-            {moodDisplayLabel}
-          </span>
-        </button>
-        {moodMenuOpen && (
-          <div
-            style={{
-              position: "absolute",
-              left: 0,
-              top: "110%",
-              background: "#FFFFFF",
-              borderRadius: 12,
-              border: "1px solid #F4E4C1",
-              padding: 6,
-              boxShadow: "0 8px 20px rgba(0,0,0,0.12)",
-              zIndex: 30,
-              minWidth: 180,
-            }}
-          >
-            {MOOD_OPTIONS.map((m) => (
-              <button
-                key={m.label}
-                type="button"
-                onClick={() => {
-                  setSelectedMood(m.emoji);
-                  setMoodMenuOpen(false);
-                }}
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "flex-start",
-                  gap: 8,
-                  padding: "6px 8px",
-                  borderRadius: 8,
-                  border: "none",
-                  background: "transparent",
-                  cursor: "pointer",
-                  fontSize: 13,
-                }}
-              >
-                <span style={{ fontSize: 18 }}>{m.emoji}</span>
-                <span>{m.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
+          {MOOD_OPTIONS.map((m) => (
+            <button
+              key={m.label}
+              type="button"
+              onClick={() => {
+                setSelectedMood(m.emoji);
+                setMoodMenuOpen(false);
+              }}
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-start",
+                gap: 8,
+                padding: "6px 8px",
+                borderRadius: 8,
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                fontSize: 13,
+              }}
+            >
+              <span style={{ fontSize: 18 }}>{m.emoji}</span>
+              <span>{m.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
   return (
     <>
