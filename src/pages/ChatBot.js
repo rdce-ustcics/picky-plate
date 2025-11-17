@@ -382,11 +382,8 @@ export default function ChatBot() {
   }, [isAuthenticated]);
 
   const activeChat = chats.find((c) => c.id === activeChatId) || null;
-  const isChatLocked = !!activeChat && !!activeChat.closed;
   const chatHasFinalChoice = !!activeChat && !!activeChat.hasFinalChoice;
-  const isInputLocked =
-    (isAuthenticated && isChatLocked) ||
-    (!isAuthenticated && guestLimitReached);
+  const isInputLocked = !isAuthenticated && guestLimitReached;
 
   async function apiChat({ message, history = [], chatId = null, mood = null }) {
     const recent = history
@@ -574,29 +571,43 @@ export default function ChatBot() {
 
     // Update title on first message (especially for logged-in new chat)
     setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === targetChatId
-          ? {
-              ...chat,
-              title:
-                isFirstMessage &&
-                (chat.title === "New Chat" || !chat.title)
-                  ? messageText.slice(0, 60)
-                  : chat.title,
-              messages: [
-                ...chat.messages,
-                { role: "user", content: messageText },
-              ],
+      prev.map((chat) => {
+        if (chat.id !== targetChatId) return chat;
+
+        // Lock any assistant messages that had options (user ignored them and typed instead)
+        const updatedMessages = chat.messages.map((msg) => {
+          if (
+            msg.role === "assistant" &&
+            !msg.choiceLocked
+          ) {
+            const extracted = extractRecommendationOptions(msg.content);
+            if (extracted.options && extracted.options.length > 0) {
+              return { ...msg, choiceLocked: true };
             }
-          : chat
-      )
+          }
+          return msg;
+        });
+
+        return {
+          ...chat,
+          title:
+            isFirstMessage &&
+            (chat.title === "New Chat" || !chat.title)
+              ? messageText.slice(0, 60)
+              : chat.title,
+          messages: [
+            ...updatedMessages,
+            { role: "user", content: messageText },
+          ],
+        };
+      })
     );
 
     // Mood now can be selected anytime; if none selected, we send null
     const moodEmoji = selectedMood || null;
 
     try {
-      const { reply, chatId: persistedId } = await apiChat({
+      const { reply, chatId: persistedId, learned } = await apiChat({
         message: messageText,
         history,
         chatId: targetChat?.chatId || null,
@@ -614,7 +625,7 @@ export default function ChatBot() {
                 chatId: chat.chatId || persistedId || null,
                 messages: [
                   ...chat.messages,
-                  { role: "assistant", content: aiText },
+                  { role: "assistant", content: aiText, learned: !!learned },
                 ],
               }
             : chat
@@ -694,7 +705,7 @@ export default function ChatBot() {
                   messages: (Array.isArray(full.messages)
                     ? full.messages
                     : []
-                  ).map((m) => ({ role: m.role, content: m.content })),
+                  ).map((m) => ({ role: m.role, content: m.content, learned:!!m.learned, choiceLocked: !!m.choiceLocked, })),
                   closed: !!full.closed,
                   hasFinalChoice: !!full.hasFinalChoice,
                 }
@@ -809,6 +820,7 @@ export default function ChatBot() {
           ? {
               ...c,
               hasFinalChoice: true,
+              closed: true,
               messages: c.messages
                 .map((msg, index) =>
                   index === pendingChoiceMessageIndex
@@ -1593,9 +1605,7 @@ function renderMoodPill() {
                                     : "";
 
                                 const hideButton =
-                                  m.choiceLocked ||
-                                  chatHasFinalChoice ||
-                                  isChatLocked;
+                                  m.choiceLocked;
 
                                 return (
                                   <div
@@ -1706,7 +1716,6 @@ function renderMoodPill() {
               >
                 {/* Post-decision CTA buttons */}
                 {isAuthenticated &&
-                  isChatLocked &&
                   postDecisionStep === "awaitingType" &&
                   chosenRecommendation && (
                     <div
@@ -1783,9 +1792,7 @@ function renderMoodPill() {
                         pointerEvents: isInputLocked ? "none" : "auto",
                       }}
                       placeholder={
-                        isChatLocked
-                          ? "You’ve locked this recommendation. Read the conversation above or use the buttons when available."
-                          : guestLimitReached
+                          guestLimitReached
                           ? "Guest chat limit reached. Please signup or login to continue."
                           : "Type your message…"
                       }
@@ -1819,7 +1826,7 @@ function renderMoodPill() {
                       title={
                         isTyping
                           ? "Sending…"
-                          : isChatLocked || guestLimitReached
+                          : guestLimitReached
                           ? "Input disabled"
                           : "Send"
                       }
