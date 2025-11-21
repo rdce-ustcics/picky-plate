@@ -1,21 +1,48 @@
 import React, { useEffect, useState, useRef } from "react";
-import L from "leaflet";
+import { GoogleMap, LoadScript, Marker, InfoWindow, MarkerClusterer, Circle } from "@react-google-maps/api";
 import LoadingModal from "../components/LoadingModal";
-import "leaflet/dist/leaflet.css";
-import "leaflet.markercluster/dist/MarkerCluster.css";
-import "leaflet.markercluster/dist/MarkerCluster.Default.css";
-import "leaflet.markercluster";
-import "leaflet.gridlayer.googlemutant";
 import "./RestaurantLocator.css";
+
+const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+
+// Debug: Check if API key is loaded
+if (!GOOGLE_MAPS_API_KEY) {
+  console.error('❌ Google Maps API key is not defined! Check your .env file.');
+} else {
+  console.log('✅ Google Maps API key loaded:', GOOGLE_MAPS_API_KEY.substring(0, 10) + '...');
+}
+
+// Google Maps container style
+const mapContainerStyle = {
+  width: "100%",
+  height: "100%"
+};
+
+// Default center (Metro Manila)
+const defaultCenter = {
+  lat: 14.5995,
+  lng: 120.9842
+};
+
+// Google Maps options
+const mapOptions = {
+  disableDefaultUI: false,
+  zoomControl: true,
+  mapTypeControl: true,
+  scaleControl: true,
+  streetViewControl: true,
+  rotateControl: false,
+  fullscreenControl: true
+};
 
 export default function RestaurantLocator() {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
-  const markerClusterRef = useRef(null);
 
   const [restaurants, setRestaurants] = useState([]);
   const [filteredRestaurants, setFilteredRestaurants] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [mapError, setMapError] = useState(null);
   const [selectedPriceLevel, setSelectedPriceLevel] = useState("all");
   const [minRating, setMinRating] = useState(0);
   const [selectedRestaurant, setSelectedRestaurant] = useState(null);
@@ -31,9 +58,11 @@ export default function RestaurantLocator() {
   const [availableCuisines, setAvailableCuisines] = useState([]);
   const [activeView, setActiveView] = useState("map"); // map or list
   const [showFilterModal, setShowFilterModal] = useState(false); // Filter modal state
-
-  const userMarkerRef = useRef(null);
-  const accuracyCircleRef = useRef(null);
+  const [selectedMarker, setSelectedMarker] = useState(null); // For InfoWindow
+  const [mapCenter, setMapCenter] = useState(defaultCenter);
+  const [mapZoom, setMapZoom] = useState(11);
+  const [visibleRestaurants, setVisibleRestaurants] = useState([]);
+  const [mapBounds, setMapBounds] = useState(null);
 
   // Metro Manila cities (NCR) - comprehensive list
   const METRO_MANILA_CITIES = [
@@ -51,6 +80,31 @@ export default function RestaurantLocator() {
     "Poblacion", "Salcedo Village", "Legazpi Village", "Bel-Air", "Forbes Park",
     "Dasmariñas Village", "San Lorenzo Village", "Urdaneta Village", "Magallanes Village"
   ];
+
+  // NCR Bounding Box (approximate coordinates for Metro Manila)
+  const NCR_BOUNDS = {
+    north: 14.7642, // Northern edge (Caloocan/Valenzuela)
+    south: 14.3990, // Southern edge (Muntinlupa)
+    east: 121.1500,  // Eastern edge (Rizal border)
+    west: 120.9200   // Western edge (Manila Bay)
+  };
+
+  // Check if coordinates are within NCR bounds
+  const isWithinNCR = (lat, lng) => {
+    return lat >= NCR_BOUNDS.south &&
+           lat <= NCR_BOUNDS.north &&
+           lng >= NCR_BOUNDS.west &&
+           lng <= NCR_BOUNDS.east;
+  };
+
+  // Check if address contains Metro Manila city
+  const addressContainsMetroManila = (address) => {
+    if (!address) return false;
+    const addressLower = address.toLowerCase();
+    return METRO_MANILA_CITIES.some(city =>
+      addressLower.includes(city.toLowerCase())
+    );
+  };
 
   // Restaurant chain logos/images mapping (case-sensitive to match data)
   const RESTAURANT_IMAGES = {
@@ -219,8 +273,8 @@ export default function RestaurantLocator() {
     setSearchRadius(5);
   };
 
-  // Get user's current location
-  const getUserLocation = () => {
+  // Get user's current location with high accuracy
+  const getUserLocation = (forceRefresh = false) => {
     setLocationLoading(true);
     setLocationError(null);
 
@@ -230,93 +284,138 @@ export default function RestaurantLocator() {
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude, accuracy } = position.coords;
-        const location = { lat: latitude, lng: longitude, accuracy: accuracy };
-        
-        setUserLocation(location);
-        setLocationLoading(false);
+    console.log('🔍 Starting location acquisition...');
+    console.log('Device info:', {
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      hasGeolocation: !!navigator.geolocation
+    });
 
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.setView([latitude, longitude], 13, {
-            animate: true,
-            duration: 1
-          });
-          updateUserLocationMarker(location);
-          setShowNearbyOnly(true);
+    // Use watchPosition for continuous updates to get better accuracy
+    let bestAccuracy = Infinity;
+    let bestPosition = null;
+    let watchId = null;
+    let updateCount = 0;
+    const maxUpdates = 5; // Try to get 5 position updates
+    const maxWaitTime = 20000; // Wait up to 20 seconds
+
+    const finishLocationAcquisition = () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+
+      if (bestPosition) {
+        const { latitude, longitude } = bestPosition.coords;
+        const location = {
+          lat: latitude,
+          lng: longitude,
+          accuracy: bestPosition.coords.accuracy
+        };
+
+        console.log('✅ Final location:', {
+          latitude,
+          longitude,
+          accuracy: `${bestPosition.coords.accuracy.toFixed(1)}m`,
+          updates: updateCount
+        });
+
+        setUserLocation(location);
+        setMapCenter({ lat: latitude, lng: longitude });
+        setMapZoom(15);
+        setShowNearbyOnly(true);
+      }
+
+      setLocationLoading(false);
+    };
+
+    // Set a timeout to finish after maxWaitTime
+    const timeoutId = setTimeout(() => {
+      console.log('⏱️ Location timeout reached');
+      finishLocationAcquisition();
+    }, maxWaitTime);
+
+    watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        updateCount++;
+        const { latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed } = position.coords;
+
+        console.log(`📍 Location update #${updateCount}:`, {
+          latitude: latitude.toFixed(6),
+          longitude: longitude.toFixed(6),
+          accuracy: `${accuracy.toFixed(1)}m`,
+          altitude: altitude ? `${altitude.toFixed(1)}m` : 'N/A',
+          speed: speed ? `${speed.toFixed(1)}m/s` : 'N/A',
+          timestamp: new Date(position.timestamp).toLocaleTimeString()
+        });
+
+        // Keep track of the most accurate position
+        if (accuracy < bestAccuracy) {
+          bestAccuracy = accuracy;
+          bestPosition = position;
+          console.log(`🎯 New best accuracy: ${accuracy.toFixed(1)}m`);
+
+          // Update the UI immediately with better position
+          const location = { lat: latitude, lng: longitude, accuracy: accuracy };
+          setUserLocation(location);
+          setMapCenter({ lat: latitude, lng: longitude });
+          setMapZoom(15);
+
+          // If we got very good accuracy, we can stop early
+          if (accuracy <= 20) {
+            console.log('✅ Excellent accuracy achieved!');
+            clearTimeout(timeoutId);
+            finishLocationAcquisition();
+            return;
+          }
+        }
+
+        // After collecting enough samples, stop
+        if (updateCount >= maxUpdates) {
+          console.log('✅ Maximum updates reached');
+          clearTimeout(timeoutId);
+          finishLocationAcquisition();
         }
       },
       (error) => {
+        clearTimeout(timeoutId);
+        if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+        }
+
         let errorMessage = "Unable to get your location";
         switch(error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage = "Location permission denied. Please enable location services.";
+            errorMessage = "Location permission denied. Please enable location access in your browser settings and reload the page.";
             break;
           case error.POSITION_UNAVAILABLE:
-            errorMessage = "Location information unavailable.";
+            errorMessage = "Location unavailable. Make sure GPS/Location Services are enabled on your device.";
             break;
           case error.TIMEOUT:
-            errorMessage = "Location request timed out.";
+            errorMessage = "Location request timed out. Try moving near a window or outside for better GPS signal.";
             break;
           default:
             errorMessage = `Location error: ${error.message}`;
         }
+
+        console.error('❌ Geolocation error:', {
+          code: error.code,
+          message: error.message
+        });
+
         setLocationError(errorMessage);
         setLocationLoading(false);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      {
+        enableHighAccuracy: true, // Critical: Force GPS usage
+        timeout: 30000, // 30 seconds per reading
+        maximumAge: 0 // Never use cached position
+      }
     );
   };
 
   // Update user location marker on map
-  const updateUserLocationMarker = (location) => {
-    if (!mapInstanceRef.current) return;
-
-    if (userMarkerRef.current) {
-      mapInstanceRef.current.removeLayer(userMarkerRef.current);
-    }
-    if (accuracyCircleRef.current) {
-      mapInstanceRef.current.removeLayer(accuracyCircleRef.current);
-    }
-
-    const userIcon = L.divIcon({
-      className: 'user-location-marker',
-      html: `
-        <div class="user-marker-pulse"></div>
-        <div class="user-marker-dot"></div>
-      `,
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
-    });
-
-    userMarkerRef.current = L.marker([location.lat, location.lng], {
-      icon: userIcon,
-      zIndexOffset: 1000
-    })
-      .bindPopup('<b>Your Location</b><br/>You are here!')
-      .addTo(mapInstanceRef.current);
-
-    accuracyCircleRef.current = L.circle([location.lat, location.lng], {
-      radius: location.accuracy,
-      color: '#e2a044',
-      fillColor: '#e2a044',
-      fillOpacity: 0.1,
-      weight: 2
-    }).addTo(mapInstanceRef.current);
-
-    L.circle([location.lat, location.lng], {
-      radius: searchRadius * 1000,
-      color: '#d4a025',
-      fillColor: '#d4a025',
-      fillOpacity: 0.05,
-      weight: 1,
-      dashArray: '5, 10'
-    }).addTo(mapInstanceRef.current);
-  };
-
-  // Custom marker icon
-  const createCustomIcon = (priceLevel) => {
+  // Get marker icon color based on price level
+  const getMarkerColor = (priceLevel) => {
     const priceLevelNum = typeof priceLevel === 'string' ? getPriceLevelNum(priceLevel) : priceLevel;
     const colors = {
       1: '#65a30d', // Green for inexpensive
@@ -325,49 +424,80 @@ export default function RestaurantLocator() {
       4: '#dc2626', // Red for very expensive
       null: '#9ca3af' // Gray for unknown
     };
-    
-    const color = colors[priceLevelNum] || colors[null];
-    
-    return L.divIcon({
-      className: 'custom-marker',
-      html: `<div style="background-color: ${color}; width: 36px; height: 36px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.3);"><div style="transform: rotate(45deg); margin-top: 6px; margin-left: 9px;">🍽️</div></div>`,
-      iconSize: [36, 36],
-      iconAnchor: [18, 36],
-      popupAnchor: [0, -36]
-    });
+    return colors[priceLevelNum] || colors[null];
   };
 
-  // Initialize map
-  useEffect(() => {
-    if (!mapInstanceRef.current && mapRef.current) {
-      const map = L.map(mapRef.current).setView([14.5995, 120.9842], 11);
+  // Handle map load
+  const onMapLoad = (map) => {
+    mapInstanceRef.current = map;
+    // Don't auto-fetch location on load - let user click "Near Me" button instead
+    // This makes the page load much faster
+  };
 
-      // Using Mapbox (OpenStreetMap-based) - Better quality, no API key needed for basic use
-      // Attribution is required by OpenStreetMap license
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-        tileSize: 256,
-      }).addTo(map);
+  // Handle map bounds change to only show visible markers (debounced)
+  const boundsChangeTimeoutRef = useRef(null);
 
-      mapInstanceRef.current = map;
-
-      setTimeout(() => {
-        getUserLocation();
-      }, 500);
+  const onBoundsChanged = () => {
+    // Debounce: Only update bounds after user stops moving the map for 300ms
+    if (boundsChangeTimeoutRef.current) {
+      clearTimeout(boundsChangeTimeoutRef.current);
     }
 
-    return () => {
+    boundsChangeTimeoutRef.current = setTimeout(() => {
       if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
+        const bounds = mapInstanceRef.current.getBounds();
+        if (bounds) {
+          setMapBounds(bounds);
+        }
       }
-    };
-  }, []);
+    }, 300);
+  };
+
+  // Filter restaurants within map bounds
+  useEffect(() => {
+    // Determine max markers based on filter status
+    const hasActiveFilters =
+      searchQuery !== "" ||
+      selectedPriceLevel !== "all" ||
+      minRating > 0 ||
+      selectedCuisine !== "all" ||
+      deliveryFilter !== "all" ||
+      openNowFilter ||
+      showNearbyOnly;
+
+    // If filters are active, show ALL filtered results (not just viewport)
+    // If no filters, only show what's in viewport for performance
+    if (hasActiveFilters) {
+      // Show all filtered results (up to 1000 for performance)
+      const maxMarkers = Math.min(filteredRestaurants.length, 1000);
+      setVisibleRestaurants(filteredRestaurants.slice(0, maxMarkers));
+      return;
+    }
+
+    // No filters: only show restaurants in viewport
+    if (!mapBounds) {
+      // Initially show first 50 restaurants until map loads
+      setVisibleRestaurants(filteredRestaurants.slice(0, 50));
+      return;
+    }
+
+    const visible = filteredRestaurants.filter(restaurant => {
+      if (!restaurant.lat || !restaurant.lng) return false;
+
+      const position = new window.google.maps.LatLng(restaurant.lat, restaurant.lng);
+      return mapBounds.contains(position);
+    });
+
+    // Limit to 200 markers in viewport when no filters
+    setVisibleRestaurants(visible.slice(0, 200));
+  }, [mapBounds, filteredRestaurants, searchQuery, selectedPriceLevel, minRating,
+      selectedCuisine, deliveryFilter, openNowFilter, showNearbyOnly]);
 
   // Load restaurant data from multiple sources
   useEffect(() => {
     const loadAllRestaurants = async () => {
+      const startTime = performance.now();
+
       try {
         // Load both data sources in parallel
         const [ncrResponse, osmResponse] = await Promise.all([
@@ -387,42 +517,49 @@ export default function RestaurantLocator() {
         const allItems = [...ncrData.items, ...osmData.items];
         console.log("Total restaurants before filtering:", allItems.length);
 
-        // Filter for valid data - show ALL valid restaurants
-        const validData = allItems.filter(item => {
+        // Filter and process in one pass for better performance
+        const processedData = [];
+        const cuisineSet = new Set();
+        let filteredOutCount = 0;
+
+        for (const item of allItems) {
           // Check basic validity
           if (!item || !item.name || typeof item.lat !== 'number' ||
               typeof item.lng !== 'number' || item.lat === 0 || item.lng === 0) {
-            return false;
+            continue;
           }
 
-          // For now, include ALL valid restaurants
-          // We can filter by location later if needed
-          return true;
-        });
+          // Filter: Only include restaurants within NCR
+          const withinNCRBounds = isWithinNCR(item.lat, item.lng);
+          const hasNCRAddress = addressContainsMetroManila(item.address);
 
-        console.log("Valid restaurants after filtering:", validData.length);
+          // Restaurant must either be within NCR bounds OR have NCR in address
+          if (!withinNCRBounds && !hasNCRAddress) {
+            filteredOutCount++;
+            continue;
+          }
 
-        // Process and deduplicate restaurants
-        const processedData = validData.map(item => ({
-          ...item,
-          id: item.id || `${item.name}_${item.lat}_${item.lng}`,
-          name: String(item.name || 'Unknown'),
-          address: String(item.address || ''),
-          types: Array.isArray(item.types) ? item.types : [],
-          priceLevelNum: getPriceLevelNum(item.priceLevel),
-          cuisine: item.cuisine || '',
-          openingHours: item.openingHours || '',
-          hasOnlineDelivery: item.hasOnlineDelivery || false,
-          hasTableBooking: item.hasTableBooking || false,
-          isDeliveringNow: item.isDeliveringNow || false,
-          takeaway: item.takeaway || false,
-          source: item.source || 'unknown',
-          image: getRestaurantImage(item.name) // Add image for each restaurant
-        }));
+          // Process the item
+          const processed = {
+            ...item,
+            id: item.id || `${item.name}_${item.lat}_${item.lng}`,
+            name: String(item.name || 'Unknown'),
+            address: String(item.address || ''),
+            types: Array.isArray(item.types) ? item.types : [],
+            priceLevelNum: getPriceLevelNum(item.priceLevel),
+            cuisine: item.cuisine || '',
+            openingHours: item.openingHours || '',
+            hasOnlineDelivery: item.hasOnlineDelivery || false,
+            hasTableBooking: item.hasTableBooking || false,
+            isDeliveringNow: item.isDeliveringNow || false,
+            takeaway: item.takeaway || false,
+            source: item.source || 'unknown'
+            // Note: Removed getRestaurantImage() call here - we'll lazy load images
+          };
 
-        // Extract all unique cuisines
-        const cuisineSet = new Set();
-        processedData.forEach(item => {
+          processedData.push(processed);
+
+          // Extract cuisines
           if (item.cuisine) {
             const cuisines = item.cuisine.split(',').map(c => c.trim());
             cuisines.forEach(c => {
@@ -440,7 +577,7 @@ export default function RestaurantLocator() {
               }
             });
           }
-        });
+        }
 
         const sortedCuisines = Array.from(cuisineSet).sort();
         setAvailableCuisines(sortedCuisines);
@@ -449,37 +586,47 @@ export default function RestaurantLocator() {
         setFilteredRestaurants(processedData);
         setLoading(false);
 
-        console.log(`✅ Successfully loaded ${processedData.length} restaurants from both sources!`);
+        const loadTime = ((performance.now() - startTime) / 1000).toFixed(2);
+        console.log(`✅ Loaded ${processedData.length} restaurants in ${loadTime}s`);
+        console.log(`🚫 Filtered out ${filteredOutCount} restaurants outside NCR`);
+        console.log(`📍 NCR restaurants only: ${processedData.length} places`);
       } catch (error) {
         console.error("Error loading restaurant data:", error);
         // Try to load at least one source if the other fails
         try {
           const response = await fetch("/data/ncr_food_places2.json");
           const data = await response.json();
-          const validData = data.items.filter(item => {
-            // Check basic validity
+
+          const processedData = [];
+          for (const item of data.items) {
             if (!item || !item.name || typeof item.lat !== 'number' ||
                 typeof item.lng !== 'number' || item.lat === 0 || item.lng === 0) {
-              return false;
+              continue;
             }
 
-            // Include all valid restaurants
-            return true;
-          });
-          const processedData = validData.map(item => ({
-            ...item,
-            name: String(item.name || 'Unknown'),
-            address: String(item.address || ''),
-            types: Array.isArray(item.types) ? item.types : [],
-            priceLevelNum: getPriceLevelNum(item.priceLevel),
-            cuisine: item.cuisine || '',
-            openingHours: item.openingHours || '',
-            hasOnlineDelivery: item.hasOnlineDelivery || false,
-            hasTableBooking: item.hasTableBooking || false,
-            isDeliveringNow: item.isDeliveringNow || false,
-            takeaway: item.takeaway || false,
-            image: getRestaurantImage(item.name)
-          }));
+            // Filter: Only include restaurants within NCR
+            const withinNCRBounds = isWithinNCR(item.lat, item.lng);
+            const hasNCRAddress = addressContainsMetroManila(item.address);
+
+            if (!withinNCRBounds && !hasNCRAddress) {
+              continue;
+            }
+
+            processedData.push({
+              ...item,
+              name: String(item.name || 'Unknown'),
+              address: String(item.address || ''),
+              types: Array.isArray(item.types) ? item.types : [],
+              priceLevelNum: getPriceLevelNum(item.priceLevel),
+              cuisine: item.cuisine || '',
+              openingHours: item.openingHours || '',
+              hasOnlineDelivery: item.hasOnlineDelivery || false,
+              hasTableBooking: item.hasTableBooking || false,
+              isDeliveringNow: item.isDeliveringNow || false,
+              takeaway: item.takeaway || false
+            });
+          }
+
           setRestaurants(processedData);
           setFilteredRestaurants(processedData);
           console.log(`⚠️ Loaded ${processedData.length} restaurants from NCR data only`);
@@ -493,71 +640,6 @@ export default function RestaurantLocator() {
     loadAllRestaurants();
   }, []);
 
-  // Update markers when filtered restaurants change
-  useEffect(() => {
-    if (!mapInstanceRef.current) return;
-
-    if (markerClusterRef.current) {
-      mapInstanceRef.current.removeLayer(markerClusterRef.current);
-    }
-
-    const markerCluster = L.markerClusterGroup({
-      maxClusterRadius: 50,
-      spiderfyOnMaxZoom: true,
-      showCoverageOnHover: false,
-      zoomToBoundsOnClick: true,
-      iconCreateFunction: function(cluster) {
-        const count = cluster.getChildCount();
-        let size = 'small';
-        if (count > 100) size = 'large';
-        else if (count > 30) size = 'medium';
-
-        return L.divIcon({
-          html: `<div><span>${count}</span></div>`,
-          className: `marker-cluster marker-cluster-${size}`,
-          iconSize: L.point(40, 40)
-        });
-      }
-    });
-
-    filteredRestaurants.forEach((place) => {
-      const { lat, lng, name, address, rating, priceLevel, priceLevelNum, userRatingCount, googleMapsUri } = place;
-      if (lat && lng && name) {
-        const marker = L.marker([lat, lng], {
-          icon: createCustomIcon(priceLevel)
-        })
-          .bindPopup(`
-            <div class="popup-content">
-              <h3>${String(name || 'Unknown')}</h3>
-              <p class="popup-address">${String(address || 'No address')}</p>
-              <div class="popup-info">
-                <span class="popup-rating">⭐ ${rating || "N/A"}</span>
-                <span class="popup-reviews">(${userRatingCount || 0} reviews)</span>
-              </div>
-              ${priceLevelNum ? `<p class="popup-price">${getPriceLevelSymbol(priceLevelNum)}</p>` : ''}
-              ${googleMapsUri ? `<a href="${googleMapsUri}" target="_blank" class="popup-link">View on Google Maps →</a>` : ''}
-            </div>
-          `);
-
-        marker.on('click', () => {
-          setSelectedRestaurant(place);
-        });
-
-        markerCluster.addLayer(marker);
-      }
-    });
-
-    mapInstanceRef.current.addLayer(markerCluster);
-    markerClusterRef.current = markerCluster;
-
-    if (filteredRestaurants.length > 0) {
-      const validRestaurants = filteredRestaurants.filter(r => r.lat && r.lng);
-      if (validRestaurants.length > 0) {
-        const bounds = L.latLngBounds(validRestaurants.map(r => [r.lat, r.lng]));
-        mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
-      }
-    }
-  }, [filteredRestaurants]);
 
   // Filter restaurants
   useEffect(() => {
@@ -669,20 +751,10 @@ export default function RestaurantLocator() {
 
   const handleRestaurantClick = (restaurant) => {
     setSelectedRestaurant(restaurant);
-    if (mapInstanceRef.current && markerClusterRef.current && restaurant.lat && restaurant.lng) {
-      mapInstanceRef.current.setView([restaurant.lat, restaurant.lng], 16, {
-        animate: true,
-        duration: 0.5
-      });
-
-      const markers = markerClusterRef.current.getLayers();
-      const marker = markers.find(m => {
-        const pos = m.getLatLng();
-        return pos.lat === restaurant.lat && pos.lng === restaurant.lng;
-      });
-      if (marker) {
-        marker.openPopup();
-      }
+    setSelectedMarker(restaurant);
+    if (restaurant.lat && restaurant.lng) {
+      setMapCenter({ lat: restaurant.lat, lng: restaurant.lng });
+      setMapZoom(16);
     }
   };
 
@@ -761,6 +833,44 @@ export default function RestaurantLocator() {
               ⚠️ {locationError}
             </div>
           )}
+
+          {userLocation && userLocation.accuracy && (
+            <div className={`alert ${userLocation.accuracy > 100 ? 'alert-warning' : 'alert-info'}`}
+                 style={{ fontSize: '12px', padding: '8px 12px', marginTop: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  📍 Location accuracy: ±{userLocation.accuracy.toFixed(0)}m
+                  {userLocation.accuracy > 100 && (
+                    <div style={{ marginTop: '4px', fontSize: '11px' }}>
+                      GPS signal weak. Move near a window or outside for better accuracy.
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => getUserLocation(true)}
+                  disabled={locationLoading}
+                  style={{
+                    padding: '4px 12px',
+                    fontSize: '11px',
+                    background: '#4285F4',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: locationLoading ? 'wait' : 'pointer',
+                    opacity: locationLoading ? 0.6 : 1
+                  }}
+                >
+                  {locationLoading ? 'Updating...' : 'Refresh'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {locationLoading && (
+            <div className="alert alert-info" style={{ fontSize: '12px', padding: '8px 12px', marginTop: '10px' }}>
+              🔄 Getting precise location... This may take up to 20 seconds for best accuracy.
+            </div>
+          )}
         </div>
 
         {/* Main Content Area */}
@@ -786,18 +896,160 @@ export default function RestaurantLocator() {
           {/* Map Container - Show when map view is active */}
           {activeView === 'map' && (
             <div className="map-container">
-              <div ref={mapRef} className="map"></div>
+              {mapError && (
+                <div style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  background: 'white',
+                  padding: '20px',
+                  borderRadius: '8px',
+                  boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                  zIndex: 1000,
+                  maxWidth: '400px',
+                  textAlign: 'center'
+                }}>
+                  <h3 style={{ color: '#dc2626', marginBottom: '10px' }}>Map Loading Error</h3>
+                  <p style={{ marginBottom: '10px' }}>{mapError}</p>
+                  <p style={{ fontSize: '12px', color: '#666' }}>Please check the browser console for more details.</p>
+                </div>
+              )}
+
+              <LoadScript
+                googleMapsApiKey={GOOGLE_MAPS_API_KEY}
+                onLoad={() => {
+                  console.log('Google Maps Script loaded successfully!');
+                  setMapError(null);
+                }}
+                onError={(error) => {
+                  console.error('Google Maps Script loading error:', error);
+                  setMapError('Failed to load Google Maps. Please check your API key and billing settings.');
+                }}
+              >
+                <GoogleMap
+                  mapContainerStyle={mapContainerStyle}
+                  center={mapCenter}
+                  zoom={mapZoom}
+                  options={mapOptions}
+                  onLoad={onMapLoad}
+                  onBoundsChanged={onBoundsChanged}
+                  onError={(error) => {
+                    console.error('Google Maps error:', error);
+                    setMapError('Google Maps failed to initialize.');
+                  }}
+                >
+                  {/* User Location Marker with Accuracy Circle */}
+                  {userLocation && (
+                    <>
+                      {/* Accuracy radius circle */}
+                      <Circle
+                        center={userLocation}
+                        radius={userLocation.accuracy || 50}
+                        options={{
+                          fillColor: '#4285F4',
+                          fillOpacity: 0.15,
+                          strokeColor: '#4285F4',
+                          strokeOpacity: 0.4,
+                          strokeWeight: 1
+                        }}
+                      />
+                      {/* Your location marker */}
+                      <Marker
+                        position={userLocation}
+                        icon={{
+                          path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
+                          scale: 12,
+                          fillColor: '#4285F4',
+                          fillOpacity: 1,
+                          strokeColor: '#ffffff',
+                          strokeWeight: 3
+                        }}
+                        title={`Your Location (±${userLocation.accuracy ? userLocation.accuracy.toFixed(0) : '50'}m)`}
+                      />
+                    </>
+                  )}
+
+                  {/* Restaurant Markers with Clustering - Only visible ones */}
+                  <MarkerClusterer>
+                    {(clusterer) =>
+                      visibleRestaurants.map((restaurant, index) => {
+                        if (!restaurant.lat || !restaurant.lng) return null;
+                        return (
+                          <Marker
+                            key={`${restaurant.lat}-${restaurant.lng}-${index}`}
+                            position={{ lat: restaurant.lat, lng: restaurant.lng }}
+                            clusterer={clusterer}
+                            onClick={() => {
+                              setSelectedMarker(restaurant);
+                              setSelectedRestaurant(restaurant);
+                            }}
+                            icon={{
+                              path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
+                              scale: 8,
+                              fillColor: getMarkerColor(restaurant.priceLevel),
+                              fillOpacity: 1,
+                              strokeColor: '#ffffff',
+                              strokeWeight: 2
+                            }}
+                          />
+                        );
+                      })
+                    }
+                  </MarkerClusterer>
+
+                  {/* InfoWindow for selected marker */}
+                  {selectedMarker && (
+                    <InfoWindow
+                      position={{ lat: selectedMarker.lat, lng: selectedMarker.lng }}
+                      onCloseClick={() => setSelectedMarker(null)}
+                    >
+                      <div className="info-window-content" style={{ minWidth: '200px' }}>
+                        <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: 'bold' }}>
+                          {selectedMarker.name}
+                        </h3>
+                        <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#666' }}>
+                          {selectedMarker.address}
+                        </p>
+                        <div style={{ margin: '8px 0' }}>
+                          <span style={{ marginRight: '8px' }}>⭐ {selectedMarker.rating || 'N/A'}</span>
+                          <span style={{ fontSize: '12px', color: '#666' }}>
+                            ({selectedMarker.userRatingCount || 0} reviews)
+                          </span>
+                        </div>
+                        {selectedMarker.priceLevelNum && (
+                          <p style={{ margin: '4px 0', fontWeight: 'bold' }}>
+                            {getPriceLevelSymbol(selectedMarker.priceLevelNum)}
+                          </p>
+                        )}
+                        {selectedMarker.googleMapsUri && (
+                          <a
+                            href={selectedMarker.googleMapsUri}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-block',
+                              marginTop: '8px',
+                              color: '#1a73e8',
+                              textDecoration: 'none',
+                              fontSize: '13px'
+                            }}
+                          >
+                            View on Google Maps →
+                          </a>
+                        )}
+                      </div>
+                    </InfoWindow>
+                  )}
+                </GoogleMap>
+              </LoadScript>
 
               {userLocation && (
                 <button
                   className="locate-me-btn"
                   onClick={() => {
-                    if (mapInstanceRef.current && userLocation) {
-                      mapInstanceRef.current.setView([userLocation.lat, userLocation.lng], 14, {
-                        animate: true,
-                        duration: 0.5
-                      });
-                    }
+                    setMapCenter(userLocation);
+                    setMapZoom(14);
                   }}
                   title="Center on my location"
                 >
