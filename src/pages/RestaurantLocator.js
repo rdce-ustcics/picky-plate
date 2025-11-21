@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import "leaflet.markercluster/dist/MarkerCluster.Default.css";
 import "leaflet.markercluster";
+import "leaflet.gridlayer.googlemutant";
 import "./RestaurantLocator.css";
 
 export default function RestaurantLocator() {
@@ -341,9 +342,12 @@ export default function RestaurantLocator() {
     if (!mapInstanceRef.current && mapRef.current) {
       const map = L.map(mapRef.current).setView([14.5995, 120.9842], 11);
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      // Using Mapbox (OpenStreetMap-based) - Better quality, no API key needed for basic use
+      // Attribution is required by OpenStreetMap license
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 19,
+        tileSize: 256,
       }).addTo(map);
 
       mapInstanceRef.current = map;

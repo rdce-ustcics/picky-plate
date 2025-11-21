@@ -32,7 +32,8 @@
       "Bash(timeout /t 3 /nobreak)",
       "Bash(nul)",
       "Bash(cmd //c \"taskkill /PID 37288 /F\")",
-      "Bash(cmd //c \"taskkill /PID 4672 /F\")"
+      "Bash(cmd //c \"taskkill /PID 4672 /F\")",
+      "Bash(timeout /t 5 /nobreak:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import LoadingModal from '../components/LoadingModal';
+import { useAuth } from '../auth/AuthContext';
 import './Profile.css';
 
 export default function Profile() {
   // API base configuration (matching Dashboard)
   const API = process.env.REACT_APP_API_BASE || "";
+  const { authHeaders } = useAuth();  // ✅ get JWT headers
 
   // ---- Identify active user ----
   const activeUserId = useMemo(() => {
@@ -101,7 +103,9 @@ export default function Profile() {
       setError('');
       try {
         const res = await fetch(`${API}/api/preferences/me`, {
-          headers: { 'x-user-id': activeUserId }
+          headers: {
+            ...authHeaders(),   // ✅ adds Authorization: Bearer <token>
+          }
         });
         if (!res.ok) throw new Error('Failed to load preferences');
         const data = await res.json();
@@ -152,7 +156,6 @@ export default function Profile() {
     try {
       // 1) Save preferences to backend
       const payload = {
-        userId: activeUserId,
         likes,        // cuisines
         dislikes,     // foods to avoid
         diets,        // dietary restrictions
@@ -166,7 +169,7 @@ export default function Profile() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': activeUserId
+          ...authHeaders(),   // ✅ adds Authorization: Bearer <token>
         },
         body: JSON.stringify(payload)
       });

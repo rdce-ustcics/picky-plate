@@ -19,6 +19,7 @@
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.3",
     "leaflet": "^1.9.4",
+    "leaflet.gridlayer.googlemutant": "^0.15.0",
     "leaflet.markercluster": "^1.5.3",
     "lucide-react": "^0.544.0",
     "mongodb": "^6.20.0",
