@@ -868,6 +868,42 @@ export default function BarkadaVote() {
             </div>
           </div>
 
+                              {/* CURRENT OPTIONS VISIBLE TO EVERYONE (before voting) */}
+          {options && options.length > 0 && (
+            <div className="mt-6 bg-white rounded-3xl p-6 border">
+              <h3 className="font-bold mb-3">Current Restaurants in the Vote</h3>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {options.map((opt) => (
+                  <div
+                    key={opt.id}
+                    className="border rounded-2xl overflow-hidden bg-gray-50"
+                  >
+                    {opt.image ? (
+                      <img
+                        src={opt.image}
+                        alt={opt.name}
+                        className="w-full h-32 object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-32 bg-gray-100 flex items-center justify-center text-xs text-gray-400">
+                        No image
+                      </div>
+                    )}
+                    <div className="p-3">
+                      <div className="font-semibold text-sm">{opt.name}</div>
+                      <div className="text-xs text-gray-600">
+                        {opt.restaurant}
+                      </div>
+                      <div className="text-xs text-yellow-700 font-bold mt-1">
+                        ₱{Number(opt.price).toFixed(2)} / person
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* PARTICIPANTS */}
           <div className="bg-white rounded-3xl p-6 border">
             <h3 className="font-bold mb-3 flex items-center gap-2">
