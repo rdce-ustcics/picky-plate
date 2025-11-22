@@ -1,6 +1,7 @@
 const { nanoid } = require('nanoid');
 const bcrypt = require('bcrypt');
 const aiRecommender = require('./aiRecommender');
+const UserPreferences = require('../models/UserPreferences');
 
 module.exports = function mountBarkada(io) {
   /**
@@ -46,32 +47,70 @@ module.exports = function mountBarkada(io) {
     return v;
   };
 
-  const sanitizeSessionForClient = (s, requestingToken = null) => {
-    const participants = Array.from(s.participants.entries()).map(([token, p]) => ({
+  const computeGroupPreferences = (participantsMap) => {
+  const groupAvoid = new Set();
+  const groupDiet = new Set();
+
+  participantsMap.forEach((p) => {
+    const r = p.restrictions;
+    if (!r) return;
+
+    if (r.avoidTags) {
+      r.avoidTags.forEach((tag) => groupAvoid.add(tag));
+    }
+
+    if (r.diet) {
+      r.diet
+        .split(',')
+        .map((d) => d.trim())
+        .filter(Boolean)
+        .forEach((d) => groupDiet.add(d));
+    }
+  });
+
+  return {
+    groupAvoid: Array.from(groupAvoid),
+    groupDiet: Array.from(groupDiet),
+  };
+};
+
+
+const sanitizeSessionForClient = (s, requestingToken = null) => {
+  const participants = Array.from(s.participants.entries()).map(
+    ([token, p]) => ({
       token: token === requestingToken ? token : undefined, // reveal only your own
       name: p.name,
       isRegistered: p.isRegistered,
       hasSubmitted: p.hasSubmitted,
-    }));
-    return {
-      code: s.code,
-      isVotingOpen: s.isVotingOpen,
-      host: { name: s.host.name, isRegistered: s.host.isRegistered },
-      participants,
-      options: s.options.map((o) => ({
-        id: o.id,
-        name: o.name,
-        price: o.price,
-        image: o.image,
-        restaurant: o.restaurant,
-      })),
-      settings: s.settings,
-      createdAt: s.createdAt,
-      lastActivityAt: s.lastActivityAt,
-      expiresAt: s.expiresAt,
-      votingEndsAt: s.votingEndsAt || null,
-    };
+    })
+  );
+
+  // 👇 Compute group-level prefs from all participants
+  const { groupAvoid, groupDiet } = computeGroupPreferences(s.participants);
+
+  return {
+    code: s.code,
+    isVotingOpen: s.isVotingOpen,
+    host: { name: s.host.name, isRegistered: s.host.isRegistered },
+    participants,
+    options: s.options.map((o) => ({
+      id: o.id,
+      name: o.name,
+      price: o.price,
+      image: o.image,
+      restaurant: o.restaurant,
+    })),
+    settings: s.settings,
+    createdAt: s.createdAt,
+    lastActivityAt: s.lastActivityAt,
+    expiresAt: s.expiresAt,
+    votingEndsAt: s.votingEndsAt || null,
+
+    // ✅ now these are defined
+    groupAvoid,
+    groupDiet,
   };
+};
 
   const broadcastState = (code) => {
     const s = sessions.get(code);
@@ -360,53 +399,104 @@ module.exports = function mountBarkada(io) {
     // ──────────────────────────────────────────────────────────────
     // Join lobby
     // ──────────────────────────────────────────────────────────────
-    socket.on(
-      'session:join',
-      async ({ code, password, name, isRegistered = false, existingToken = null, restrictions = null }, cb) => {
-        const s = sessions.get(code);
-        if (!s) return cb({ ok: false, error: 'Invalid code' });
+socket.on(
+  'session:join',
+  async (
+    {
+      code,
+      password,
+      name,
+      isRegistered = false,
+      userId = null,        // 👈 NEW
+      existingToken = null,
+      restrictions = null,  // can be used for guests
+    },
+    cb
+  ) => {
+    const s = sessions.get(code);
+    if (!s) return cb({ ok: false, error: 'Invalid code' });
 
-        if (s.settings?.maxParticipants && s.participants.size >= s.settings.maxParticipants) {
-          return cb({
-            ok: false,
-            error: `Lobby is full (max ${s.settings.maxParticipants} participants)`,
-          });
+    if (s.settings?.maxParticipants && s.participants.size >= s.settings.maxParticipants) {
+      return cb({
+        ok: false,
+        error: `Lobby is full (max ${s.settings.maxParticipants} participants)`,
+      });
+    }
+
+    const ok = await bcrypt.compare(String(password || ''), s.passwordHash);
+    if (!ok) return cb({ ok: false, error: 'Wrong password' });
+
+    // 🔹 Start with whatever the client passed (guest modal)
+    let finalRestrictions = restrictions || null;
+
+    // 🔹 If logged in, load preferences from DB (overrides guest for that user)
+    if (isRegistered && userId) {
+      try {
+        const prefs = await UserPreferences.findOne({ userId }).lean();
+        if (prefs) {
+          const diets = prefs.diets || [];
+          const dislikes = prefs.dislikes || [];
+          const allergens = prefs.allergens || [];
+
+          finalRestrictions = {
+            // tags we want to AVOID at restaurant level
+            avoidTags: [...new Set([...dislikes, ...diets])],
+            // free-text notes for AI / UI
+            allergens: allergens.join(', '),
+            diet: diets.join(', '),
+          };
         }
-
-        const ok = await bcrypt.compare(String(password || ''), s.passwordHash);
-        if (!ok) return cb({ ok: false, error: 'Wrong password' });
-
-        let token = existingToken && s.participants.has(existingToken) ? existingToken : nanoid();
-
-        s.participants.set(token, {
-          name,
-          isRegistered,
-          hasSubmitted: s.participants.get(token)?.hasSubmitted || false,
-          socketId: socket.id,
-          restrictions: restrictions?.avoidTags?.length
-            ? { avoidTags: new Set(restrictions.avoidTags) }
-            : undefined,
-          submittedOptionsCount: s.participants.get(token)?.submittedOptionsCount || 0,
-        });
-
-        // Refilter options based on non-negotiables
-        s.options = filterOptionsByNonNegotiables(s.baseOptions, Array.from(s.participants.values()));
-
-        // Slide inactivity window
-        const now = new Date();
-        s.lastActivityAt = now;
-        s.expiresAt = new Date(now.getTime() + s.settings.inactivityMinutes * 60 * 1000);
-        rescheduleExpire(s);
-
-        socket.join(code);
-        cb({
-          ok: true,
-          participantToken: token,
-          state: sanitizeSessionForClient(s, token),
-        });
-        broadcastState(code);
+      } catch (err) {
+        console.error('Failed to load UserPreferences:', err);
       }
+    }
+
+    let token =
+      existingToken && s.participants.has(existingToken)
+        ? existingToken
+        : nanoid();
+
+    s.participants.set(token, {
+      name,
+      userId: userId || null,
+      isRegistered,
+      hasSubmitted: s.participants.get(token)?.hasSubmitted || false,
+      socketId: socket.id,
+      restrictions: finalRestrictions
+        ? {
+            avoidTags: finalRestrictions.avoidTags?.length
+              ? new Set(finalRestrictions.avoidTags)
+              : undefined,
+            allergens: finalRestrictions.allergens || '',
+            diet: finalRestrictions.diet || '',
+          }
+        : undefined,
+      submittedOptionsCount:
+        s.participants.get(token)?.submittedOptionsCount || 0,
+    });
+
+    // Refilter options based on everyone’s non-negotiables
+    s.options = filterOptionsByNonNegotiables(
+      s.baseOptions,
+      Array.from(s.participants.values())
     );
+
+    const now = new Date();
+    s.lastActivityAt = now;
+    s.expiresAt = new Date(
+      now.getTime() + s.settings.inactivityMinutes * 60 * 1000
+    );
+    rescheduleExpire(s);
+
+    socket.join(code);
+    cb({
+      ok: true,
+      participantToken: token,
+      state: sanitizeSessionForClient(s, token),
+    });
+    broadcastState(code);
+  }
+);
 
     // Session fetch
     socket.on('session:get', ({ code, token }, cb) => {
