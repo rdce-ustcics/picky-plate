@@ -13,6 +13,8 @@ import {
   Settings,
   X,
 } from "lucide-react";
+import { useAuth } from "../auth/AuthContext";
+
 
 const SOCKET_URL =
   process.env.REACT_APP_SOCKET_URL ||
@@ -219,8 +221,18 @@ export default function BarkadaVote() {
   const [showAIPrefs, setShowAIPrefs] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
 
-  // Auth (optional - currently unused)
-  const authUser = null;
+    // For logged-out users (guest)
+  const [guestRestrictions, setGuestRestrictions] = useState({
+    allergens: "",
+    diet: "",
+  });
+  const [showGuestPrefs, setShowGuestPrefs] = useState(false);
+
+  // For storing a “pending join” when we pop the modal
+  const pendingJoinRef = useRef(null);
+
+
+  const { user: authUser } = useAuth(); 
 
   /* Socket setup */
   useEffect(() => {
@@ -423,48 +435,64 @@ export default function BarkadaVote() {
     );
   };
 
-  const handleJoinSession = () => {
-    const socket = socketRef.current;
-    if (!socket) return alert("Not connected yet.");
-    if (connState !== "connected") return alert("Not connected yet.");
-    if (!joinName || !joinCode || !joinPassword) return alert("Fill all fields");
+const doJoin = (restrictionsOverride = null) => {
+  const socket = socketRef.current;
+  if (!socket) return alert("Not connected yet.");
+  if (connState !== "connected") return alert("Not connected yet.");
+  if (!joinName || !joinCode || !joinPassword) return alert("Fill all fields");
 
-    socket.emit(
-      "session:join",
-      {
-        code: joinCode,
-        password: joinPassword,
-        name: joinName,
-        isRegistered: false,
-        existingToken: participantToken || null,
-      },
-      (res) => {
-        if (!res?.ok) return alert(res?.error || "Join failed");
+  socket.emit(
+    "session:join",
+    {
+      code: joinCode,
+      password: joinPassword,
+      name: joinName,
+      isRegistered: !!authUser,
+      userId: authUser?._id || null,
+      existingToken: participantToken || null,
+      restrictions: restrictionsOverride, // null for logged-in or guest-without-prefs
+    },
+    (res) => {
+      if (!res?.ok) return alert(res?.error || "Join failed");
 
-        setSessionCode(joinCode);
-        setIsHost(false);
-        setParticipantToken(res.participantToken);
-        localStorage.setItem("barkada_vote_token", res.participantToken);
+      setSessionCode(joinCode);
+      setIsHost(false);
+      setParticipantToken(res.participantToken);
+      localStorage.setItem("barkada_vote_token", res.participantToken);
 
-        const st = res.state;
-        setParticipants(st.participants || []);
-        setOptions(st.options || []);
-        setIsVotingOpen(st.isVotingOpen);
-        setHost(st.host || null);
-        if (st.settings) {
-          setSettings(st.settings);
-          setSettingsDraft(st.settings);
-        } else {
-          setSettings(defaultSettings);
-          setSettingsDraft(defaultSettings);
-        }
-        if (st.createdAt) setCreatedAt(st.createdAt);
-        if (st.expiresAt) setExpiresAt(st.expiresAt);
-
-        setCurrentView("lobby");
+      const st = res.state;
+      setParticipants(st.participants || []);
+      setOptions(st.options || []);
+      setIsVotingOpen(st.isVotingOpen);
+      setHost(st.host || null);
+      if (st.settings) {
+        setSettings(st.settings);
+        setSettingsDraft(st.settings);
+      } else {
+        setSettings(defaultSettings);
+        setSettingsDraft(defaultSettings);
       }
-    );
-  };
+      if (st.createdAt) setCreatedAt(st.createdAt);
+      if (st.expiresAt) setExpiresAt(st.expiresAt);
+
+      // Example: you can read st.groupAvoid / st.groupDiet here if you want
+      // console.log("Group avoid:", st.groupAvoid, "Group diet:", st.groupDiet);
+
+      setCurrentView("lobby");
+    }
+  );
+};
+
+const handleJoinSession = () => {
+  // Logged-in: just join, server will pull from UserPreferences
+  if (authUser) {
+    return doJoin(null);
+  }
+
+  // Logged-out: pop modal first (optional)
+  pendingJoinRef.current = true;
+  setShowGuestPrefs(true);
+};
 
   const saveMenuToServer = () => {
     const socket = socketRef.current;
@@ -682,6 +710,7 @@ export default function BarkadaVote() {
 
     // If prefs are basically empty, force the modal first
     if (
+      !authUser &&
       !aiPrefs.area &&
       !aiPrefs.budgetPerPerson &&
       !aiPrefs.cuisinesLike &&
@@ -867,6 +896,42 @@ export default function BarkadaVote() {
               </button>
             </div>
           </div>
+
+                              {/* CURRENT OPTIONS VISIBLE TO EVERYONE (before voting) */}
+          {options && options.length > 0 && (
+            <div className="mt-6 bg-white rounded-3xl p-6 border">
+              <h3 className="font-bold mb-3">Current Restaurants in the Vote</h3>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {options.map((opt) => (
+                  <div
+                    key={opt.id}
+                    className="border rounded-2xl overflow-hidden bg-gray-50"
+                  >
+                    {opt.image ? (
+                      <img
+                        src={opt.image}
+                        alt={opt.name}
+                        className="w-full h-32 object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-32 bg-gray-100 flex items-center justify-center text-xs text-gray-400">
+                        No image
+                      </div>
+                    )}
+                    <div className="p-3">
+                      <div className="font-semibold text-sm">{opt.name}</div>
+                      <div className="text-xs text-gray-600">
+                        {opt.restaurant}
+                      </div>
+                      <div className="text-xs text-yellow-700 font-bold mt-1">
+                        ₱{Number(opt.price).toFixed(2)} / person
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* PARTICIPANTS */}
           <div className="bg-white rounded-3xl p-6 border">
