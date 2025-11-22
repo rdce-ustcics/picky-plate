@@ -145,12 +145,12 @@ export default function Login() {
         {/* Left Section - Form */}
         <div className="w-full lg:w-1/2 p-6 sm:p-8 lg:p-12">
           <div className="mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2">
+            <center><h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-800 mb-2">
               {isLogin ? "Welcome Back!" : "Create Account"}
-            </h1>
-            <p className="text-sm sm:text-base text-gray-500">
+            </h1></center>
+            <center><p className="text-sm sm:text-base text-gray-500">
               {isLogin ? "Login to continue to PickAPlate" : "Sign up to start your food journey"}
-            </p>
+            </p></center>
           </div>
 
           {apiError && (
@@ -401,20 +401,7 @@ export default function Login() {
             <p className="text-xl mb-4">Discover Smarter Food Choices</p>
             <p className="text-lg opacity-90">Join thousands of food lovers exploring the best dishes in town</p>
 
-            <div className="mt-12 flex justify-center gap-8">
-              <div className="text-center">
-                <div className="text-4xl font-bold">10K+</div>
-                <div className="text-sm opacity-90">Happy Users</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold">500+</div>
-                <div className="text-sm opacity-90">Restaurants</div>
-              </div>
-              <div className="text-center">
-                <div className="text-4xl font-bold">5K+</div>
-                <div className="text-sm opacity-90">Dishes</div>
-              </div>
-            </div>
+        
           </div>
         </div>
       </div> 
