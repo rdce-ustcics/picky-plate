@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Edit, Trash2, X, Download } from "lucide-react";
+import { Plus, Edit, Trash2, X, Download, Camera } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import jsPDF from "jspdf";
 import LoadingModal from "../components/LoadingModal";
@@ -29,6 +29,7 @@ export default function Explorer() {
     instructions: [""],
     recipe: [""] // Backward compatibility
   });
+  const [imagePreview, setImagePreview] = useState(null);
 
   // Fetch cultural recipes from database
   const fetchRecipes = async () => {
@@ -191,9 +192,23 @@ export default function Explorer() {
     doc.save(fileName);
   };
 
+  // Image upload handler
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+        setRecipeForm(prev => ({ ...prev, img: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Admin functions
   const openAddForm = () => {
     setEditingRecipe(null);
+    setImagePreview(null);
     setRecipeForm({
       name: "",
       desc: "",
@@ -208,6 +223,7 @@ export default function Explorer() {
 
   const openEditForm = (dish) => {
     setEditingRecipe(dish);
+    setImagePreview(dish.img || null);
     setRecipeForm({
       name: dish.name,
       desc: dish.desc,
@@ -223,6 +239,7 @@ export default function Explorer() {
   const closeEditForm = () => {
     setShowEditForm(false);
     setEditingRecipe(null);
+    setImagePreview(null);
     setRecipeForm({
       name: "",
       desc: "",
@@ -293,7 +310,23 @@ export default function Explorer() {
   };
 
   const saveRecipe = async () => {
-    if (!isAdmin) return;
+    if (!isAdmin) {
+      alert("You must be logged in as an admin to create cultural recipes");
+      return;
+    }
+
+    // Check authentication
+    if (!isAuthenticated) {
+      alert("You must be logged in to create cultural recipes");
+      return;
+    }
+
+    console.log("🔐 Auth check:", {
+      isAuthenticated,
+      isAdmin,
+      user: user?.email || "unknown",
+      role: user?.role || "unknown"
+    });
 
     try {
       const cleanIngredients = recipeForm.ingredients.filter(item => item.trim());
@@ -312,6 +345,23 @@ export default function Explorer() {
         recipe: cleanRecipe // Backward compatibility
       };
 
+      const headers = {
+        ...authHeaders(),
+        "Content-Type": "application/json"
+      };
+
+      console.log("📤 Sending cultural recipe payload:", {
+        name: payload.name,
+        desc: payload.desc,
+        region: payload.region,
+        hasImage: !!payload.img,
+        imageSize: payload.img ? `${(payload.img.length / 1024).toFixed(2)} KB` : '0 KB',
+        ingredientsCount: payload.ingredients.length,
+        instructionsCount: payload.instructions.length
+      });
+
+      console.log("📋 Request headers:", headers);
+
       const url = editingRecipe
         ? `${API_BASE}/api/cultural-recipes/${editingRecipe.id}`
         : `${API_BASE}/api/cultural-recipes`;
@@ -320,24 +370,29 @@ export default function Explorer() {
 
       const res = await fetch(url, {
         method,
-        headers: {
-          ...authHeaders(),
-          "Content-Type": "application/json"
-        },
+        headers,
         body: JSON.stringify(payload)
       });
 
       const data = await res.json();
 
+      console.log("📥 Server response:", {
+        status: res.status,
+        success: data.success,
+        error: data.error
+      });
+
       if (res.ok && data.success) {
+        alert("Recipe saved successfully!");
         closeEditForm();
         await fetchRecipes();
       } else {
+        console.error("❌ Failed to save recipe:", data);
         alert(data.error || "Failed to save recipe");
       }
     } catch (e) {
-      console.error("Save recipe error:", e);
-      alert("Failed to save recipe");
+      console.error("❌ Save recipe error:", e);
+      alert(`Failed to save recipe: ${e.message}`);
     }
   };
 
@@ -584,14 +639,56 @@ export default function Explorer() {
                 </select>
               </div>
 
+              {/* Image Upload Section - matches UploadRecipe.js style */}
               <div className="form-group">
-                <label>Image URL</label>
+                <label>Recipe Photo</label>
                 <input
-                  type="text"
-                  value={recipeForm.img}
-                  onChange={(e) => handleFormChange("img", e.target.value)}
-                  placeholder="/images/dish.png"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  id="cultural-photo-upload"
+                  style={{ display: 'none' }}
                 />
+                <label
+                  htmlFor="cultural-photo-upload"
+                  style={{
+                    display: 'block',
+                    border: '2px dashed #FCD34D',
+                    borderRadius: '12px',
+                    minHeight: '250px',
+                    cursor: 'pointer',
+                    transition: 'border-color 0.2s',
+                    backgroundColor: 'white'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderColor = '#F59E0B'}
+                  onMouseLeave={(e) => e.currentTarget.style.borderColor = '#FCD34D'}
+                >
+                  {imagePreview ? (
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      style={{
+                        width: '100%',
+                        height: '250px',
+                        objectFit: 'cover',
+                        borderRadius: '12px'
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      height: '250px'
+                    }}>
+                      <Camera style={{ width: '64px', height: '64px', color: '#F59E0B', marginBottom: '12px' }} />
+                      <p style={{ color: '#92400E', fontWeight: '500', margin: 0 }}>Upload a photo</p>
+                      <p style={{ color: '#B45309', fontSize: '14px', marginTop: '4px' }}>Click to browse</p>
+                    </div>
+                  )}
+                </label>
               </div>
 
               {/* Ingredients Section */}
