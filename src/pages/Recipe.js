@@ -3,13 +3,12 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle,
-  Filter, Search
+  Filter, Search, FileText, Download, Flag
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import LoadingModal from "../components/LoadingModal";
-import { Flag } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 
@@ -403,9 +402,9 @@ export default function CommunityRecipes() {
         {/* Header */}
         <div className="bg-gradient-to-r from-amber-400 to-yellow-500 shadow-lg">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-2">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2 whitespace-nowrap">
                   Community Recipes
                 </h1>
                 <p className="text-amber-100 text-sm sm:text-base">
@@ -413,22 +412,22 @@ export default function CommunityRecipes() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="flex items-center gap-3 flex-shrink-0">
                 <button
                   onClick={() => { setShowMine((v) => !v); setPage(1); }}
-                  className={`px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-md ${
+                  className={`px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all shadow-md whitespace-nowrap ${
                     showMine
                       ? "bg-white text-amber-600 shadow-lg scale-105"
                       : "bg-amber-300 text-amber-800 hover:bg-amber-200"
                   }`}
                   title="Show only recipes you uploaded"
                 >
-                  {showMine ? " My Recipes" : " All Recipes"}
+                  {showMine ? "My Recipes" : "All Recipes"}
                 </button>
 
                 <Link
                   to="/recipes/upload"
-                  className="bg-white hover:bg-amber-50 text-amber-600 font-bold px-5 py-2.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base"
+                  className="bg-white hover:bg-amber-50 text-amber-600 font-bold px-5 py-2.5 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 text-sm sm:text-base whitespace-nowrap"
                 >
                   <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                   Upload Recipe
@@ -458,7 +457,7 @@ export default function CommunityRecipes() {
                     className="bg-white border-2 border-amber-200 rounded-2xl px-5 py-3 text-sm font-semibold flex items-center gap-2 hover:bg-amber-50 hover:border-amber-300 transition shadow-md text-amber-800"
                   >
                     <span>
-                      {selectedTags.length > 0 ? `🏷️ Tags (${selectedTags.length})` : " Filter by Tags"}
+                      {selectedTags.length > 0 ? `Tags (${selectedTags.length})` : "Filter by Tags"}
                     </span>
                     <ChevronDown className={`w-4 h-4 text-amber-600 transition ${showTagMenu ? 'rotate-180' : ''}`} />
                   </button>
@@ -511,7 +510,7 @@ export default function CommunityRecipes() {
                     onClick={resetFilters}
                     className="bg-white border-2 border-amber-200 rounded-2xl px-5 py-3 text-sm hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition font-semibold shadow-md"
                   >
-                    ✕ Clear All
+                    <X className="w-4 h-4 inline mr-1" /> Clear All
                   </button>
                 )}
               </div>
@@ -528,7 +527,7 @@ export default function CommunityRecipes() {
                       onChange={(e) => { setPrepFilter(e.target.value); setPage(1); }}
                       className="border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-amber-50 hover:border-amber-300 transition font-medium text-amber-900"
                     >
-                      <option value=""> Prep Time (Any)</option>
+                      <option value="">Prep Time (Any)</option>
                       {PREP_TIME_OPTIONS.map((opt) => (
                         <option key={opt} value={opt}>{opt}</option>
                       ))}
@@ -539,7 +538,7 @@ export default function CommunityRecipes() {
                       onChange={(e) => { setCookFilter(e.target.value); setPage(1); }}
                       className="border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-amber-50 hover:border-amber-300 transition font-medium text-amber-900"
                     >
-                      <option value=""> Cook Time (Any)</option>
+                      <option value="">Cook Time (Any)</option>
                       {COOK_TIME_OPTIONS.map((opt) => (
                         <option key={opt} value={opt}>{opt}</option>
                       ))}
@@ -550,7 +549,7 @@ export default function CommunityRecipes() {
                       onChange={(e) => { setDifficultyFilter(e.target.value); setPage(1); }}
                       className="border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-amber-50 hover:border-amber-300 transition font-medium text-amber-900"
                     >
-                      <option value=""> Difficulty (Any)</option>
+                      <option value="">Difficulty (Any)</option>
                       <option>Easy</option>
                       <option>Medium</option>
                       <option>Hard</option>
@@ -561,7 +560,7 @@ export default function CommunityRecipes() {
                       onChange={(e) => { setServingsFilter(e.target.value); setPage(1); }}
                       className="border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-amber-50 hover:border-amber-300 transition font-medium text-amber-900"
                     >
-                      <option value=""> Servings (Any)</option>
+                      <option value="">Servings (Any)</option>
                       {SERVING_SIZE_OPTIONS.map((opt) => (
                         <option key={opt} value={opt}>{opt}</option>
                       ))}
@@ -577,8 +576,8 @@ export default function CommunityRecipes() {
                       >
                         <span>
                           {excludeAllergens.length > 0 
-                            ? `🚫 Excluding ${excludeAllergens.length} allergen${excludeAllergens.length > 1 ? 's' : ''}`
-                            : "🚫 Exclude Allergens"
+                            ? `Excluding ${excludeAllergens.length} allergen${excludeAllergens.length > 1 ? 's' : ''}`
+                            : "Exclude Allergens"
                           }
                         </span>
                         <ChevronDown className={`w-4 h-4 text-amber-600 transition ${showAllergenMenu ? 'rotate-180' : ''}`} />
@@ -612,7 +611,7 @@ export default function CommunityRecipes() {
                   {/* Custom Exclude Terms */}
                   <div>
                     <label className="block text-xs font-bold text-amber-900 mb-2 uppercase tracking-wide">
-                       Exclude Custom Terms
+                      Exclude Custom Terms
                     </label>
                     <div className="flex gap-2">
                       <input
@@ -669,9 +668,9 @@ export default function CommunityRecipes() {
               {/* Stats */}
               <div className="flex items-center justify-between pt-2">
                 <p className="text-sm font-semibold text-amber-900">
-                  {total === 0 ? "No recipes found " : (
+                  {total === 0 ? "No recipes found" : (
                     <>
-                      <span className="text-amber-700 font-bold text-base">{total}</span> delicious recipe{total === 1 ? "" : "s"} found 🎉
+                      <span className="text-amber-700 font-bold text-base">{total}</span> delicious recipe{total === 1 ? "" : "s"} found
                     </>
                   )}
                 </p>
@@ -696,7 +695,7 @@ export default function CommunityRecipes() {
               <p className="text-amber-700 mb-6 text-lg">
                 Try adjusting your filters or{" "}
                 <Link to="/recipes/upload" className="text-amber-600 font-bold hover:underline">
-                  be the first to add one! 🌟
+                  be the first to add one!
                 </Link>
               </p>
             </div>
@@ -896,8 +895,9 @@ export default function CommunityRecipes() {
               {/* Instructions */}
               {selectedRecipe.instructions?.length ? (
                 <div className="mb-8">
-                  <h3 className="text-2xl font-bold text-amber-900 mb-4 text-center">
-                    📝 Step-by-Step Instructions
+                  <h3 className="text-2xl font-bold text-amber-900 mb-4 text-center flex items-center justify-center gap-2">
+                    <FileText className="w-6 h-6 text-amber-600" />
+                    Step-by-Step Instructions
                   </h3>
                   <div className="space-y-4">
                     {selectedRecipe.instructions.map((instruction, index) => (
@@ -918,7 +918,8 @@ export default function CommunityRecipes() {
               {selectedRecipe.notes ? (
                 <div className="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-r-2xl mb-6 shadow-md">
                   <h3 className="text-lg font-bold text-blue-900 mb-2 flex items-center gap-2">
-                    💡 Chef's Notes
+                    <FileText className="w-5 h-5 text-blue-700" />
+                    Chef's Notes
                   </h3>
                   <p className="text-base text-blue-800 leading-relaxed font-medium">
                     {selectedRecipe.notes}
@@ -930,15 +931,17 @@ export default function CommunityRecipes() {
               <div className="no-pdf flex flex-wrap justify-center gap-3 mt-6 mb-4">
                 <button
                   onClick={previewRecipePdf}
-                  className="bg-white border-2 border-amber-400 text-amber-700 hover:bg-amber-50 font-bold px-6 py-3 rounded-2xl shadow-md transition"
+                  className="bg-white border-2 border-amber-400 text-amber-700 hover:bg-amber-50 font-bold px-6 py-3 rounded-2xl shadow-md transition flex items-center gap-2"
                 >
-                  👁️ Preview PDF
+                  <FileText className="w-4 h-4" />
+                  Preview PDF
                 </button>
                 <button
                   onClick={downloadRecipePdf}
-                  className="bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-white font-bold px-6 py-3 rounded-2xl shadow-lg transition"
+                  className="bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-white font-bold px-6 py-3 rounded-2xl shadow-lg transition flex items-center gap-2"
                 >
-                  ⬇️ Download PDF
+                  <Download className="w-4 h-4" />
+                  Download PDF
                 </button>
 
                 {/* Report button */}
@@ -953,7 +956,7 @@ export default function CommunityRecipes() {
                   title={selectedRecipe?.reportedByMe ? "You have already reported this recipe" : "Report this recipe"}
                 >
                   <Flag className="w-4 h-4" />
-                  {selectedRecipe?.reportedByMe ? "Reported" : "🚩 Report recipe"}
+                  {selectedRecipe?.reportedByMe ? "Reported" : "Report Recipe"}
                 </button>
               </div>
             </div>

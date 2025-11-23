@@ -69,7 +69,7 @@ function CookingLoader(){
         </div>
       </div>
 
-      <p className="mt-6 text-sm text-gray-600">The chef-bot is cooking up unique meals…</p>
+      <p className="mt-6 text-sm text-amber-700">The chef-bot is cooking up unique meals…</p>
     </div>
   );
 }
@@ -85,14 +85,13 @@ export default function Calendar(){
   .print-wrap { box-shadow: none !important; }
   .print-root { transform: scale(0.85); transform-origin: top left; width: 1180px; }
   .rounded-3xl, .rounded-xl { border-radius: 10px !important; }
-  .bg-yellow-50 { background-color: #FFFBEB !important; }
-  .bg-yellow-300 { background-color: #FCD34D !important; }
+  .bg-amber-50 { background-color: #FFFBEB !important; }
   .bg-yellow-400 { background-color: #FBBF24 !important; }
-  .bg-gray-50 { background-color: #F9FAFB !important; }
-  .text-gray-800 { color: #1F2937 !important; }
-  .text-gray-700 { color: #374151 !important; }
-  .text-gray-600 { color: #4B5563 !important; }
-  .text-yellow-800 { color: #92400E !important; }
+  .bg-yellow-500 { background-color: #F59E0B !important; }
+  .bg-cream-50 { background-color: #FFF9E6 !important; }
+  .text-amber-900 { color: #78350F !important; }
+  .text-amber-800 { color: #92400E !important; }
+  .text-amber-700 { color: #B45309 !important; }
   .ring-2 { box-shadow: none !important; }
 }
 `;
@@ -403,23 +402,23 @@ export default function Calendar(){
 
   // ---------- UI ----------
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50">
       <style>{printCss}</style>
 
       <main className="p-6 overflow-auto">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8 print-hide">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Calendar Meal Planner</h1>
-            <p className="text-gray-600">Plan your meals in advance and manage your budget effectively</p>
+            <h1 className="text-3xl font-bold text-amber-900 mb-2">Calendar Meal Planner</h1>
+            <p className="text-amber-700">Plan your meals in advance and manage your budget effectively</p>
           </div>
 
           {/* Calendar Card */}
-          <div className="bg-white rounded-3xl shadow-lg overflow-hidden print-wrap print-root">
+          <div className="bg-white/80 backdrop-blur-sm rounded-[2rem] shadow-xl overflow-hidden border border-amber-100 print-wrap print-root">
             {/* Calendar Header */}
-            <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 p-6">
+            <div className="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-white">
+                <h2 className="text-2xl font-bold text-white drop-shadow-sm">
                   {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
                 </h2>
 
@@ -427,14 +426,14 @@ export default function Calendar(){
                   <button
                     onClick={previousMonth}
                     disabled={prevDisabled}
-                    className={`p-2 rounded-lg transition ${prevDisabled ? "bg-white/10 text-white/50 cursor-not-allowed" : "bg-white bg-opacity-20 hover:bg-opacity-30 text-white"}`}
+                    className={`p-2.5 rounded-xl transition-all ${prevDisabled ? "bg-white/10 text-white/50 cursor-not-allowed" : "bg-white/90 hover:bg-white text-amber-600 shadow-md hover:shadow-lg"}`}
                     title="Previous month"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                   <button
                     onClick={nextMonth}
-                    className="bg-white bg-opacity-20 hover:bg-opacity-30 text-white p-2 rounded-lg transition"
+                    className="bg-white/90 hover:bg-white text-amber-600 p-2.5 rounded-xl transition-all shadow-md hover:shadow-lg"
                     title="Next month"
                   >
                     <ChevronRight className="w-5 h-5" />
@@ -443,7 +442,7 @@ export default function Calendar(){
                   {/* AI Generate opens options modal */}
                   <button
                     onClick={openAiOptionsModal}
-                    className="bg-white text-yellow-600 px-4 py-2 rounded-lg font-semibold hover:bg-yellow-50 transition flex items-center gap-2 ml-2"
+                    className="bg-white/95 hover:bg-white text-amber-600 px-5 py-2.5 rounded-xl font-bold hover:scale-105 transition-all flex items-center gap-2 ml-2 shadow-md hover:shadow-lg"
                     title="Generate meal suggestions"
                   >
                     <Sparkles className="w-4 h-4" /> AI Generate
@@ -454,7 +453,7 @@ export default function Calendar(){
               {/* Day Names */}
               <div className="grid grid-cols-7 gap-2">
                 {dayNames.map((d) => (
-                  <div key={d} className="text-center text-white font-semibold text-sm py-2">
+                  <div key={d} className="text-center text-white font-bold text-sm py-2 drop-shadow-sm">
                     {d}
                   </div>
                 ))}
@@ -462,8 +461,8 @@ export default function Calendar(){
             </div>
 
             {/* Calendar Grid */}
-            <div className="p-6">
-              <div className="grid grid-cols-7 gap-2">
+            <div className="p-6 bg-gradient-to-br from-amber-50/50 to-yellow-50/50">
+              <div className="grid grid-cols-7 gap-3">
                 {Array.from({ length: rows }).map((_, rowIdx) =>
                   Array.from({ length: 7 }).map((__, colIdx) => {
                     const day = days[rowIdx * 7 + colIdx];
@@ -488,24 +487,24 @@ export default function Calendar(){
                           openAddModal(day); // modal on day click
                         }}
                         className={[
-                          "min-h-32 border-2 rounded-xl p-3 transition relative",
-                          !day ? "bg-gray-50 border-gray-100"
-                               : past ? "bg-gray-50 border-gray-200"
-                               : isToday(day) ? "bg-yellow-300 border-yellow-400"
-                               : hasMeals ? "bg-yellow-50 border-yellow-200 hover:border-yellow-400"
-                               : "border-gray-200 hover:border-yellow-300",
-                          !past && day && (hoveredDay === day || selectedDay === day) ? "ring-2 ring-yellow-400" : "",
+                          "min-h-32 border-2 rounded-2xl p-3 transition-all relative backdrop-blur-sm",
+                          !day ? "bg-amber-50/30 border-amber-100/50"
+                               : past ? "bg-gray-50/50 border-gray-200/50"
+                               : isToday(day) ? "bg-gradient-to-br from-yellow-300 to-amber-300 border-yellow-400 shadow-lg"
+                               : hasMeals ? "bg-amber-50/80 border-amber-200 hover:border-amber-400 hover:shadow-md"
+                               : "bg-white/60 border-amber-100 hover:border-yellow-300 hover:shadow-md",
+                          !past && day && (hoveredDay === day || selectedDay === day) ? "ring-2 ring-yellow-400 shadow-lg scale-[1.02]" : "",
                           day && !past ? "cursor-pointer" : "cursor-default",
                         ].join(" ")}
                       >
                         {day && (
                           <>
                             <div className="flex items-center justify-between mb-2">
-                              <span className={`text-sm font-bold ${isToday(day) ? "text-yellow-800" : "text-gray-700"}`}>{day}</span>
+                              <span className={`text-sm font-bold ${isToday(day) ? "text-amber-900" : "text-amber-800"}`}>{day}</span>
                               {!past && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); openAddModal(day); }}
-                                  className="text-gray-400 hover:text-yellow-500 transition print-hide"
+                                  className="text-amber-400 hover:text-amber-600 hover:bg-amber-100 rounded-full p-1 transition print-hide"
                                   title="Add / Edit meals"
                                 >
                                   <Plus className="w-4 h-4" />
@@ -514,21 +513,23 @@ export default function Calendar(){
                             </div>
 
                             {hasMeals && (
-                              <div className="space-y-1">
+                              <div className="space-y-1.5">
                                 {dishes.map((dish, i) => (
-                                  <div key={i} className="bg-white rounded px-2 py-1">
-                                    <p className="text-xs font-semibold text-gray-700 truncate">
+                                  <div key={i} className="bg-white rounded-lg px-2.5 py-1.5 shadow-sm border border-amber-100">
+                                    <p className="text-xs font-semibold text-amber-900 truncate">
                                       {dish.name}{" "}
-                                      <span className="text-[11px] text-gray-500">₱{Number(dish.cost).toFixed(2)}</span>
+                                      <span className="text-[11px] text-amber-600">₱{Number(dish.cost).toFixed(2)}</span>
                                       {dish.source === "ai" && (
-                                        <span className="ml-1 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                        <span className="ml-1 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-yellow-100 text-amber-800 border border-yellow-200">
                                           <BadgeCheck className="w-3 h-3" /> AI
                                         </span>
                                       )}
                                     </p>
                                   </div>
                                 ))}
-                                <div className="mt-2 text-xs font-bold text-yellow-600">₱{total.toFixed(2)}</div>
+                                <div className="mt-2 text-xs font-bold text-amber-700 bg-amber-100/50 rounded-lg px-2 py-1 text-center">
+                                  ₱{total.toFixed(2)}
+                                </div>
                               </div>
                             )}
                           </>
@@ -541,22 +542,22 @@ export default function Calendar(){
             </div>
 
             {/* Footer with week picker & print */}
-            <div className="bg-gray-50 px-6 py-4 border-t flex items-center justify-between">
+            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 px-6 py-5 border-t border-amber-100 flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="bg-yellow-400 rounded-full p-2">
-                  <DollarSign className="w-5 h-5 text-white" />
+                <div className="bg-gradient-to-br from-yellow-400 to-amber-500 rounded-2xl p-3 shadow-md">
+                  <DollarSign className="w-6 h-6 text-white" />
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-amber-700 font-medium">
                     {selectedWeekStart ? "Selected Week Total" : "This Week Total"}
                   </p>
-                  <p className="text-xl font-bold text-gray-800">₱{weeklyTotal.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-amber-900">₱{weeklyTotal.toFixed(2)}</p>
                 </div>
 
                 {/* viewer week picker (past weeks disabled) */}
                 <div className="print-hide">
-                  <label className="text-sm text-gray-600 mr-2">Week:</label>
+                  <label className="text-sm text-amber-700 font-medium mr-2">Week:</label>
                   <select
                     value={weekIndexInMonth}
                     onChange={(e)=>{
@@ -567,7 +568,7 @@ export default function Calendar(){
                       setWeekIndexInMonth(idx);
                       setSelectedWeekStart(ws);
                     }}
-                    className="px-3 py-2 border rounded-lg bg-white text-sm"
+                    className="px-4 py-2 border-2 border-amber-200 rounded-xl bg-white text-sm font-medium text-amber-800 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all"
                   >
                     {weekStarts.map((ws,i)=>{
                       const today0=new Date(); today0.setHours(0,0,0,0);
@@ -584,7 +585,7 @@ export default function Calendar(){
 
               <button
                 onClick={handlePrint}
-                className="bg-yellow-400 hover:bg-yellow-500 text-white font-bold px-6 py-3 rounded-xl transition flex items-center gap-2"
+                className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white font-bold px-6 py-3 rounded-2xl transition-all flex items-center gap-2 shadow-md hover:shadow-lg hover:scale-105"
                 title="Print / Save as PDF"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -597,24 +598,24 @@ export default function Calendar(){
         </div>
       </main>
 
-      {/* ===== Add/Edit Modal (RESTORED) ===== */}
+      {/* ===== Add/Edit Modal ===== */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={closeModal}>
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-xl overflow-hidden" onClick={(e)=>e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-white font-bold text-lg">Edit Meals – {modalDateKey}</h3>
-              <button onClick={closeModal} className="bg-white/20 hover:bg-white/30 rounded-full p-2">
-                <X className="w-5 h-5 text-white" />
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={closeModal}>
+          <div className="bg-white w-full max-w-2xl rounded-[2rem] shadow-2xl overflow-hidden border-2 border-amber-100" onClick={(e)=>e.stopPropagation()}>
+            <div className="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 px-6 py-5 flex items-center justify-between">
+              <h3 className="text-white font-bold text-lg drop-shadow-sm">Edit Meals – {modalDateKey}</h3>
+              <button onClick={closeModal} className="bg-white/90 hover:bg-white rounded-full p-2 transition-all hover:scale-110 shadow-md">
+                <X className="w-5 h-5 text-amber-600" />
               </button>
             </div>
 
-            <div className="p-6 space-y-3">
+            <div className="p-6 space-y-3 bg-gradient-to-br from-amber-50/50 to-yellow-50/50 max-h-[60vh] overflow-auto">
               {modalDishes.map((d,i)=>(
-                <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center bg-gray-50 rounded-xl p-3 border border-gray-200">
+                <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center bg-white/80 rounded-2xl p-4 border-2 border-amber-100 shadow-sm">
                   <select
                     value={d.slot}
                     onChange={(e)=>updateDishRow(i,"slot",e.target.value)}
-                    className="sm:col-span-3 px-3 py-2 border rounded-lg bg-white"
+                    className="sm:col-span-3 px-3 py-2 border-2 border-amber-200 rounded-xl bg-white font-medium text-amber-800 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all"
                   >
                     <option value="breakfast">Breakfast</option>
                     <option value="lunch">Lunch</option>
@@ -625,7 +626,7 @@ export default function Calendar(){
                   <input
                     value={d.name}
                     onChange={(e)=>updateDishRow(i,"name",e.target.value)}
-                    className="sm:col-span-6 px-3 py-2 border rounded-lg"
+                    className="sm:col-span-6 px-3 py-2 border-2 border-amber-200 rounded-xl font-medium text-amber-800 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all"
                     placeholder="Dish name"
                   />
 
@@ -633,20 +634,20 @@ export default function Calendar(){
                     <input
                       type="number" step="0.01" value={d.cost}
                       onChange={(e)=>updateDishRow(i,"cost",e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl font-medium text-amber-800 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all"
                       placeholder="₱0.00"
                     />
                   </div>
 
                   {d.source === "ai" && (
-                    <span className="sm:col-span-1 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                    <span className="sm:col-span-1 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-yellow-100 text-amber-800 border border-yellow-200">
                       <BadgeCheck className="w-3 h-3"/> AI
                     </span>
                   )}
 
                   <button
                     onClick={()=>deleteDishRow(i)}
-                    className="text-red-600 text-sm hover:underline sm:col-span-12 sm:justify-self-end"
+                    className="text-red-600 text-sm hover:underline font-medium sm:col-span-12 sm:justify-self-end hover:text-red-700 transition"
                   >
                     Delete
                   </button>
@@ -655,15 +656,15 @@ export default function Calendar(){
 
               <button
                 onClick={()=>setModalDishes(prev=>[...prev,{slot:"other",name:"",cost:0,source:undefined}])}
-                className="flex items-center gap-2 text-yellow-700 bg-yellow-50 hover:bg-yellow-100 px-4 py-2 rounded-lg border border-yellow-200"
+                className="flex items-center gap-2 text-amber-800 bg-amber-100 hover:bg-amber-200 px-5 py-3 rounded-xl border-2 border-amber-200 font-bold transition-all hover:scale-105 shadow-sm"
               >
                 <Plus className="w-4 h-4" /> Add Dish
               </button>
             </div>
 
-            <div className="px-6 py-4 bg-gray-50 border-t flex justify-end gap-3">
-              <button onClick={closeModal} className="px-4 py-2 rounded-xl border hover:bg-gray-100">Cancel</button>
-              <button onClick={saveModal} className="px-5 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-white font-semibold shadow">Save</button>
+            <div className="px-6 py-4 bg-gradient-to-r from-amber-50 to-yellow-50 border-t-2 border-amber-100 flex justify-end gap-3">
+              <button onClick={closeModal} className="px-5 py-2.5 rounded-xl border-2 border-amber-200 hover:bg-amber-50 font-semibold text-amber-800 transition-all">Cancel</button>
+              <button onClick={saveModal} className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white font-bold shadow-md hover:shadow-lg transition-all hover:scale-105">Save</button>
             </div>
           </div>
         </div>
@@ -671,31 +672,31 @@ export default function Calendar(){
 
       {/* ===== AI Options Modal ===== */}
       {showAiOptions && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={()=>setShowAiOptions(false)}>
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-xl overflow-hidden" onClick={(e)=>e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-white font-bold text-lg">AI Generate</h3>
-              <button onClick={()=>setShowAiOptions(false)} className="bg-white/20 hover:bg-white/30 rounded-full p-2">
-                <X className="w-5 h-5 text-white" />
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={()=>setShowAiOptions(false)}>
+          <div className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden border-2 border-amber-100" onClick={(e)=>e.stopPropagation()}>
+            <div className="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 px-6 py-5 flex items-center justify-between">
+              <h3 className="text-white font-bold text-lg drop-shadow-sm">AI Generate</h3>
+              <button onClick={()=>setShowAiOptions(false)} className="bg-white/90 hover:bg-white rounded-full p-2 transition-all hover:scale-110 shadow-md">
+                <X className="w-5 h-5 text-amber-600" />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label className="flex items-center gap-2">
-                  <input type="radio" name="aimode" value="remainder" checked={aiMode==="remainder"} onChange={()=>setAiMode("remainder")} />
-                  <span>Generate for <strong>this week (remainder to Saturday)</strong></span>
+            <div className="p-6 space-y-4 bg-gradient-to-br from-amber-50/50 to-yellow-50/50">
+              <div className="space-y-3">
+                <label className="flex items-center gap-3 p-4 bg-white rounded-xl border-2 border-amber-100 cursor-pointer hover:border-amber-300 transition-all">
+                  <input type="radio" name="aimode" value="remainder" checked={aiMode==="remainder"} onChange={()=>setAiMode("remainder")} className="w-5 h-5 text-amber-500" />
+                  <span className="text-amber-900 font-medium">Generate for <strong className="text-amber-700">this week (remainder to Saturday)</strong></span>
                 </label>
-                <label className="flex items-center gap-2">
-                  <input type="radio" name="aimode" value="week" checked={aiMode==="week"} onChange={()=>setAiMode("week")} />
-                  <span>Generate for a <strong>different week</strong></span>
+                <label className="flex items-center gap-3 p-4 bg-white rounded-xl border-2 border-amber-100 cursor-pointer hover:border-amber-300 transition-all">
+                  <input type="radio" name="aimode" value="week" checked={aiMode==="week"} onChange={()=>setAiMode("week")} className="w-5 h-5 text-amber-500" />
+                  <span className="text-amber-900 font-medium">Generate for a <strong className="text-amber-700">different week</strong></span>
                 </label>
               </div>
 
               {aiMode === "week" && (
-                <div className="space-y-3">
+                <div className="space-y-3 p-4 bg-white rounded-xl border-2 border-amber-100">
                   {/* Future month picker (next 6 months incl. current) */}
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Month:</label>
+                    <label className="block text-sm text-amber-700 font-bold mb-2">Month:</label>
                     <select
                       value={`${aiMonthBase.getFullYear()}-${aiMonthBase.getMonth()}`}
                       onChange={(e)=>{
@@ -704,7 +705,7 @@ export default function Calendar(){
                         setAiMonthBase(dt);
                         setAiChosenWeekIdx(0);
                       }}
-                      className="px-3 py-2 border rounded-lg bg-white w-full"
+                      className="px-4 py-2 border-2 border-amber-200 rounded-xl bg-white w-full font-medium text-amber-800 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all"
                     >
                       {Array.from({length:6}).map((_,i)=>{
                         const dt=new Date(); dt.setDate(1); dt.setMonth(dt.getMonth()+i);
@@ -716,11 +717,11 @@ export default function Calendar(){
 
                   {/* Week picker for chosen month (past weeks + current midweek disabled) */}
                   <div>
-                    <label className="block text-sm text-gray-600 mb-1">Pick week:</label>
+                    <label className="block text-sm text-amber-700 font-bold mb-2">Pick week:</label>
                     <select
                       value={aiChosenWeekIdx}
                       onChange={(e)=>setAiChosenWeekIdx(Number(e.target.value))}
-                      className="px-3 py-2 border rounded-lg bg-white w-full"
+                      className="px-4 py-2 border-2 border-amber-200 rounded-xl bg-white w-full font-medium text-amber-800 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all"
                     >
                       {weekStartsInMonth(aiMonthBase).map((ws,i)=>{
                         const today0=new Date(); today0.setHours(0,0,0,0);
@@ -735,14 +736,14 @@ export default function Calendar(){
                         );
                       })}
                     </select>
-                    <p className="text-xs text-gray-500 mt-1">If it’s mid-week now, use the remainder option for the current week.</p>
+                    <p className="text-xs text-amber-600 mt-2 font-medium">If it's mid-week now, use the remainder option for the current week.</p>
                   </div>
                 </div>
               )}
             </div>
-            <div className="px-6 py-4 bg-gray-50 border-t flex justify-end gap-3">
-              <button onClick={()=>setShowAiOptions(false)} className="px-4 py-2 rounded-xl border hover:bg-gray-100">Cancel</button>
-              <button onClick={runAiGenerate} className="px-5 py-2 rounded-xl bg-yellow-400 hover:bg-yellow-500 text-white font-semibold shadow">Generate</button>
+            <div className="px-6 py-4 bg-gradient-to-r from-amber-50 to-yellow-50 border-t-2 border-amber-100 flex justify-end gap-3">
+              <button onClick={()=>setShowAiOptions(false)} className="px-5 py-2.5 rounded-xl border-2 border-amber-200 hover:bg-amber-50 font-semibold text-amber-800 transition-all">Cancel</button>
+              <button onClick={runAiGenerate} className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white font-bold shadow-md hover:shadow-lg transition-all hover:scale-105">Generate</button>
             </div>
           </div>
         </div>
@@ -750,42 +751,46 @@ export default function Calendar(){
 
       {/* ===== AI Suggestions Modal + Loader ===== */}
       {showAiModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={()=>setShowAiModal(false)}>
-          <div className="bg-white w-full max-w-4xl rounded-3xl shadow-xl overflow-hidden" onClick={(e)=>e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 px-6 py-4 flex items-center justify-between">
-              <h3 className="text-white font-bold text-lg">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={()=>setShowAiModal(false)}>
+          <div className="bg-white w-full max-w-4xl rounded-[2rem] shadow-2xl overflow-hidden border-2 border-amber-100" onClick={(e)=>e.stopPropagation()}>
+            <div className="bg-gradient-to-r from-yellow-400 via-amber-400 to-orange-400 px-6 py-5 flex items-center justify-between">
+              <h3 className="text-white font-bold text-lg drop-shadow-sm">
                 AI Suggestions {aiWeekStart && <>– Week of {aiWeekStart.getDate()} {monthNamesShort[aiWeekStart.getMonth()]} {aiWeekStart.getFullYear()}</>}
               </h3>
-              <button onClick={()=>setShowAiModal(false)} className="bg-white/20 hover:bg-white/30 rounded-full p-2"><X className="w-5 h-5 text-white" /></button>
+              <button onClick={()=>setShowAiModal(false)} className="bg-white/90 hover:bg-white rounded-full p-2 transition-all hover:scale-110 shadow-md">
+                <X className="w-5 h-5 text-amber-600" />
+              </button>
             </div>
 
             {aiLoading ? (
-              <CookingLoader />
+              <div className="bg-gradient-to-br from-amber-50/50 to-yellow-50/50">
+                <CookingLoader />
+              </div>
             ) : (
               <>
-                <div className="p-6 space-y-4 max-h-[70vh] overflow-auto">
-                  {!aiSuggestions.length && (<div className="text-gray-600">No suggestions yet.</div>)}
+                <div className="p-6 space-y-4 max-h-[70vh] overflow-auto bg-gradient-to-br from-amber-50/50 to-yellow-50/50">
+                  {!aiSuggestions.length && (<div className="text-amber-700 font-medium text-center py-8">No suggestions yet.</div>)}
 
                   {aiSuggestions.map((day, idx) => {
                     const [y,m1,d] = day.dateKey.split("-").map(Number);
                     const dayTotal = day.dishes.reduce((a,b)=>a+(Number(b.cost)||0),0);
 
                     return (
-                      <div key={day.dateKey} className={`rounded-2xl border p-4 ${day._saved ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"}`}>
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="font-semibold text-gray-800">
+                      <div key={day.dateKey} className={`rounded-2xl border-2 p-5 transition-all ${day._saved ? "bg-green-50 border-green-300 shadow-md" : "bg-white/80 border-amber-200 shadow-sm"}`}>
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="font-bold text-amber-900">
                             {monthNamesShort[m1-1]} {d}, {y}
-                            <span className="ml-2 inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full bg-yellow-100 text-yellow-800 border border-yellow-200">
+                            <span className="ml-2 inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full bg-yellow-100 text-amber-800 border border-yellow-300 font-semibold">
                               <BadgeCheck className="w-3 h-3" /> AI generated
                             </span>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-sm font-semibold text-yellow-700">₱{dayTotal.toFixed(2)}</div>
+                          <div className="flex items-center gap-4">
+                            <div className="text-sm font-bold text-amber-700 bg-amber-100 px-3 py-1.5 rounded-lg">₱{dayTotal.toFixed(2)}</div>
                             <button
                               onClick={()=>acceptOneDay(idx)}
                               disabled={aiSaving || !day.dishes.length}
-                              className={`px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1 ${
-                                !day.dishes.length ? "bg-gray-200 text-gray-500 cursor-not-allowed" : "bg-yellow-400 hover:bg-yellow-500 text-white"
+                              className={`px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 transition-all shadow-sm ${
+                                !day.dishes.length ? "bg-gray-200 text-gray-500 cursor-not-allowed" : "bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white hover:scale-105"
                               }`}
                               title="Accept this day"
                             >
@@ -796,11 +801,11 @@ export default function Calendar(){
 
                         <div className="space-y-2">
                           {day.dishes.length ? day.dishes.map((dish, j)=>(
-                            <div key={j} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center bg-white rounded-xl p-3 border">
+                            <div key={j} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center bg-amber-50/50 rounded-xl p-3 border-2 border-amber-100">
                               <select
                                 value={dish.slot}
                                 onChange={(e)=>updateAiDish(idx,j,"slot",e.target.value)}
-                                className="sm:col-span-3 px-3 py-2 border rounded-lg bg-white"
+                                className="sm:col-span-3 px-3 py-2 border-2 border-amber-200 rounded-xl bg-white font-medium text-amber-800 focus:border-amber-400 transition-all"
                               >
                                 <option value="breakfast">Breakfast</option>
                                 <option value="lunch">Lunch</option>
@@ -810,24 +815,24 @@ export default function Calendar(){
                               <input
                                 value={dish.name}
                                 onChange={(e)=>updateAiDish(idx,j,"name",e.target.value)}
-                                className="sm:col-span-7 px-3 py-2 border rounded-lg"
+                                className="sm:col-span-7 px-3 py-2 border-2 border-amber-200 rounded-xl font-medium text-amber-800 focus:border-amber-400 transition-all"
                                 placeholder="Dish or item"
                               />
                               <div className="sm:col-span-2 flex items-center gap-2">
                                 <input
                                   type="number" step="0.01" value={dish.cost}
                                   onChange={(e)=>updateAiDish(idx,j,"cost",e.target.value)}
-                                  className="w-full px-3 py-2 border rounded-lg"
+                                  className="w-full px-3 py-2 border-2 border-amber-200 rounded-xl font-medium text-amber-800 focus:border-amber-400 transition-all"
                                   placeholder="₱0.00"
                                 />
-                                <button onClick={()=>deleteAiDish(idx,j)} className="text-red-600 text-sm hover:underline">Delete</button>
+                                <button onClick={()=>deleteAiDish(idx,j)} className="text-red-600 text-sm hover:underline font-medium hover:text-red-700 transition">Delete</button>
                               </div>
                             </div>
-                          )) : (<div className="text-sm text-gray-500">No suggestions</div>)}
+                          )) : (<div className="text-sm text-amber-600 font-medium">No suggestions</div>)}
 
                           <button
                             onClick={()=>addAiDish(idx)}
-                            className="mt-2 text-yellow-700 bg-yellow-50 hover:bg-yellow-100 px-3 py-1.5 rounded-lg border border-yellow-200 text-sm"
+                            className="mt-3 text-amber-800 bg-amber-100 hover:bg-amber-200 px-4 py-2 rounded-xl border-2 border-amber-200 text-sm font-bold transition-all hover:scale-105"
                           >
                             + Add Dish
                           </button>
@@ -837,9 +842,9 @@ export default function Calendar(){
                   })}
                 </div>
 
-                <div className="px-6 py-4 bg-gray-50 border-t flex justify-between items-center">
-                  <button onClick={()=>setShowAiModal(false)} className="px-4 py-2 rounded-xl border hover:bg-gray-100">Close</button>
-                  <button onClick={acceptAllAi} disabled={aiSaving} className={`px-5 py-2 rounded-xl ${aiSaving ? "bg-yellow-300" : "bg-yellow-400 hover:bg-yellow-500"} text-white font-semibold shadow`}>
+                <div className="px-6 py-4 bg-gradient-to-r from-amber-50 to-yellow-50 border-t-2 border-amber-100 flex justify-between items-center">
+                  <button onClick={()=>setShowAiModal(false)} className="px-5 py-2.5 rounded-xl border-2 border-amber-200 hover:bg-amber-50 font-semibold text-amber-800 transition-all">Close</button>
+                  <button onClick={acceptAllAi} disabled={aiSaving} className={`px-6 py-2.5 rounded-xl font-bold shadow-md transition-all ${aiSaving ? "bg-amber-300 text-white" : "bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white hover:scale-105"}`}>
                     {aiSaving ? "Saving…" : "Accept All"}
                   </button>
                 </div>
