@@ -4,6 +4,9 @@ const router = express.Router();
 const openai = require("../openaiClient"); // your { OpenAI } client
 const { protect } = require("../middleware/auth");
 const MealPlan = require("../models/MealPlan");
+const UserPreferences = require("../models/UserPreferences");
+const KidPreferences = require("../models/KidPreferences");
+
 
 /* ───────────── utils ───────────── */
 function pad2(n){ return String(n).padStart(2,"0"); }
@@ -146,6 +149,28 @@ router.post("/suggest-week", protect, async (req, res) => {
       end = saturdayOf(start);
     }
 
+        /* USER + KID preferences */
+    const userPrefs = await UserPreferences.findOne({ user: req.user.id }).lean();
+    const kids = await KidPreferences.find({ user: req.user.id }).lean();
+
+    const dislikeSet = new Set();
+    const avoidAllergenSet = new Set();
+    const favoriteList = new Set();
+
+    // USER dislikes/allergens
+    if (userPrefs) {
+      (userPrefs.dislikes || []).forEach(d => dislikeSet.add(d.toLowerCase()));
+      (userPrefs.allergens || []).forEach(a => avoidAllergenSet.add(a.toLowerCase()));
+      (userPrefs.favorites || []).forEach(f => favoriteList.add(f.toLowerCase()));
+    }
+
+    // KIDS dislikes/allergens
+    for (const k of kids) {
+      (k.dislikes || []).forEach(d => dislikeSet.add(d.toLowerCase()));
+      (k.allergens || []).forEach(a => avoidAllergenSet.add(a.toLowerCase()));
+    }
+
+
     /* DB month seen (avoid repeats) */
     const monthStart = new Date(start.getFullYear(), start.getMonth(), 1);
     const monthEnd   = new Date(start.getFullYear(), start.getMonth()+1, 0);
@@ -181,8 +206,25 @@ Rules:
 - Costs must be realistic, numeric Philippine pesos (no currency symbol).
 - Output JSON ONLY with either an array of 7 days, or {"plan":[...7 days...]}.`;
 
-    const userPrompt = `Start date: ${ymdFromDate(start)}
-Avoid these dish names for this month: ${avoidList || "(none)"}`;
+const userPrompt = `
+Start date: ${ymdFromDate(start)}
+
+Avoid repeating: ${avoidList || "(none)"}
+
+User dislikes the ff.: ${Array.from(dislikeSet).join(", ") || "none"}
+Allergens to avoid: ${Array.from(avoidAllergenSet).join(", ") || "none"}
+Kids in household: ${kids.length}
+Kids dislikes: ${kids.flatMap(k => k.dislikes).join(", ") || "none"}
+
+Try to include favorites when possible: ${Array.from(favoriteList).join(", ") || "none"}
+
+Rules:
+- NEVER suggest dishes containing allergens.
+- Strongly avoid dishes that match dislikes.
+- Prefer dishes matching favorites.
+- Prefer kid-friendly dishes if kids exist.
+- Suggest varied dishes, not the same cuisine repeatedly. But prioritize the ones the user actually likes.
+`;
 
     let plan;
     try {

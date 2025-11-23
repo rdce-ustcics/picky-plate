@@ -125,6 +125,7 @@ export default function Calendar(){
   const [aiMode,setAiMode]=useState("remainder"); // "remainder" | "week"
   const [aiMonthBase,setAiMonthBase]=useState(()=> new Date(currentMonth));
   const [aiChosenWeekIdx,setAiChosenWeekIdx]=useState(0);
+  const [aiBudget, setAiBudget] = useState(""); // NEW: optional weekly budget
 
   const calendarRef=useRef(null);
   const monthNames=["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -292,11 +293,15 @@ export default function Calendar(){
 
     try{
       // First try: real AI
-      const res=await fetch(`${API_BASE}/api/ai/suggest-week`,{
-        method:"POST",
-        headers:{ "Content-Type":"application/json", ...authHeaders() },
-        body: JSON.stringify({ startDate, mode: aiMode }),
-      });
+        const res=await fetch(`${API_BASE}/api/ai/suggest-week`,{
+          method:"POST",
+          headers:{ "Content-Type":"application/json", ...authHeaders() },
+          body: JSON.stringify({
+            startDate,
+            mode: aiMode,
+            budget: aiBudget ? Number(aiBudget) : undefined,
+          }),
+        });
       const data=await res.json();
 
       if(res.ok && data.success){
@@ -308,7 +313,12 @@ export default function Calendar(){
           const r2 = await fetch(`${API_BASE}/api/ai/suggest-week`,{
             method:"POST",
             headers:{ "Content-Type":"application/json", ...authHeaders() },
-            body: JSON.stringify({ startDate, mode: aiMode, fallback: "random" }),
+            body: JSON.stringify({
+              startDate,
+              mode: aiMode,
+              fallback: "random",
+              budget: aiBudget ? Number(aiBudget) : undefined,
+            }),
           });
           const d2 = await r2.json();
           if (r2.ok && d2.success) {
@@ -740,13 +750,27 @@ export default function Calendar(){
                   </div>
                 </div>
               )}
+
+            {/* 🔻 NEW: Budget input, always visible (for either mode) */}
+            <div>
+              <label className="block text-sm text-amber-700 font-bold mb-2">
+                Estimated Weekly Budget (₱)
+              </label>
+              <input
+                type="number"
+                value={aiBudget}
+                onChange={(e) => setAiBudget(e.target.value)}
+                placeholder="Optional, e.g. 1500"
+                className="px-4 py-2 border-2 border-amber-200 rounded-xl bg-white w-full font-medium text-amber-800 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition-all"
+              />
+            </div>
             </div>
             <div className="px-6 py-4 bg-gradient-to-r from-amber-50 to-yellow-50 border-t-2 border-amber-100 flex justify-end gap-3">
               <button onClick={()=>setShowAiOptions(false)} className="px-5 py-2.5 rounded-xl border-2 border-amber-200 hover:bg-amber-50 font-semibold text-amber-800 transition-all">Cancel</button>
               <button onClick={runAiGenerate} className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-white font-bold shadow-md hover:shadow-lg transition-all hover:scale-105">Generate</button>
             </div>
           </div>
-        </div>
+          </div>
       )}
 
       {/* ===== AI Suggestions Modal + Loader ===== */}
@@ -772,6 +796,8 @@ export default function Calendar(){
                   {!aiSuggestions.length && (<div className="text-amber-700 font-medium text-center py-8">No suggestions yet.</div>)}
 
                   {aiSuggestions.map((day, idx) => {
+                    const existing = mealData[day.dateKey]?.dishes || [];
+                    const conflicted = existing.length > 0;
                     const [y,m1,d] = day.dateKey.split("-").map(Number);
                     const dayTotal = day.dishes.reduce((a,b)=>a+(Number(b.cost)||0),0);
 
