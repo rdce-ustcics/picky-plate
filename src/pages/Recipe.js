@@ -10,16 +10,7 @@ import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import LoadingModal from "../components/LoadingModal";
 import { useNavigate } from "react-router-dom";
-
-
-// ===== PDF MODE CSS (injected once) =====
-const pdfModeStyles = `
-  .pdf-mode * { animation: none !important; transition: none !important; box-shadow: none !important; }
-  .pdf-mode .no-pdf { display: none !important; }
-  .pdf-mode .svg-only { display: none !important; }
-  .circle-badge { display: inline-flex; align-items: center; justify-content: center; line-height: 1 !important; border-radius: 9999px; }
-  .chip { display: inline-flex; align-items: center; justify-content: center; line-height: 1.2; }
-`;
+import "./CommunityRecipes.css";
 
 const API_BASE = "http://localhost:4000";
 
@@ -118,17 +109,6 @@ export default function CommunityRecipes() {
     if (servingsFilter) count += 1;
     return count;
   }, [selectedTags, excludeAllergens, excludeTerms, prepFilter, cookFilter, difficultyFilter, servingsFilter]);
-
-  // Inject pdf mode CSS once
-  useEffect(() => {
-    const id = "pdf-mode-styles";
-    if (!document.getElementById(id)) {
-      const style = document.createElement("style");
-      style.id = id;
-      style.innerHTML = pdfModeStyles;
-      document.head.appendChild(style);
-    }
-  }, []);
 
   // close menus on outside click
   useEffect(() => {
@@ -401,7 +381,7 @@ export default function CommunityRecipes() {
       <div className="min-h-screen" style={{ background: 'linear-gradient(to bottom, #FEF3C7 0%, #FDE68A 50%, #FEF3C7 100%)' }}>
         {/* Header */}
         <div className="bg-gradient-to-r from-amber-400 to-yellow-500 shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
                 <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2 whitespace-nowrap">
@@ -684,8 +664,8 @@ export default function CommunityRecipes() {
           </div>
         </div>
 
-        {/* Recipe Grid */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+        {/* Recipe Grid - NOW FULL WIDTH WITH 4 COLUMNS */}
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
           {items.length === 0 ? (
             <div className="text-center py-20 bg-white rounded-3xl shadow-lg border-2 border-amber-200">
               <div className="mb-6">
@@ -700,86 +680,202 @@ export default function CommunityRecipes() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {items.map((recipe) => (
-                <div
-                  key={recipe._id}
-                  className="bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all cursor-pointer group border-2 border-amber-100 hover:border-amber-300 transform hover:scale-[1.02]"
-                  onClick={() => setSelectedRecipe(recipe)}
-                >
-                  <div className="relative overflow-hidden">
-                    <img
-                      crossOrigin="anonymous"
-                      src={recipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
-                      alt={recipe.title}
-                      className="w-full h-56 object-cover group-hover:scale-110 transition duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
-                  </div>
+            <>
+              {/* Recipe Cards Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+                {items.map((recipe) => (
+                  <div
+                    key={recipe._id}
+                    className="recipe-card bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all cursor-pointer group border-2 border-amber-100 hover:border-amber-300"
+                    onClick={() => setSelectedRecipe(recipe)}
+                  >
+                    <div className="relative overflow-hidden">
+                      <img
+                        crossOrigin="anonymous"
+                        src={recipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
+                        alt={recipe.title}
+                        className="recipe-card-image w-full h-56 object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
+                    </div>
 
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-amber-900 mb-2 group-hover:text-amber-600 transition">
-                      {recipe.title}
-                    </h3>
-                    <p className="text-sm text-amber-700 mb-4">
-                      By{" "}
-                      <span className="text-amber-900 font-semibold">
-                        {recipe.author || "anonymous"}
-                      </span>
-                    </p>
+                    <div className="p-6">
+                      <h3 className="text-xl font-bold text-amber-900 mb-2 group-hover:text-amber-600 transition line-clamp-2">
+                        {recipe.title}
+                      </h3>
+                      <p className="text-sm text-amber-700 mb-4">
+                        By{" "}
+                        <span className="text-amber-900 font-semibold">
+                          {recipe.author || "anonymous"}
+                        </span>
+                      </p>
 
-                    {/* tags */}
-                    {recipe.tags?.length ? (
-                      <div className="mb-4 flex flex-wrap gap-2">
-                        {recipe.tags.slice(0, 6).map((t, i) => (
-                          <span
-                            key={i}
-                            className="chip text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200 font-semibold"
-                          >
-                            #{t}
-                          </span>
-                        ))}
-                      </div>
-                    ) : null}
+                      {/* tags */}
+                      {recipe.tags?.length ? (
+                        <div className="mb-4 flex flex-wrap gap-2">
+                          {recipe.tags.slice(0, 4).map((t, i) => (
+                            <span
+                              key={i}
+                              className="chip text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200 font-semibold"
+                            >
+                              #{t}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
 
-                    <div className="flex items-center gap-4 text-sm text-amber-700 font-medium">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-4 h-4 text-amber-500" />
-                        <span>Prep: {recipe.prepTime || "—"}</span>
-                      </div>
-                      <span className="text-amber-400">•</span>
-                      <div className="flex items-center gap-1.5">
-                        <TrendingUp className="w-4 h-4 text-amber-500" />
-                        <span>{recipe.difficulty || "Easy"}</span>
+                      <div className="flex items-center gap-4 text-sm text-amber-700 font-medium">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-4 h-4 text-amber-500" />
+                          <span>Prep: {recipe.prepTime || "—"}</span>
+                        </div>
+                        <span className="text-amber-400">•</span>
+                        <div className="flex items-center gap-1.5">
+                          <TrendingUp className="w-4 h-4 text-amber-500" />
+                          <span>{recipe.difficulty || "Easy"}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Pagination */}
-          {pages > 1 && (
-            <div className="mt-10 flex items-center justify-center gap-3">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="px-6 py-3 rounded-2xl bg-white border-2 border-amber-200 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm transition shadow-md text-amber-900"
-              >
-                ← Previous
-              </button>
-              <div className="px-6 py-3 text-sm font-bold text-amber-900 bg-white rounded-2xl border-2 border-amber-300 shadow-md">
-                Page {page} of {pages}
+                ))}
               </div>
-              <button
-                onClick={() => setPage((p) => Math.min(pages, p + 1))}
-                disabled={page >= pages}
-                className="px-6 py-3 rounded-2xl bg-white border-2 border-amber-200 hover:bg-amber-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm transition shadow-md text-amber-900"
-              >
-                Next →
-              </button>
-            </div>
+
+              {/* ENHANCED PAGINATION */}
+              {pages > 1 && (
+                <div className="bg-white rounded-3xl shadow-lg border-2 border-amber-200 p-6">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    {/* Page Info */}
+                    <div className="text-center sm:text-left">
+                      <p className="text-sm font-semibold text-amber-900">
+                        Showing <span className="text-amber-600 font-bold">{((page - 1) * 20) + 1}</span> - <span className="text-amber-600 font-bold">{Math.min(page * 20, total)}</span> of <span className="text-amber-600 font-bold">{total}</span> recipes
+                      </p>
+                    </div>
+
+                    {/* Pagination Controls */}
+                    <div className="flex items-center gap-2">
+                      {/* First Page */}
+                      <button
+                        onClick={() => setPage(1)}
+                        disabled={page <= 1}
+                        className="px-4 py-2 rounded-xl bg-white border-2 border-amber-200 hover:bg-amber-50 disabled:opacity-30 disabled:cursor-not-allowed font-semibold text-sm transition shadow-sm text-amber-900 hidden sm:block"
+                        title="First page"
+                      >
+                        ««
+                      </button>
+
+                      {/* Previous */}
+                      <button
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        disabled={page <= 1}
+                        className="px-5 py-2.5 rounded-xl bg-white border-2 border-amber-200 hover:bg-amber-50 disabled:opacity-30 disabled:cursor-not-allowed font-semibold text-sm transition shadow-sm text-amber-900"
+                      >
+                        ← Previous
+                      </button>
+
+                      {/* Page Numbers */}
+                      <div className="flex items-center gap-2">
+                        {/* Show page numbers with ellipsis for many pages */}
+                        {pages <= 7 ? (
+                          // Show all pages if 7 or fewer
+                          Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
+                            <button
+                              key={p}
+                              onClick={() => setPage(p)}
+                              className={`w-10 h-10 rounded-xl font-bold text-sm transition shadow-sm ${
+                                page === p
+                                  ? "bg-gradient-to-r from-amber-400 to-yellow-500 text-white border-2 border-amber-400"
+                                  : "bg-white text-amber-900 border-2 border-amber-200 hover:bg-amber-50"
+                              }`}
+                            >
+                              {p}
+                            </button>
+                          ))
+                        ) : (
+                          // Show first, last, current, and neighbors with ellipsis
+                          <>
+                            {page > 3 && (
+                              <>
+                                <button
+                                  onClick={() => setPage(1)}
+                                  className="w-10 h-10 rounded-xl font-bold text-sm transition shadow-sm bg-white text-amber-900 border-2 border-amber-200 hover:bg-amber-50"
+                                >
+                                  1
+                                </button>
+                                {page > 4 && <span className="text-amber-600 font-bold">…</span>}
+                              </>
+                            )}
+
+                            {Array.from({ length: Math.min(5, pages) }, (_, i) => {
+                              const start = Math.max(1, Math.min(page - 2, pages - 4));
+                              return start + i;
+                            }).map((p) => (
+                              <button
+                                key={p}
+                                onClick={() => setPage(p)}
+                                className={`w-10 h-10 rounded-xl font-bold text-sm transition shadow-sm ${
+                                  page === p
+                                    ? "bg-gradient-to-r from-amber-400 to-yellow-500 text-white border-2 border-amber-400"
+                                    : "bg-white text-amber-900 border-2 border-amber-200 hover:bg-amber-50"
+                                }`}
+                              >
+                                {p}
+                              </button>
+                            ))}
+
+                            {page < pages - 2 && (
+                              <>
+                                {page < pages - 3 && <span className="text-amber-600 font-bold">…</span>}
+                                <button
+                                  onClick={() => setPage(pages)}
+                                  className="w-10 h-10 rounded-xl font-bold text-sm transition shadow-sm bg-white text-amber-900 border-2 border-amber-200 hover:bg-amber-50"
+                                >
+                                  {pages}
+                                </button>
+                              </>
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      {/* Next */}
+                      <button
+                        onClick={() => setPage((p) => Math.min(pages, p + 1))}
+                        disabled={page >= pages}
+                        className="px-5 py-2.5 rounded-xl bg-white border-2 border-amber-200 hover:bg-amber-50 disabled:opacity-30 disabled:cursor-not-allowed font-semibold text-sm transition shadow-sm text-amber-900"
+                      >
+                        Next →
+                      </button>
+
+                      {/* Last Page */}
+                      <button
+                        onClick={() => setPage(pages)}
+                        disabled={page >= pages}
+                        className="px-4 py-2 rounded-xl bg-white border-2 border-amber-200 hover:bg-amber-50 disabled:opacity-30 disabled:cursor-not-allowed font-semibold text-sm transition shadow-sm text-amber-900 hidden sm:block"
+                        title="Last page"
+                      >
+                        »»
+                      </button>
+                    </div>
+
+                    {/* Quick Jump (Optional) */}
+                    <div className="hidden lg:flex items-center gap-2">
+                      <label className="text-sm font-semibold text-amber-900">Jump to:</label>
+                      <select
+                        value={page}
+                        onChange={(e) => setPage(Number(e.target.value))}
+                        className="px-3 py-2 border-2 border-amber-200 rounded-xl bg-white text-sm font-semibold text-amber-900 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 transition"
+                      >
+                        {Array.from({ length: pages }, (_, i) => i + 1).map((p) => (
+                          <option key={p} value={p}>
+                            Page {p}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
