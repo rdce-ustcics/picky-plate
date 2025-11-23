@@ -4,6 +4,8 @@ import { Mail, Lock, User, Eye, EyeOff, AlertCircle, Loader } from "lucide-react
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
+const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:4000").replace(/\/+$/, "");
+
 export default function Login() {
   const navigate = useNavigate();
   const { login: authLogin, signup: authSignup } = useAuth();
@@ -109,19 +111,48 @@ export default function Login() {
         try { localStorage.setItem("pap:activeUserId", formData.email); } catch {}
         setSuccessMessage(result?.message || "Logged in successfully");
         return navigate("/", { replace: true });
-      } else {
-        // SIGNUP → do NOT auto-login; go straight to OTP page
-        const result = await authSignup(formData.name, formData.email, formData.password);
-        if (!result?.success) throw new Error(result?.message || "Signup failed");
+        } else {
+          // SIGNUP → create account, send OTP, then go to OTP page
+          const result = await authSignup(formData.name, formData.email, formData.password);
+          if (!result?.success) throw new Error(result?.message || "Signup failed");
 
-        try {
-          sessionStorage.setItem("pap:onboardingTrigger", "1");
-          localStorage.setItem("pap:onboardingForce", "1");
-        } catch {}
+          // Request OTP for this email
+          let initialCooldown = 0;
+          try {
+            const res = await fetch(`${API_BASE}/api/auth/request-otp`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email: formData.email }),
+              credentials: "include",
+            });
 
-        setSuccessMessage(result?.message || "Account created successfully");
-        return navigate("/verify-otp", { replace: true, state: { email: formData.email } });
-      }
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok || data?.success === false) {
+              // If it failed, show an error, but still allow user to hit "Send Code" later
+              console.error("Failed to send OTP after signup:", data?.message || res.statusText);
+            } else {
+              // Backend can send cooldownSec; default to 60
+              initialCooldown = Number.isFinite(data?.cooldownSec) ? Number(data.cooldownSec) : 60;
+            }
+          } catch (err) {
+            console.error("Failed to send OTP after signup:", err);
+          }
+
+          try {
+            sessionStorage.setItem("pap:onboardingTrigger", "1");
+            localStorage.setItem("pap:onboardingForce", "1");
+          } catch {}
+
+          setSuccessMessage(result?.message || "Account created successfully");
+          return navigate("/verify-otp", {
+            replace: true,
+            state: {
+              email: formData.email,
+              initialCooldown, // ⬅ used by VerifyOtp as starting cooldown
+            },
+          });
+        }
     } catch (err) {
       console.error("Auth error:", err);
       setApiError(err?.message || "Unable to connect to server. Please try again.");
@@ -337,18 +368,6 @@ export default function Login() {
               </button>
             </div>
 
-            {!isLogin && (
-              <div className="text-center text-xs text-gray-500 mt-2">
-                <button
-                  type="button"
-                  onClick={() => navigate("/verify-otp", { state: { email: formData.email } })}
-                  className="hover:underline"
-                  disabled={!formData.email}
-                >
-                  Verify email with OTP
-                </button>
-              </div>
-            )}
           </form>
 
           <div className="mt-6 sm:mt-8">

@@ -15,14 +15,29 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide all required fields' });
     }
 
-    const existing = await User.findOne({ email: String(email).toLowerCase().trim() });
-    if (existing) {
-      return res.status(400).json({ success: false, message: 'Email already registered' });
+    const normalizedEmail = String(email).toLowerCase().trim();
+
+    // 🔹 Check if there's already a user with this email
+    let existing = await User.findOne({ email: normalizedEmail });
+
+    // ✅ If there's a VERIFIED user → block signup (email really taken)
+    if (existing && existing.verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already registered',
+      });
     }
 
+    // ✅ If there's an UNVERIFIED user → remove it so user can start fresh
+    if (existing && !existing.verified) {
+      await User.deleteOne({ _id: existing._id });
+      existing = null;
+    }
+
+    // ✅ Now create a fresh, unverified user
     const user = await User.create({
       name,
-      email: String(email).toLowerCase().trim(),
+      email: normalizedEmail,
       password,
       role: 'user',
       verified: false, // enforce OTP gate

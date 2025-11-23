@@ -11,7 +11,7 @@ const { sendOtpEmail } = require('../utils/mailer');
 // ── Config
 const OTP_LENGTH = Number(process.env.OTP_LENGTH || 6);
 const OTP_TTL_MIN = Number(process.env.OTP_CODE_TTL_MIN || 10);
-const OTP_RESEND_COOLDOWN_SEC = Number(process.env.OTP_RESEND_COOLDOWN_SEC || 60);
+const OTP_RESEND_COOLDOWN_SEC = Number(process.env.OTP_RESEND_COOLDOWN_SEC || 120);
 const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS || 5);
 
 function generateOtp(len = OTP_LENGTH) {
@@ -89,12 +89,20 @@ router.post('/verify-otp', async (req, res) => {
 
     if (!email || !code) return res.status(400).json({ success: false, message: 'Email & OTP are required.' });
 
-    // Map 'verification' to 'verify' for backwards compatibility
-    const otpPurpose = purpose === 'verification' ? 'verify' : purpose;
+      // Map 'verification' to 'verify' for backwards compatibility
+      const otpPurpose = purpose === 'verification' ? 'verify' : purpose;
 
-    // Find OTP with the specific purpose
-    const rec = await Otp.findOne({ email, purpose: otpPurpose });
-    if (!rec) return res.status(400).json({ success: false, message: 'No OTP requested for this email.' });
+      // Try specific purpose first
+      let rec = await Otp.findOne({ email, purpose: otpPurpose });
+
+      // Fallback: any OTP for this email (in case of mismatched purpose)
+      if (!rec) {
+        rec = await Otp.findOne({ email });
+      }
+
+      if (!rec) {
+        return res.status(400).json({ success: false, message: 'No OTP requested for this email.' });
+      }
 
     if (Date.now() > new Date(rec.expiry).getTime())
       return res.status(400).json({ success: false, message: 'OTP expired.' });
@@ -218,5 +226,24 @@ router.post('/reset-password', async (req, res) => {
     return res.status(500).json({ success: false, message: 'Error resetting password' });
   }
 });
+
+// POST /api/auth/invalidate-otp  { email, purpose? }
+router.post('/invalidate-otp', async (req, res) => {
+  try {
+    const email = String(req.body.email || req.query.email || '').toLowerCase().trim();
+    const purpose = String(req.body.purpose || req.query.purpose || 'verify').toLowerCase();
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required.' });
+    }
+
+    await Otp.deleteOne({ email, purpose });
+    return res.json({ success: true });
+  } catch (e) {
+    console.error('[invalidate-otp] error:', e);
+    return res.status(500).json({ success: false, message: 'Error invalidating OTP' });
+  }
+});
+
 
 module.exports = router;

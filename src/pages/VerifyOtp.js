@@ -24,7 +24,7 @@ export default function VerifyOtp() {
   const [loading, setLoading] = useState(false);
   const [info, setInfo] = useState("");
   const [error, setError] = useState("");
-  const [cooldown, setCooldown] = useState(0);
+  const [cooldown, setCooldown] = useState(() => location.state?.initialCooldown || 0);
 
   const inputsRef = useRef([]);
 
@@ -34,6 +34,29 @@ export default function VerifyOtp() {
     const id = setInterval(() => setCooldown((c) => (c > 0 ? c - 1 : 0)), 1000);
     return () => clearInterval(id);
   }, [cooldown]);
+
+
+  // Invalidate OTP only when tab closes or page refreshes (not on React unmount)
+  useEffect(() => {
+    if (!email) return;
+
+    const handleBeforeUnload = () => {
+      try {
+        const url = `${API_BASE}/api/auth/invalidate-otp?email=${encodeURIComponent(email)}&purpose=verify`;
+        navigator.sendBeacon(url);
+      } catch (err) {
+        console.error("Failed to send OTP invalidate beacon:", err);
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      // ❌ no fetch here — avoids deleting OTP on StrictMode fake unmount
+    };
+  }, [email]);
+
 
   const onChangeDigit = (idx, val) => {
     if (val.length > 1) val = val.slice(-1);
@@ -79,7 +102,13 @@ export default function VerifyOtp() {
         message: `HTTP ${res.status} ${res.statusText}`,
       }));
 
-      if (!res.ok || data?.success === false) throw new Error(data?.message || "Failed to send OTP");
+      if (!res.ok || data?.success === false) {
+        // If server sends back how long to wait, start the timer
+        if (typeof data?.cooldownSec === "number") {
+          setCooldown(Number(data.cooldownSec));
+        }
+        throw new Error(data?.message || "Failed to send OTP");
+      }
 
       // adopt server length if provided
       const serverLen = Number.parseInt(data?.length, 10);
@@ -92,7 +121,7 @@ export default function VerifyOtp() {
       }
 
       setInfo(`OTP sent to ${email}.`);
-      setCooldown(Number.isFinite(data?.cooldownSec) ? Number(data.cooldownSec) : 60);
+      setCooldown(Number.isFinite(data?.cooldownSec) ? Number(data.cooldownSec) : 120);
     } catch (e) {
       setError(e.message || "Failed to send OTP");
     } finally {
@@ -112,7 +141,7 @@ export default function VerifyOtp() {
       const res = await fetch(`${API_BASE}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp: code }),
+        body: JSON.stringify({ email, otp: code, purpose: "verify" }),
         credentials: "include",
       });
       const data = await res.json().catch(() => ({
@@ -131,11 +160,22 @@ export default function VerifyOtp() {
     }
   };
 
-  // auto-send code if we already have an email (e.g., redirected from Login)
-  useEffect(() => {
-    if (email) requestOtp();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once on mount
+    const handleBackToLogin = async () => {
+    if (email) {
+      try {
+        await fetch(`${API_BASE}/api/auth/invalidate-otp`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, purpose: "verify" }),
+          credentials: "include",
+        });
+      } catch (err) {
+        console.error("Failed to invalidate OTP before going back:", err);
+      }
+    }
+    navigate("/login");
+  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
@@ -144,24 +184,36 @@ export default function VerifyOtp() {
         <p className="text-gray-500 text-center mb-6">Enter the {len}-digit code we sent to your email.</p>
 
         <label className="block text-sm font-semibold mb-2">Email</label>
-        <div className="flex gap-2 mb-4">
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => { setEmail(e.target.value); setInfo(""); setError(""); }}
-            className="w-full px-4 py-3 border-2 rounded-xl focus:outline-none focus:border-yellow-400"
-            placeholder="your@email.com"
-            autoComplete="email"
-            disabled={loading}
-          />
-          <button
-            onClick={requestOtp}
-            disabled={loading || !email || cooldown > 0}
-            className="whitespace-nowrap px-4 py-3 bg-yellow-400 hover:bg-yellow-500 text-white font-semibold rounded-xl disabled:opacity-50"
-          >
-            {cooldown > 0 ? `Resend in ${cooldown}s` : "Send Code"}
-          </button>
+        <div className="flex flex-col gap-1 mb-4">
+          <div className="flex gap-2">
+            <input
+              type="email"
+              value={email}
+              readOnly
+              disabled
+              className="w-full px-4 py-3 border-2 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed"
+            />
+            <button
+              onClick={requestOtp}
+              disabled={loading || !email || cooldown > 0}
+              className="whitespace-nowrap px-4 py-3 bg-yellow-400 hover:bg-yellow-500 text-white font-semibold rounded-xl disabled:opacity-50"
+            >
+              {cooldown > 0 ? `Resend in ${cooldown}s` : "Send Code"}
+            </button>
+          </div>
+
+          <div className="text-xs text-gray-500">
+            Wrong email?{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/login", { state: { mode: "signup" } })}
+              className="text-yellow-500 hover:text-yellow-600 font-semibold"
+            >
+              Try another
+            </button>
+          </div>
         </div>
+
 
         <label className="block text-sm font-semibold mb-3">One-Time Code</label>
         <div className="flex justify-between gap-2 mb-6" onPaste={onPaste}>
@@ -193,7 +245,7 @@ export default function VerifyOtp() {
         </button>
 
         <div className="text-center mt-6">
-          <button onClick={() => navigate("/login")} className="text-sm text-gray-600 hover:underline">
+          <button onClick={handleBackToLogin} className="text-sm text-gray-600 hover:underline">
             Back to Login
           </button>
         </div>
