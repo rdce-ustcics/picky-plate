@@ -46,12 +46,12 @@ export default function Profile() {
   });
 
   // ---- Option sets (matching Dashboard.js exactly) ----
-  const cuisineOptions   = ['filipino','japanese','italian','korean','chinese','american','thai','mexican'];
+  const cuisineOptions   = ['filipino','japanese','italian','korean','chinese','american','thai','mexican','middle-eastern'];
   const dislikeOptions   = ['seafood','spicy','vegetables','meat','dairy','gluten','nuts','eggs'];
-  const allergenOptions  = ['peanuts','tree-nuts','eggs','dairy','gluten','soy','fish','shellfish'];
-  const dietOptions      = ['omnivore','vegetarian','vegan','pescetarian','keto','low-carb','halal','kosher'];
+  const allergenOptions  = ['peanuts','tree-nuts','eggs','dairy','gluten','soy','fish','shellfish','sesame','corn','sulfites','mustard'];
+  const dietOptions      = ['omnivore','vegetarian','vegan','pescetarian','keto','low-carb','halal','kosher','gluten-free'];
   // Note: favorites are not in Dashboard modal, keeping for extra feature
-  const favoriteOptions  = ['steak','sushi','pizza','burger','pasta','ramen','tacos','desserts'];
+  const favoriteOptions  = ['steak','sushi','pizza','burger','pasta','ramen','tacos','desserts','milk tea', 'coffee', 'fries' , 'chicken', 'salad', 'soup', 'donut', 'brunch'];
 
   // ---- Label + emoji maps (matching Dashboard labels) ----
   const pretty = {
@@ -85,7 +85,15 @@ export default function Profile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [showAddPreferences, setShowAddPreferences] = useState(false);
+  // Old small modal is replaced by big wizard
+  const [showPrefsWizard, setShowPrefsWizard] = useState(false);
+  const [prefsStep, setPrefsStep] = useState(1); // 1..4 like onboarding
+
+    const openPrefsWizard = (startStep = 1) => {
+    setPrefsStep(startStep);
+    setShowPrefsWizard(true);
+  };
+
 
   // Combine all preferences for display
   const allSelectedPreferences = [...likes, ...dislikes, ...favorites, ...allergens, ...diets];
@@ -357,7 +365,7 @@ export default function Profile() {
               {cuisineOptions.filter(opt => !likes.includes(opt)).length > 0 && (
                 <button
                   className="add-pill-btn"
-                  onClick={() => setShowAddPreferences('cuisine')}
+                  onClick={() => openPrefsWizard(1)} // Step 1 = cuisines
                   title="Add Cuisine"
                 >
                   + Add
@@ -385,7 +393,7 @@ export default function Profile() {
               {dietOptions.filter(opt => !diets.includes(opt)).length > 0 && (
                 <button
                   className="add-pill-btn"
-                  onClick={() => setShowAddPreferences('diet')}
+                  onClick={() => openPrefsWizard(3)} // Step 3 = diet
                   title="Add Diet"
                 >
                   + Add
@@ -413,7 +421,7 @@ export default function Profile() {
               {allergenOptions.filter(opt => !allergens.includes(opt)).length > 0 && (
                 <button
                   className="add-pill-btn"
-                  onClick={() => setShowAddPreferences('allergen')}
+                  onClick={() => openPrefsWizard(4)} // Step 4 = allergens
                   title="Add Allergen"
                 >
                   + Add
@@ -441,7 +449,7 @@ export default function Profile() {
               {dislikeOptions.filter(opt => !dislikes.includes(opt)).length > 0 && (
                 <button
                   className="add-pill-btn"
-                  onClick={() => setShowAddPreferences('dislike')}
+                  onClick={() => openPrefsWizard(2)} // Step 2 = dislikes
                   title="Add Dislike"
                 >
                   + Add
@@ -469,7 +477,7 @@ export default function Profile() {
               {favoriteOptions.filter(opt => !favorites.includes(opt)).length > 0 && (
                 <button
                   className="add-pill-btn"
-                  onClick={() => setShowAddPreferences('favorite')}
+                  onClick={() => openPrefsWizard(5)}
                   title="Add Favorite"
                 >
                   + Add
@@ -478,101 +486,145 @@ export default function Profile() {
             </div>
           </div>
 
-          {/* Add Preferences Modal */}
-          {showAddPreferences && (
-            <div className="add-preferences-modal">
-              <div className="modal-backdrop" onClick={() => setShowAddPreferences(false)}></div>
-              <div className="modal-content">
-                <div className="modal-header">
-                  <h3>
-                    {showAddPreferences === 'cuisine' && '🍽️ Add Cuisine'}
-                    {showAddPreferences === 'diet' && '🥗 Add Dietary Preference'}
-                    {showAddPreferences === 'allergen' && '⚠️ Add Allergen'}
-                    {showAddPreferences === 'dislike' && '👎 Add Dislike'}
-                    {showAddPreferences === 'favorite' && '⭐ Add Favorite'}
-                  </h3>
-                  <button
-                    className="close-modal-btn"
-                    onClick={() => setShowAddPreferences(false)}
-                  >
-                    ×
-                  </button>
-                </div>
-                <div className="modal-options">
-                  {showAddPreferences === 'cuisine' && cuisineOptions
-                    .filter(opt => !likes.includes(opt))
-                    .map((opt) => (
-                      <button
-                        key={opt}
-                        className="option-btn"
-                        onClick={() => {
-                          togglePreference(opt);
-                          setShowAddPreferences(false);
-                        }}
-                      >
-                        {display(opt)}
-                      </button>
-                    ))}
-                  {showAddPreferences === 'diet' && dietOptions
-                    .filter(opt => !diets.includes(opt))
-                    .map((opt) => (
-                      <button
-                        key={opt}
-                        className="option-btn"
-                        onClick={() => {
-                          togglePreference(opt);
-                          setShowAddPreferences(false);
-                        }}
-                      >
-                        {display(opt)}
-                      </button>
-                    ))}
-                  {showAddPreferences === 'allergen' && allergenOptions
-                    .filter(opt => !allergens.includes(opt))
-                    .map((opt) => (
-                      <button
-                        key={opt}
-                        className="option-btn"
-                        onClick={() => {
-                          togglePreference(opt);
-                          setShowAddPreferences(false);
-                        }}
-                      >
-                        {display(opt)}
-                      </button>
-                    ))}
-                  {showAddPreferences === 'dislike' && dislikeOptions
-                    .filter(opt => !dislikes.includes(opt))
-                    .map((opt) => (
-                      <button
-                        key={opt}
-                        className="option-btn"
-                        onClick={() => {
-                          togglePreference(opt);
-                          setShowAddPreferences(false);
-                        }}
-                      >
-                        {display(opt)}
-                      </button>
-                    ))}
-                  {showAddPreferences === 'favorite' && favoriteOptions
-                    .filter(opt => !favorites.includes(opt))
-                    .map((opt) => (
-                      <button
-                        key={opt}
-                        className="option-btn"
-                        onClick={() => {
-                          togglePreference(opt);
-                          setShowAddPreferences(false);
-                        }}
-                      >
-                        {display(opt)}
-                      </button>
-                    ))}
-                </div>
-              </div>
-            </div>
-          )}
+{/* Edit Preferences Wizard (single-page per section) */}
+{showPrefsWizard && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 p-6 text-white text-center">
+        <h2 className="text-2xl font-bold mb-1">
+          {prefsStep === 1 && "Edit Favorite Cuisines"}
+          {prefsStep === 2 && "Edit Dislikes"}
+          {prefsStep === 3 && "Edit Dietary Preferences"}
+          {prefsStep === 4 && "Edit Allergens"}
+          {prefsStep === 5 && "Edit Favorites"}
+        </h2>
+        <p className="text-yellow-50 text-sm">
+          {prefsStep === 1 && "Choose the cuisines you love."}
+          {prefsStep === 2 && "Tell us what to avoid in your meals."}
+          {prefsStep === 3 && "Select diets that fit your lifestyle."}
+          {prefsStep === 4 && "Mark anything that might cause a reaction."}
+          {prefsStep === 5 && "Pick your go-to food categories."}
+        </p>
+      </div>
+
+      {/* Body */}
+      <div className="p-6 overflow-y-auto flex-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+          {/* Cuisines */}
+          {prefsStep === 1 &&
+            cuisineOptions.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => togglePreference(id)}
+                className={`rounded-xl border px-3 py-3 text-sm font-medium text-left transition-all ${
+                  likes.includes(id)
+                    ? "bg-yellow-100 border-yellow-400 text-yellow-800"
+                    : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {display(id)}
+              </button>
+            ))}
+
+          {/* Dislikes */}
+          {prefsStep === 2 &&
+            dislikeOptions.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => togglePreference(id)}
+                className={`rounded-xl border px-3 py-3 text-sm font-medium text-left transition-all ${
+                  dislikes.includes(id)
+                    ? "bg-red-100 border-red-400 text-red-800"
+                    : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {display(id)}
+              </button>
+            ))}
+
+          {/* Diets */}
+          {prefsStep === 3 &&
+            dietOptions.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => togglePreference(id)}
+                className={`rounded-xl border px-3 py-3 text-sm font-medium text-left transition-all ${
+                  diets.includes(id)
+                    ? "bg-green-100 border-green-500 text-green-800"
+                    : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {display(id)}
+              </button>
+            ))}
+
+          {/* Allergens */}
+          {prefsStep === 4 &&
+            allergenOptions.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => togglePreference(id)}
+                className={`rounded-xl border px-3 py-3 text-sm font-medium text-left transition-all ${
+                  allergens.includes(id)
+                    ? "bg-red-100 border-red-500 text-red-800"
+                    : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {display(id)}
+              </button>
+            ))}
+
+          {/* Favorites (new page) */}
+          {prefsStep === 5 &&
+            favoriteOptions.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => togglePreference(id)}
+                className={`rounded-xl border px-3 py-3 text-sm font-medium text-left transition-all ${
+                  favorites.includes(id)
+                    ? "bg-purple-100 border-purple-400 text-purple-800"
+                    : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                }`}
+              >
+                {display(id)}
+              </button>
+            ))}
+        </div>
+      </div>
+
+      {/* Footer buttons: only Cancel + Save */}
+      <div className="bg-gray-50 p-4 flex items-center justify-end border-t">
+        <button
+          type="button"
+          onClick={() => setShowPrefsWizard(false)}
+          className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 mr-2"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={async () => {
+            await saveChanges();    // PUT /api/preferences/me
+            setShowPrefsWizard(false);
+          }}
+          className="px-6 py-2 text-sm font-semibold rounded-xl bg-yellow-400 hover:bg-yellow-500 text-white shadow-md"
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+
+
         </div>
 
         {error && (
