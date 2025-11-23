@@ -226,6 +226,7 @@ router.post("/chat", async (req, res) => {
     const db = req.app.locals.db;
     if (!db) return res.status(500).json({ error: "db_not_initialized" });
 
+    const now = new Date(); // 👈 use one shared timestamp
     const chats = db.collection("chats");
     const ownerInfo = getOwner(req);
     if (!ownerInfo) return res.status(400).json({ error: "missing_owner" });
@@ -431,7 +432,7 @@ router.post("/chat", async (req, res) => {
           messages: {
             $each: [
               { role: "user", content: userMessage, ts: new Date() },
-              { role: "assistant", content: reply, ts: new Date() },
+              { role: "assistant", content: reply, ts:now, choiceLocked:false },
             ],
           },
         },
@@ -439,6 +440,25 @@ router.post("/chat", async (req, res) => {
       },
       { upsert: true }
     );
+
+    // ✅ Lock ALL previous assistant messages (so their "I'm choosing this!" never reactivates)
+    await chats.updateMany(
+      { _id: chatId, ...owner },
+      {
+        $set: { "messages.$[m].choiceLocked": true },
+      },
+      {
+        arrayFilters: [
+          {
+            "m.role": "assistant",
+            // lock anything older than this turn
+            "m.ts": { $lt: now },
+            "m.choiceLocked": { $ne: true },
+          },
+        ],
+      }
+    );
+
 
         // add here: extract preferences from this turn and save to UserPreferences
     let learnedSomething = false;

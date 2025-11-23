@@ -304,7 +304,7 @@ export default function ChatBot() {
   const [chosenRecommendation, setChosenRecommendation] = useState(null);
   const [postDecisionStep, setPostDecisionStep] = useState(null); // "awaitingType" | "done" | null
   const [pendingChoiceMessageIndex, setPendingChoiceMessageIndex] = useState(null);
-
+  const [ctaChatId, setCtaChatId] = useState(null);  // which chat the recipe/restaurant buttons belong to
 
   const prevAuthRef = useRef(isAuthenticated);
   const suppressLocalLoadRef = useRef(false);
@@ -561,6 +561,14 @@ export default function ChatBot() {
     // If locked or guest-limit reached, prevent sending
     if (isInputLocked) return;
 
+    // 👇 User is moving on; clear any previous "I'm choosing this" UI
+    setPostDecisionStep(null);
+    setChosenRecommendation(null);
+    setCtaChatId(null);
+    setPendingChoice(null);
+    setPendingChoiceMessageIndex(null);
+
+
     const targetChat = chats.find((c) => c.id === targetChatId);
     const history = targetChat?.messages || [];
     const isFirstMessage = history.length === 0;
@@ -681,6 +689,12 @@ export default function ChatBot() {
   async function selectChat(localId) {
     setActiveChatId(localId);
     setShowSidebar(false);
+
+      setPostDecisionStep(null);
+      setChosenRecommendation(null);
+      setCtaChatId(null);
+      setPendingChoice(null);
+      setPendingChoiceMessageIndex(null);
 
     const chat = chats.find((c) => c.id === localId);
     const serverId =
@@ -808,6 +822,7 @@ export default function ChatBot() {
     }
 
     setChosenRecommendation(titleOnly);
+    setCtaChatId(activeChatId);        // 👈 buttons belong to the currently active chat
     setShowConfirmChoiceModal(false);
     setPostDecisionStep("awaitingType");
 
@@ -1716,7 +1731,8 @@ function renderMoodPill() {
                 {/* Post-decision CTA buttons */}
                 {isAuthenticated &&
                   postDecisionStep === "awaitingType" &&
-                  chosenRecommendation && (
+                  chosenRecommendation && 
+                  activeChatId === ctaChatId &&(
                     <div
                       style={{
                         maxWidth: 768,
