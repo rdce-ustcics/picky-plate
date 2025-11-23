@@ -1,0 +1,102 @@
+/* Print Styles */
+@media print {
+  @page { 
+    size: A4 landscape; 
+    margin: 10mm; 
+  }
+  
+  body { 
+    -webkit-print-color-adjust: exact !important; 
+    print-color-adjust: exact !important; 
+  }
+  
+  .print-hide { 
+    display: none !important; 
+  }
+  
+  .print-wrap { 
+    box-shadow: none !important; 
+  }
+  
+  .print-root { 
+    transform: scale(0.85); 
+    transform-origin: top left; 
+    width: 1180px; 
+  }
+  
+  .rounded-3xl, .rounded-xl { 
+    border-radius: 10px !important; 
+  }
+  
+  .bg-amber-50 { 
+    background-color: #FFFBEB !important; 
+  }
+  
+  .bg-yellow-400 { 
+    background-color: #FBBF24 !important; 
+  }
+  
+  .bg-yellow-500 { 
+    background-color: #F59E0B !important; 
+  }
+  
+  .bg-cream-50 { 
+    background-color: #FFF9E6 !important; 
+  }
+  
+  .text-amber-900 { 
+    color: #78350F !important; 
+  }
+  
+  .text-amber-800 { 
+    color: #92400E !important; 
+  }
+  
+  .text-amber-700 { 
+    color: #B45309 !important; 
+  }
+  
+  .ring-2 { 
+    box-shadow: none !important; 
+  }
+}
+
+/* Cooking Loader Animations */
+.bot-bob { 
+  animation: bob 1.6s ease-in-out infinite; 
+}
+
+@keyframes bob { 
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+  100% { transform: translateY(0); }
+}
+
+.steam { 
+  position: absolute; 
+  width: 6px; 
+  height: 6px; 
+  border-radius: 50%; 
+  background: #FDE68A; 
+  opacity: 0.9; 
+  animation: steam 1.8s ease-in-out infinite; 
+}
+
+.steam.s2 { 
+  animation-delay: 0.3s; 
+}
+
+.steam.s3 { 
+  animation-delay: 0.6s; 
+}
+
+@keyframes steam { 
+  0% { 
+    transform: translateY(0) scale(0.9); 
+    opacity: 0.9; 
+  }
+  100% { 
+    transform: translateY(-24px) scale(1.4); 
+    opacity: 0; 
+  }
+}

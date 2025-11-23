@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import BotPng from "../assets/bot.png";
+import "./Calendar.css";
 
 const API_BASE = "http://localhost:4000";
 
@@ -46,16 +47,6 @@ const MIN_YEAR=2025; const MIN_MONTH0=9; // blocks only past navigation
 function CookingLoader(){
   return (
     <div className="flex flex-col items-center justify-center py-12">
-      <style>{`
-        .bot-bob { animation: bob 1.6s ease-in-out infinite; }
-        @keyframes bob { 0%{transform:translateY(0)} 50%{transform:translateY(-6px)} 100%{transform:translateY(0)} }
-        .steam { position:absolute; width:6px; height:6px; border-radius:50%; background:#FDE68A; opacity:.9; animation: steam 1.8s ease-in-out infinite; }
-        .steam.s2 { animation-delay:.3s }
-        .steam.s3 { animation-delay:.6s }
-        @keyframes steam { 0%{ transform: translateY(0) scale(.9); opacity:.9 }
-                           100%{ transform: translateY(-24px) scale(1.4); opacity:0 } }
-      `}</style>
-
       <div className="relative">
         <img src={BotPng} alt="AI bot" className="w-20 h-20 bot-bob drop-shadow-md" />
         {/* pan */}
@@ -76,25 +67,6 @@ function CookingLoader(){
 
 export default function Calendar(){
   const { isAuthenticated, authHeaders } = useAuth();
-
-  const printCss = `
-@media print {
-  @page { size: A4 landscape; margin: 10mm; }
-  body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  .print-hide { display: none !important; }
-  .print-wrap { box-shadow: none !important; }
-  .print-root { transform: scale(0.85); transform-origin: top left; width: 1180px; }
-  .rounded-3xl, .rounded-xl { border-radius: 10px !important; }
-  .bg-amber-50 { background-color: #FFFBEB !important; }
-  .bg-yellow-400 { background-color: #FBBF24 !important; }
-  .bg-yellow-500 { background-color: #F59E0B !important; }
-  .bg-cream-50 { background-color: #FFF9E6 !important; }
-  .text-amber-900 { color: #78350F !important; }
-  .text-amber-800 { color: #92400E !important; }
-  .text-amber-700 { color: #B45309 !important; }
-  .ring-2 { box-shadow: none !important; }
-}
-`;
 
   // ---------- Initial month ----------
   const now=new Date(); const currentMonth=new Date(now.getFullYear(), now.getMonth(), 1);
@@ -413,8 +385,6 @@ export default function Calendar(){
   // ---------- UI ----------
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50">
-      <style>{printCss}</style>
-
       <main className="p-6 overflow-auto">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
