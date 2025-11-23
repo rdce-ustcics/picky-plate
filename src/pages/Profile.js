@@ -81,6 +81,26 @@ export default function Profile() {
   const [diets, setDiets] = useState([]);
   const [kiddieMeal, setKiddieMeal] = useState(false);
 
+  // Kids preferences
+  const [kids, setKids] = useState([]);
+  const [loadingKids, setLoadingKids] = useState(false);
+
+  // Kid wizard state
+  const [showKidWizard, setShowKidWizard] = useState(false);
+  const [kidStep, setKidStep] = useState(0); // 0 = name & age, 1..4 = prefs
+
+  const [editingKidId, setEditingKidId] = useState(null);
+  const [kidName, setKidName] = useState('');
+  const [kidAge, setKidAge] = useState('');
+
+  const [kidLikes, setKidLikes] = useState([]);
+  const [kidDislikes, setKidDislikes] = useState([]);
+  const [kidDiets, setKidDiets] = useState([]);
+  const [kidAllergens, setKidAllergens] = useState([]);
+  const [kidFavorites, setKidFavorites] = useState([]);
+
+  const [savingKid, setSavingKid] = useState(false);
+
   // ---- UI state ----
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -137,6 +157,39 @@ export default function Profile() {
     })();
     return () => { cancelled = true; };
   }, [activeUserId]);
+
+  // ---- Load kids preferences ----
+useEffect(() => {
+  let cancelled = false;
+
+  const loadKids = async () => {
+    setLoadingKids(true);
+    try {
+      const res = await fetch(`${API}/api/preferences/kids`, {
+        headers: {
+          ...authHeaders(),
+        },
+      });
+
+      if (!res.ok) throw new Error('Failed to load kids');
+      const data = await res.json();
+
+      if (!cancelled && data.success) {
+        setKids(Array.isArray(data.kids) ? data.kids : []);
+      }
+    } catch (err) {
+      console.error('Error loading kids', err);
+    } finally {
+      if (!cancelled) setLoadingKids(false);
+    }
+  };
+
+  loadKids();
+  return () => {
+    cancelled = true;
+  };
+}, [API, authHeaders]);
+
 
   // ---- Toggle preference ----
   const togglePreference = (id) => {
@@ -199,6 +252,88 @@ export default function Profile() {
       setSaving(false);
     }
   };
+
+      // Open wizard for new or existing kid
+    const openKidWizard = (kid = null) => {
+      if (kid) {
+        setEditingKidId(kid.kidId);
+        setKidName(kid.name || '');
+        setKidAge(kid.age != null ? String(kid.age) : '');
+        setKidLikes(kid.likes || []);
+        setKidDislikes(kid.dislikes || []);
+        setKidDiets(kid.diets || []);
+        setKidAllergens(kid.allergens || []);
+        setKidFavorites(kid.favorites || []);
+      } else {
+        setEditingKidId(null);
+        setKidName('');
+        setKidAge('');
+        setKidLikes([]);
+        setKidDislikes([]);
+        setKidDiets([]);
+        setKidAllergens([]);
+        setKidFavorites([]);
+      }
+      setKidStep(0);
+      setShowKidWizard(true);
+    };
+
+    const toggleKidPref = (id, type) => {
+      const toggle = (setter) =>
+        setter((prev) =>
+          prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+        );
+
+      if (type === 'cuisine') toggle(setKidLikes);
+      else if (type === 'dislike') toggle(setKidDislikes);
+      else if (type === 'diet') toggle(setKidDiets);
+      else if (type === 'allergen') toggle(setKidAllergens);
+      else if (type === 'favorite') toggle(setKidFavorites);
+    };
+
+    const saveKid = async () => {
+      setSavingKid(true);
+      try {
+        const payload = {
+          kidId: editingKidId,
+          name: kidName.trim(),
+          age: Number(kidAge),
+          likes: kidLikes,
+          dislikes: kidDislikes,
+          diets: kidDiets,
+          allergens: kidAllergens,
+          favorites: kidFavorites,
+          kiddieMeal: true,
+        };
+
+        const res = await fetch(`${API}/api/preferences/kids`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders(),
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || 'Failed to save kid');
+        }
+
+        // Update kids list locally
+        setKids((prev) => {
+          const without = prev.filter((k) => k.kidId !== data.kid.kidId);
+          return [...without, data.kid];
+        });
+
+        setShowKidWizard(false);
+      } catch (err) {
+        alert(err.message || 'Failed to save kid');
+      } finally {
+        setSavingKid(false);
+      }
+    };
+
 
   return (
     <>
@@ -340,6 +475,53 @@ export default function Profile() {
               <p className="feature-description">Enable kid-friendly meal suggestions and portions</p>
             </div>
           </div>
+
+                  {/* 🧒 Kids Preferences Section (3.4 goes here) */}
+          <div className="kids-preferences-card">
+            <h3 className="kids-title">Kids’ Preferences</h3>
+
+            {loadingKids ? (
+              <p className="kids-text">Loading kids…</p>
+            ) : kids.length === 0 ? (
+              <>
+                <p className="kids-text">
+                  You currently have no preferences for your kids. Want to add your kids?
+                </p>
+                <button
+                  className="kids-add-button"
+                  onClick={() => openKidWizard()}
+                >
+                  + Add Kid
+                </button>
+              </>
+            ) : (
+              <>
+                <ul className="kids-list">
+                  {kids.map((kid) => (
+                    <li key={kid.kidId} className="kids-item">
+                      <div className="kids-main">
+                        <span className="kids-name">{kid.name}</span>
+                        <span className="kids-age">{kid.age} yrs</span>
+                      </div>
+                      <button
+                        className="kids-edit-btn"
+                        onClick={() => openKidWizard(kid)}
+                      >
+                        Edit
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  className="kids-add-button"
+                  onClick={() => openKidWizard()}
+                >
+                  + Add Another Kid
+                </button>
+              </>
+            )}
+          </div>
+        </div>
         </div>
 
         {/* Food Preferences - Full Width */}
@@ -622,8 +804,218 @@ export default function Profile() {
   </div>
 )}
 
+{/* Kid Preferences Wizard */}
+{showKidWizard && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 p-6 text-white text-center">
+        <h2 className="text-2xl font-bold mb-1">
+          {editingKidId ? "Edit Kid's Preferences" : "Add Kid Preferences"}
+        </h2>
+        <p className="text-yellow-50 text-sm">
+          We’ll use this to suggest kid-friendly meals.
+        </p>
 
+        {/* Steps 0–4 indicator */}
+        <div className="flex items-center justify-center gap-2 mt-4">
+          {[0, 1, 2, 3, 4].map((step) => (
+            <div
+              key={step}
+              className={`h-2 rounded-full transition-all ${
+                step === kidStep ? "w-8 bg-white" : "w-2 bg-yellow-200"
+              }`}
+            />
+          ))}
+        </div>
+      </div>
 
+      {/* Body */}
+      <div className="p-6 overflow-y-auto flex-1">
+        {/* Step 0: name + age */}
+        {kidStep === 0 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">
+              Let’s meet your kid!
+            </h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Kid’s name
+              </label>
+              <input
+                type="text"
+                value={kidName}
+                onChange={(e) => setKidName(e.target.value)}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                placeholder="e.g. Lucas"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Age
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="18"
+                value={kidAge}
+                onChange={(e) => setKidAge(e.target.value)}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                placeholder="e.g. 7"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Step 1: cuisines */}
+        {kidStep === 1 && (
+          <>
+            <h3 className="text-lg font-bold text-gray-800 mb-3">
+              What cuisines does {kidName || 'your kid'} like?
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {cuisineOptions.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => toggleKidPref(id, 'cuisine')}
+                  className={`rounded-xl border px-3 py-3 text-sm font-medium text-left transition-all ${
+                    kidLikes.includes(id)
+                      ? "bg-yellow-100 border-yellow-400 text-yellow-800"
+                      : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {display(id)}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Step 2: dislikes */}
+        {kidStep === 2 && (
+          <>
+            <h3 className="text-lg font-bold text-gray-800 mb-3">
+              Anything {kidName || 'your kid'} dislikes or refuses to eat?
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {dislikeOptions.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => toggleKidPref(id, 'dislike')}
+                  className={`rounded-xl border px-3 py-3 text-sm font-medium text-left transition-all ${
+                    kidDislikes.includes(id)
+                      ? "bg-red-100 border-red-400 text-red-800"
+                      : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {display(id)}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Step 3: diet */}
+        {kidStep === 3 && (
+          <>
+            <h3 className="text-lg font-bold text-gray-800 mb-3">
+              Any diet we should follow for {kidName || 'your kid'}?
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {dietOptions.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => toggleKidPref(id, 'diet')}
+                  className={`rounded-xl border px-3 py-3 text-sm font-medium text-left transition-all ${
+                    kidDiets.includes(id)
+                      ? "bg-green-100 border-green-500 text-green-800"
+                      : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {display(id)}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Step 4: allergens */}
+        {kidStep === 4 && (
+          <>
+            <h3 className="text-lg font-bold text-gray-800 mb-3">
+              Any allergens we must avoid?
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {allergenOptions.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => toggleKidPref(id, 'allergen')}
+                  className={`rounded-xl border px-3 py-3 text-sm font-medium text-left transition-all ${
+                    kidAllergens.includes(id)
+                      ? "bg-red-100 border-red-500 text-red-800"
+                      : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  {display(id)}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="bg-gray-50 p-4 flex items-center justify-between border-t">
+        <button
+          type="button"
+          onClick={() => setShowKidWizard(false)}
+          className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800"
+          disabled={savingKid}
+        >
+          Cancel
+        </button>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setKidStep((prev) => Math.max(0, prev - 1))}
+            disabled={kidStep === 0 || savingKid}
+            className="px-4 py-2 text-sm font-semibold rounded-xl border border-gray-300 text-gray-700 disabled:opacity-40"
+          >
+            Back
+          </button>
+
+          {kidStep < 4 ? (
+            <button
+              type="button"
+              onClick={() => setKidStep((prev) => Math.min(4, prev + 1))}
+              disabled={
+                savingKid ||
+                (kidStep === 0 && (!kidName.trim() || !kidAge.trim()))
+              }
+              className="px-6 py-2 text-sm font-semibold rounded-xl bg-yellow-400 hover:bg-yellow-500 text-white shadow-md disabled:opacity-50"
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={saveKid}
+              disabled={savingKid}
+              className="px-6 py-2 text-sm font-semibold rounded-xl bg-yellow-400 hover:bg-yellow-500 text-white shadow-md disabled:opacity-50"
+            >
+              {savingKid ? "Saving…" : "Save Kid"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
         </div>
 
@@ -632,7 +1024,6 @@ export default function Profile() {
             ⚠️ {error}
           </div>
         )}
-      </div>
       </div>
     </>
   );

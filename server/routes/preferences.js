@@ -3,6 +3,9 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const UserPreferences = require('../models/UserPreferences');
+const mongoose = require('mongoose');
+const KidPreferences = require('../models/KidPreferences');
+
 
 // 🔐 Require JWT auth for all preferences routes
 function requireAuth(req, res, next) {
@@ -114,5 +117,90 @@ router.put('/me', async (req, res) => {
     res.status(500).json({ error: 'server_error' });
   }
 });
+
+// GET /api/preferences/kids - list all kids for the logged-in user
+router.get('/kids', async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const kids = await KidPreferences.find({ userId }).lean();
+
+    res.json({
+      success: true,
+      kids: kids || [],
+    });
+  } catch (e) {
+    console.error('GET /preferences/kids error:', e);
+    res.status(500).json({ success: false, message: 'server_error' });
+  }
+});
+
+// POST /api/preferences/kids - create or update a kid's preferences
+router.post('/kids', async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const {
+      kidId, // optional for new kid
+      name,
+      age,
+      likes = [],
+      dislikes = [],
+      diets = [],
+      allergens = [],
+      favorites = [],
+      kiddieMeal = true,
+    } = req.body;
+
+    if (!name || typeof age === 'undefined') {
+      return res
+        .status(400)
+        .json({ success: false, message: 'Name and age are required' });
+    }
+
+    const finalKidId = kidId || new mongoose.Types.ObjectId().toString();
+
+    const doc = await KidPreferences.findOneAndUpdate(
+      { userId, kidId: finalKidId },
+      {
+        userId,
+        kidId: finalKidId,
+        name,
+        age,
+        likes,
+        dislikes,
+        diets,
+        allergens,
+        favorites,
+        kiddieMeal: kiddieMeal === true,
+      },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    ).lean();
+
+    res.json({
+      success: true,
+      kid: doc,
+    });
+  } catch (e) {
+    console.error('POST /preferences/kids error:', e);
+    res.status(500).json({ success: false, message: 'server_error' });
+  }
+});
+
+// DELETE /api/preferences/kids/:kidId - optional: remove a kid
+router.delete('/kids/:kidId', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const kidId = req.params.kidId;
+
+    await KidPreferences.deleteOne({ userId, kidId });
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('DELETE /preferences/kids/:kidId error:', e);
+    res.status(500).json({ success: false, message: 'server_error' });
+  }
+});
+
 
 module.exports = router;
