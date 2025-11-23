@@ -9,6 +9,570 @@ const openai = require("../openaiClient");
 // Unified preferences + food history models
 const UserPreferences = require("../models/UserPreferences");
 const FoodHistory = require("../models/FoodHistory");
+// ---------------------
+// Fallback Recommender Helpers
+// ---------------------
+const fs = require("fs");
+const path = require("path");
+
+// Mood CSV loader (MOOD-FOOD.csv in /server/assets)
+let moodCSV = [];
+try {
+  const csvPath = path.join(__dirname, "..", "assets", "MOOD-FOOD.csv");
+  const raw = fs.readFileSync(csvPath, "utf8").split("\n").slice(1);
+  moodCSV = raw
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((r) => {
+      const [mood, food] = r.split(",");
+      return { mood: mood?.trim(), food: food?.trim() };
+    });
+  console.log("Loaded mood CSV rows:", moodCSV.length);
+} catch (e) {
+  console.error("CSV failed to load:", e.message || e);
+}
+
+// Static fallbacks per preference type
+const CUISINE_FALLBACKS = {
+  filipino: [
+    "Chicken Inasal",
+    "Pork Binagoongan",
+    "Beef Kare-Kare",
+    "Laing",
+    "Tortang Talong",
+    "Tinolang Manok",
+    "Adobong Kangkong",
+  ],
+  japanese: [
+    "Chicken Teriyaki Don",
+    "Vegetable Tempura",
+    "Beef Gyudon",
+    "Katsu Curry",
+    "Shoyu Ramen",
+    "Salmon Onigiri",
+    "Yakisoba",
+  ],
+  italian: [
+    "Creamy Pesto Pasta",
+    "Four Cheese Pasta",
+    "Tomato Basil Penne",
+    "Chicken Alfredo",
+    "Margherita Pizza",
+    "Mushroom Risotto",
+    "Lasagna al Forno",
+  ],
+  korean: [
+    "Beef Bulgogi Rice Bowl",
+    "Kimchi Fried Rice",
+    "Chicken Bibimbap",
+    "Seafood Pancake",
+    "Japchae",
+    "Soy Garlic Korean Fried Chicken",
+  ],
+  chinese: [
+    "Beef Hofan",
+    "Stir-Fried Vegetables with Garlic",
+    "Sweet and Sour Chicken",
+    "Yang Chow Fried Rice",
+    "Mapo Tofu (mild)",
+    "Chicken and Broccoli Stir Fry",
+  ],
+  american: [
+    "Classic Cheeseburger",
+    "BBQ Chicken Platter",
+    "Grilled Salmon with Vegetables",
+    "Mac & Cheese",
+    "Buffalo Chicken Wrap",
+    "Steak and Mashed Potatoes",
+  ],
+  thai: [
+    "Pad Thai",
+    "Green Chicken Curry",
+    "Thai Basil Chicken",
+    "Tom Yum (mild)",
+    "Pineapple Fried Rice",
+  ],
+  mexican: [
+    "Beef Burrito",
+    "Chicken Quesadilla",
+    "Vegetarian Tacos",
+    "Carnitas Rice Bowl",
+    "Nachos Supreme",
+    "Chicken Fajitas",
+  ],
+  "middle-eastern": [
+    "Chicken Shawarma Rice",
+    "Beef Kebab Platter",
+    "Falafel Bowl",
+    "Hummus with Pita",
+    "Lamb Over Rice",
+    "Tabbouleh with Chicken",
+  ],
+};
+
+const DISLIKE_REPLACEMENTS = {
+  seafood: [
+    "Garlic butter chicken",
+    "Beef stir-fry with vegetables",
+    "Crispy fried chicken",
+    "Grilled pork chops",
+    "Creamy mushroom pasta",
+  ],
+  spicy: [
+    "Sweet soy chicken",
+    "Garlic parmesan chicken",
+    "Creamy carbonara",
+    "Beef teriyaki",
+    "Chicken alfredo pasta",
+  ],
+  vegetables: [
+    "Chicken katsu curry",
+    "Beef tapa with garlic rice",
+    "Chicken teriyaki",
+    "Pork adobo flakes",
+    "Chicken karaage",
+  ],
+  meat: [
+    "Mushroom risotto",
+    "Vegetable yakisoba",
+    "Four cheese pizza",
+    "Pesto pasta",
+    "Tofu stir-fry bowl",
+  ],
+  dairy: [
+    "Soy garlic chicken",
+    "Beef bulgogi",
+    "Garlic rice with grilled chicken",
+    "Teriyaki tofu bowl",
+    "Vegetable fried rice",
+  ],
+  gluten: [
+    "Steamed rice with grilled chicken",
+    "Garlic shrimp (no breading)",
+    "Meat and vegetable keto bowl",
+    "Beef with mushrooms",
+    "Tofu veggie bowl",
+  ],
+  nuts: [
+    "Beef kare-kare (no peanuts)",
+    "Chicken teriyaki",
+    "Fried chicken",
+    "Pork sinigang",
+    "Garlic butter chicken",
+  ],
+  eggs: [
+    "Beef stir fry",
+    "Chicken katsu (no mayo)",
+    "Soy garlic chicken",
+    "Tomato basil pasta",
+    "Garlic rice with grilled meat",
+  ],
+};
+
+const ALLERGEN_SAFE = {
+  peanuts: [
+    "Grilled chicken with rice",
+    "Tomato basil pasta",
+    "Cheese pizza",
+    "Beef tapa",
+  ],
+  "tree-nuts": [
+    "Garlic rice with fried chicken",
+    "Chicken shawarma",
+    "Hamburger steak",
+    "Sinigang",
+  ],
+  eggs: [
+    "Chicken teriyaki",
+    "Beef rice bowl",
+    "Vegetable stir fry",
+    "Sushi (no mayo, no tamago)",
+  ],
+  dairy: [
+    "Beef bulgogi",
+    "Teriyaki chicken bowl",
+    "Pork adobo",
+    "Ramen without cheese/milk",
+  ],
+  gluten: [
+    "Grilled chicken with rice",
+    "Stir fried tofu and vegetables",
+    "Chicken skewers",
+    "Salmon with garlic",
+  ],
+  soy: [
+    "Herb grilled chicken",
+    "Garlic shrimp rice",
+    "Pork sinigang",
+    "Roast beef",
+  ],
+  fish: [
+    "Garlic butter chicken",
+    "Korean beef rice bowl",
+    "Tomato pasta",
+    "Fried chicken chop",
+  ],
+  shellfish: [
+    "Beef curry",
+    "Chicken karaage",
+    "Bulgogi",
+    "Cheese quesadilla",
+  ],
+  sesame: [
+    "Grilled chicken salad (simple dressing)",
+    "Beef stew",
+    "Herb roasted chicken",
+    "Sinigang",
+  ],
+  corn: [
+    "Beef adobo",
+    "Chicken barbecue",
+    "Pork chops",
+    "Garlic rice meals",
+  ],
+  sulfites: [
+    "Grilled chicken",
+    "Simple seasoned beef tapa",
+    "Mushroom pasta",
+    "Vegetable fried rice",
+  ],
+  mustard: [
+    "Soy-garlic chicken",
+    "Classic adobo",
+    "Plain ramen (no toppings)",
+    "Chicken fried rice",
+  ],
+};
+
+const DIET_FALLBACKS = {
+  omnivore: [
+    "Beef tapa",
+    "Chicken inasal",
+    "Garlic butter shrimp",
+    "Chicken teriyaki",
+  ],
+  vegetarian: [
+    "Vegetable kare-kare",
+    "Mushroom pasta",
+    "Vegetable fried rice",
+    "Tofu stir-fry",
+  ],
+  vegan: [
+    "Vegan tofu sisig",
+    "Vegan stir fry noodles",
+    "Vegetable curry",
+    "Tomato basil pasta (no cheese)",
+  ],
+  pescetarian: [
+    "Garlic butter salmon",
+    "Tuna poke bowl",
+    "Shrimp garlic rice",
+    "Fish teriyaki",
+  ],
+  keto: [
+    "Grilled chicken with broccoli",
+    "Beef tapa without rice",
+    "Creamy garlic salmon",
+    "Egg and vegetable stir fry",
+  ],
+  "low-carb": [
+    "Chicken salad bowl",
+    "Beef bowl without rice",
+    "Boiled eggs with vegetables",
+    "Roasted chicken plate",
+  ],
+  halal: [
+    "Chicken shawarma bowl",
+    "Beef kebab plate",
+    "Hummus with grilled chicken",
+    "Chicken biryani",
+  ],
+  kosher: [
+    "Grilled salmon plate",
+    "Shakshuka",
+    "Vegetable couscous",
+    "Chicken schnitzel (no cheese)",
+  ],
+  "gluten-free": [
+    "Rice meals",
+    "Stir fried vegetables",
+    "Grilled chicken plate",
+    "Garlic shrimp with rice",
+  ],
+};
+
+const FAVORITE_EXPANDED = {
+  steak: [
+    "Garlic ribeye with rice",
+    "Beef steak bowl",
+    "Mushroom steak plate",
+  ],
+  sushi: [
+    "California maki",
+    "Salmon sushi",
+    "Tuna poke bowl",
+  ],
+  pizza: [
+    "Margherita pizza",
+    "Pepperoni pizza",
+    "Truffle mushroom pizza",
+  ],
+  burger: [
+    "Classic cheeseburger",
+    "Double cheeseburger",
+    "Mushroom Swiss burger",
+  ],
+  pasta: [
+    "Creamy carbonara",
+    "Tomato basil pasta",
+    "Chicken alfredo",
+  ],
+  ramen: [
+    "Shoyu ramen",
+    "Miso ramen",
+    "Tonkotsu ramen",
+  ],
+  tacos: [
+    "Beef soft tacos",
+    "Chicken quesadilla",
+    "Pork carnitas bowl",
+  ],
+  desserts: [
+    "Matcha cheesecake",
+    "Chocolate lava cake",
+    "Mango sticky rice",
+  ],
+  "milk tea": [
+    "Pearl milk tea",
+    "Wintermelon milk tea",
+    "Matcha latte",
+  ],
+  coffee: [
+    "Iced americano",
+    "Spanish latte",
+    "Vanilla sweet cream cold brew",
+  ],
+  fries: [
+    "Garlic parmesan fries",
+    "Truffle fries",
+    "Cheese fries",
+  ],
+  chicken: [
+    "Soy garlic chicken",
+    "Crispy fried chicken",
+    "Chicken teriyaki",
+  ],
+  salad: [
+    "Caesar salad",
+    "Garden salad",
+    "Chicken salad",
+  ],
+  soup: [
+    "Tomato soup",
+    "Chicken noodle soup",
+    "Clam chowder",
+  ],
+  donut: [
+    "Glazed donut",
+    "Chocolate donut",
+    "Boston cream donut",
+  ],
+  brunch: [
+    "Avocado toast",
+    "Chicken and waffles",
+    "Pancakes with syrup",
+  ],
+};
+
+// Fisher-Yates shuffle (in-place)
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+// Build a single fallback response text
+function buildFallbackRecommendation({ prefs, kidPrefs, history, mood }) {
+  const likes = Array.isArray(prefs?.likes) ? prefs.likes : [];
+  const diets = Array.isArray(prefs?.diets) ? prefs.diets : [];
+  const favorites = Array.isArray(prefs?.favorites) ? prefs.favorites : [];
+  const dislikes = Array.isArray(prefs?.dislikes)
+    ? prefs.dislikes.map((x) => x.toLowerCase().trim())
+    : [];
+  const allergens = Array.isArray(prefs?.allergens)
+    ? prefs.allergens.map((x) => x.toLowerCase().trim())
+    : [];
+  const recent = Array.isArray(history) ? history : [];
+
+  const avoidNames = new Set(
+    recent
+      .map((h) => (h.label || "").toLowerCase().trim())
+      .filter(Boolean)
+  );
+
+  const isSafeName = (name) => {
+    if (!name) return false;
+    const lower = name.toLowerCase();
+    if (avoidNames.has(lower)) return false;
+    if (dislikes.some((d) => lower.includes(d))) return false;
+    if (allergens.some((a) => lower.includes(a))) return false;
+    return true;
+  };
+
+  const candidates = [];
+
+  const addCandidate = (name, reason, sourceLabel) => {
+    if (!isSafeName(name)) return;
+    const key = name.toLowerCase();
+    // avoid duplicates
+    if (candidates.some((c) => c.key === key)) return;
+    candidates.push({ key, name, reason, sourceLabel });
+  };
+
+  // 1) Mood-based from CSV
+  if (mood && moodCSV.length) {
+    const moodLabel = String(mood).trim();
+    const moodFoods = moodCSV
+      .filter(
+        (m) =>
+          m.mood &&
+          m.food &&
+          m.mood.toLowerCase() === moodLabel.toLowerCase()
+      )
+      .map((m) => m.food);
+    moodFoods.slice(0, 8).forEach((food) => {
+      addCandidate(
+        food,
+        "Picked from mood-based suggestions similar to how you feel.",
+        "Based on your mood"
+      );
+    });
+  }
+
+  // 2) Cuisine-based from likes if they match known cuisine keys
+  likes.forEach((likeRaw) => {
+    const like = String(likeRaw || "").toLowerCase().trim();
+    if (CUISINE_FALLBACKS[like]) {
+      CUISINE_FALLBACKS[like].forEach((dish) => {
+        addCandidate(
+          dish,
+          `Because you enjoy ${like} cuisine.`,
+          "Based on your favorite cuisines"
+        );
+      });
+    }
+  });
+
+  // 3) Dislike-based: replacement dishes for dislikes (suggesting alternatives)
+  dislikes.forEach((d) => {
+    if (DISLIKE_REPLACEMENTS[d]) {
+      DISLIKE_REPLACEMENTS[d].forEach((dish) => {
+        addCandidate(
+          dish,
+          `Avoids your dislike for ${d}, but keeps the meal satisfying.`,
+          "Safe picks avoiding dislikes"
+        );
+      });
+    }
+  });
+
+  // 4) Allergen-safe sets
+  allergens.forEach((a) => {
+    if (ALLERGEN_SAFE[a]) {
+      ALLERGEN_SAFE[a].forEach((dish) => {
+        addCandidate(
+          dish,
+          `Chosen to stay away from your ${a} allergy.`,
+          "Allergen-safe ideas"
+        );
+      });
+    }
+  });
+
+  // 5) Diet-based
+  diets.forEach((dietRaw) => {
+    const key = String(dietRaw || "").toLowerCase().trim();
+    if (DIET_FALLBACKS[key]) {
+      DIET_FALLBACKS[key].forEach((dish) => {
+        addCandidate(
+          dish,
+          `Matches your ${dietRaw} diet preference.`,
+          "Based on your diet"
+        );
+      });
+    }
+  });
+
+  // 6) Favorites boosted
+  favorites.forEach((favRaw) => {
+    const key = String(favRaw || "").toLowerCase().trim();
+    if (FAVORITE_EXPANDED[key]) {
+      FAVORITE_EXPANDED[key].forEach((dish) => {
+        addCandidate(
+          dish,
+          `Because you often enjoy ${favRaw}.`,
+          "Inspired by your favorites"
+        );
+      });
+    }
+  });
+
+  // If still too few, lightly use some cuisine defaults as generic variety
+  if (candidates.length < 5) {
+    Object.keys(CUISINE_FALLBACKS).forEach((cui) => {
+      CUISINE_FALLBACKS[cui].forEach((dish) => {
+        addCandidate(
+          dish,
+          `A popular ${cui} dish many people enjoy.`,
+          "Comfort picks"
+        );
+      });
+    });
+  }
+
+  if (!candidates.length) {
+    return (
+      "Our chatbot seems to be down right now, so I’m using some safe defaults instead.\n\n" +
+      "1. Chicken Inasal: Simple, flavorful grilled chicken with rice.\n" +
+      "2. Beef Tapa: Savory beef with garlic rice.\n" +
+      "3. Vegetable Fried Rice: Light and flexible.\n" +
+      "4. Chicken Teriyaki Bowl: Sweet-savory and filling.\n" +
+      "5. Tomato Basil Pasta: Comforting and easy to enjoy."
+    );
+  }
+
+  // Shuffle and pick up to 10 (5 + another random 5)
+  shuffleArray(candidates);
+  const picked = candidates.slice(0, 10);
+  const first5 = picked.slice(0, 5);
+  const next5 = picked.slice(5, 10);
+
+  let text =
+    "Our chatbot seems to be down right now, here are suggestions based on your saved preferences, dislikes, allergies, mood, and previous choices:\n\n";
+
+  let idx = 1;
+
+  if (first5.length) {
+    text += "Top ideas for now:\n";
+    first5.forEach((c) => {
+      text += `${idx}. ${c.name}: ${c.reason}\n`;
+      idx += 1;
+    });
+    text += "\n";
+  }
+
+  if (next5.length) {
+    text += "More ideas you might also like:\n";
+    next5.forEach((c) => {
+      text += `${idx}. ${c.name}: ${c.reason}\n`;
+      idx += 1;
+    });
+  }
+
+  return text.trim();
+}
+// ---------------------
 
 /**
  * Soft authentication middleware
@@ -59,7 +623,7 @@ async function extractAndSavePreferences({ owner, conversation }) {
       role: "system",
       content:
         "You are an information extraction assistant for a food chatbot. " +
-        "From the conversation, detect explicit, stable user food preferences. " +
+        "From the conversation, detect explicit, stable user food preferences. Never treat dish selections (e.g., 'I'm choosing this') as likes. Only treat explicit statements of preference like 'I like ____'. " +
         "Only capture statements where the user clearly says they like/dislike something, " +
         "have an allergy, follow or stop following a diet, or call something a favorite, " +
         "or mentions they want kiddie meals. " +
@@ -279,6 +843,18 @@ router.post("/chat", async (req, res) => {
 
     // 🔍 Fetch user preferences (if logged in)
     let prefsForPrompt = null;
+
+    const KidPreferences = require("../models/KidPreferences");
+
+    let kidPrefsForPrompt = [];
+    if (owner.userId) {
+      try {
+        kidPrefsForPrompt = await KidPreferences.find({ userId: owner.userId }).lean();
+      } catch (e) {
+        console.error("kid_prefs_fetch_error:", e);
+      }
+    }
+
     if (owner.userId) {
       try {
         const prefs = await UserPreferences.findOne({ userId: owner.userId }).lean();
@@ -324,14 +900,31 @@ router.post("/chat", async (req, res) => {
       // fail-soft
     }
 
+    // 🕒 Time-of-day detection
+    const hour = new Date().getHours();
+    let mealContext = "any meal";
+
+    if (hour >= 5 && hour < 11) mealContext = "breakfast";
+    else if (hour >= 11 && hour < 15) mealContext = "lunch";
+    else if (hour >= 17 && hour < 22) mealContext = "dinner";
+    else mealContext = "late-night snack";
+
+
+
     // 🧠 Build system messages (core + mood + prefs + history)
     const systemMessages = [
       {
         role: "system",
         content:
-          "You are Pick-A-Plate, a friendly food recommender in the Philippines. Include Filipino and non-Filipino cuisines. Be concise and track context (e.g., 'the second one'). Always prioritize safety and avoid allergens.",
+          "You are Pick-A-Plate, a STRICTLY friendly food-only recommender in the Philippines. Include Filipino and non-Filipino cuisines. Be concise and track context (e.g., 'the second one'). Always prioritize safety and avoid allergens. Ignore or Decline non-food related requests.",
       },
     ];
+
+  systemMessages.push({
+    role: "system",
+    content: `The current time suggests the user is likely preparing for ${mealContext}. Prioritize foods appropriate for ${mealContext}.`
+  });
+
 
     systemMessages.push({
       role: "system",
@@ -374,6 +967,18 @@ router.post("/chat", async (req, res) => {
       });
     }
 
+        if (kidPrefsForPrompt.length > 0) {
+      systemMessages.push({
+        role: "system",
+        content:
+          "The user has kids with the following preferences: " +
+          JSON.stringify(kidPrefsForPrompt) +
+          ". Before giving recommendations, always ask: 'Are the kids eating with you? Which kids?' " +
+          "If kids are included, adjust food suggestions to respect their likes/dislikes/allergies."
+      });
+    }
+
+
     if (recentHistory && recentHistory.length) {
       const simpleHistory = recentHistory.map((h) => ({
         label: h.label,
@@ -397,14 +1002,31 @@ router.post("/chat", async (req, res) => {
       { role: "user", content: userMessage },
     ];
 
-    // Call OpenAI
-    const r = await openai.responses.create({
-      model: "gpt-4o-mini",
-      input,
-      max_output_tokens: 300,
-    });
+    // 🧠 OpenAI Call with Fallback
+    let reply = "";
+    let openaiFailed = false;
 
-    const reply = (r?.output_text || "").trim();
+    try {
+      const r = await openai.responses.create({
+        model: "gpt-4o-mini",
+        input,
+        max_output_tokens: 300,
+      });
+      reply = (r?.output_text || "").trim();
+    } catch (err) {
+      console.error("OpenAI DOWN → using fallback mode", err);
+      openaiFailed = true;
+    }
+
+        if (openaiFailed) {
+      reply = buildFallbackRecommendation({
+        prefs: prefsForPrompt,
+        kidPrefs: kidPrefsForPrompt,
+        history: recentHistory,
+        mood: mood || null
+      });
+    }
+
 
     // Create or reuse chatId
     const chatId =

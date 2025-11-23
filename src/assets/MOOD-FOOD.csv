@@ -1,0 +1,170 @@
+food,mood,why_short,evidence_tags,category_tags,category_simple,reason_mood
+Fried chicken (home-style or fast-food),happy,familiar comfort food that boosts enjoyment,protein,other,Main Meal,familiar comfort food that boosts enjoyment
+Dark chocolate (tablea / 70–85%),happy,cocoa flavanols can give a small mood lift,cocoa,drink,Drink,cocoa flavanols can give a small mood lift
+Mango (mangga),happy,higher fruit/veg intake is linked with better mood,"fiber,fruit",other,Fruit Snack,higher fruit/veg intake is linked with better mood
+Banana (saba/latundan/lakatan),happy,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,fruit,low-GI",other,Fruit Snack,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Pineapple (pinya),happy,higher fruit/veg intake is linked with better mood,"fiber,fruit",other,Fruit Snack,higher fruit/veg intake is linked with better mood
+Buko (fresh coconut),happy,higher fruit/veg intake is linked with better mood,"fiber,fruit",other,Dessert / Sweet Snack,higher fruit/veg intake is linked with better mood
+Chicken inasal (grilled),happy,familiar comfort food that boosts enjoyment,protein,other,Main Meal,familiar comfort food that boosts enjoyment
+Pandesal with peanut butter (moderate portion),happy,familiar comfort food that boosts enjoyment,,other,Snack,familiar comfort food that boosts enjoyment
+Sinigang na bangus belly,happy,fish omega‑3s linked with better mood over time,"comfort,omega-3,protein",soup,Main Meal,fish omega‑3s linked with better mood over time
+Champorado (moderate portion),happy,familiar comfort food that boosts enjoyment,,other,Other / Flexible,familiar comfort food that boosts enjoyment
+Sardinas (canned sardines in oil/tomato),sad,fish omega‑3s linked with better mood over time,"omega-3,protein",other,Main Meal,fish omega‑3s linked with better mood over time
+Galunggong (round scad) – grilled or paksiw,sad,fish omega‑3s linked with better mood over time,"omega-3,protein",other,Main Meal,fish omega‑3s linked with better mood over time
+Bangus (milkfish) – grilled/steamed,sad,fish omega‑3s linked with better mood over time,"hydration,omega-3,protein,theanine/low-caf",drink,Main Meal,fish omega‑3s linked with better mood over time
+Tuna (canned in water or olive oil),sad,fish omega‑3s linked with better mood over time,"omega-3,protein",other,Main Meal,fish omega‑3s linked with better mood over time
+Pinakbet (vegetable stew),sad,higher fruit/veg intake is linked with better mood,"fiber,veg",other,Veggie Snack / Side,higher fruit/veg intake is linked with better mood
+Ginisang ampalaya with egg,sad,higher fruit/veg intake is linked with better mood,"fiber,veg",other,Veggie Snack / Side,higher fruit/veg intake is linked with better mood
+Laing (taro leaves in coconut milk),sad,hydrating and gentle—good when tense,hydration,drink,Main Meal,hydrating and gentle—good when tense
+Kangkong (water spinach) garlic stir-fry,sad,higher fruit/veg intake is linked with better mood,"fiber,veg",other,Veggie Snack / Side,higher fruit/veg intake is linked with better mood
+Talbos ng kamote salad,sad,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,low-GI,veg",other,Veggie Snack / Side,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Brown/red rice (swap for part of white rice),sad,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,low-GI",rice bowl,Main Meal,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Green tea / matcha (low sugar),stress,tea theanine can calm while keeping attention,"hydration,theanine/low-caf",drink,Drink,tea theanine can calm while keeping attention
+Plain yogurt (unsweetened),stress,fermented/probiotic foods may ease stress and improve mood,probiotic,other,Other / Flexible,fermented/probiotic foods may ease stress and improve mood
+Yakult / probiotic drink (moderate),stress,fermented/probiotic foods may ease stress and improve mood,probiotic,drink,Drink,fermented/probiotic foods may ease stress and improve mood
+Kimchi (small side),stress,fermented/probiotic foods may ease stress and improve mood,probiotic,other,Other / Flexible,fermented/probiotic foods may ease stress and improve mood
+Kefir (if available),stress,fermented/probiotic foods may ease stress and improve mood,probiotic,drink,Drink,fermented/probiotic foods may ease stress and improve mood
+Oatmeal lugaw (oats with banana),stress,"low‑GI, fiber‑rich carbs steady energy and irritability","comfort,fiber,fruit,low-GI",soup,Main Meal,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Saging na saba (boiled/steamed),stress,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,hydration,low-GI,theanine/low-caf",drink,Drink,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Tinola (chicken-ginger soup with sayote),stress,higher fruit/veg intake is linked with better mood,"comfort,fiber,protein,veg",soup,Main Meal,higher fruit/veg intake is linked with better mood
+"Tablea hot chocolate (unsweetened, light sweetener)",stress,cocoa flavanols can give a small mood lift,cocoa,drink,Drink,cocoa flavanols can give a small mood lift
+Mixed fruit bowl (mango-papaya-banana),stress,higher fruit/veg intake is linked with better mood,"fiber,fruit",other,Fruit Snack,higher fruit/veg intake is linked with better mood
+Kamote (boiled sweet potato),angry,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,low-GI",other,Other / Flexible,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Brown/red rice (half-and-half mix),angry,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,low-GI",rice bowl,Main Meal,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Monggo guisado (mung bean stew),angry,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,low-GI",other,Other / Flexible,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Malunggay leaves (add to soups),angry,higher fruit/veg intake is linked with better mood,"comfort,fiber,veg",soup,Soup / Main Meal,higher fruit/veg intake is linked with better mood
+"Peanuts / mani (unsalted, small handful)",angry,steady‑energy foods to help with irritability,,other,Snack,steady‑energy foods to help with irritability
+Adlai (grain) or corn rice (if available),angry,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,low-GI",rice bowl,Main Meal,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Saba banana + peanut butter (small),angry,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,fruit,low-GI",other,Snack,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Whole-grain tinapay (bread),angry,fish omega‑3s linked with better mood over time,"omega-3,protein",other,Snack,fish omega‑3s linked with better mood over time
+Lugaw (arroz caldo) with chicken breast (moderate),angry,balanced protein meal to stabilize energy and mood,"comfort,protein",soup,Main Meal,balanced protein meal to stabilize energy and mood
+Fresh lumpiang gulay (vegetable spring roll),angry,higher fruit/veg intake is linked with better mood,"fiber,veg",other,Veggie Snack / Side,higher fruit/veg intake is linked with better mood
+"Fatty fish (e.g., sardines, tulingan, bangus)",fear,fish omega‑3s linked with better mood over time,"omega-3,protein",other,Main Meal,fish omega‑3s linked with better mood over time
+Green tea (low-caffeine) or decaf tea,fear,tea theanine can calm while keeping attention,"hydration,theanine/low-caf",drink,Drink,tea theanine can calm while keeping attention
+Oatmeal with banana and nuts,fear,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,fruit,low-GI",other,Snack,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Plain yogurt with fruit,fear,fermented/probiotic foods may ease stress and improve mood,probiotic,other,Other / Flexible,fermented/probiotic foods may ease stress and improve mood
+Kimchi/yogurt combo bowl,fear,fermented/probiotic foods may ease stress and improve mood,probiotic,other,Other / Flexible,fermented/probiotic foods may ease stress and improve mood
+Tinolang isda (fish-ginger soup),fear,fish omega‑3s linked with better mood over time,"comfort,omega-3,protein",soup,Main Meal,fish omega‑3s linked with better mood over time
+Talbos ng kamote + itlog (omelette),fear,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,low-GI,veg",other,Veggie Snack / Side,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Dark chocolate square (85%),fear,cocoa flavanols can give a small mood lift,cocoa,other,Other / Flexible,cocoa flavanols can give a small mood lift
+Fresh buko water (unsweetened),fear,hydrating and gentle—good when tense,"fiber,fruit,hydration",drink,Dessert / Sweet Snack,hydrating and gentle—good when tense
+Turmeric-ginger tea (salabat with luyang dilaw),fear,tea theanine can calm while keeping attention,"hydration,theanine/low-caf",drink,Drink,tea theanine can calm while keeping attention
+Cheeseburger,happy,comfort/hedonic treat—enjoy occasionally,UPF/hedonic,burger,Main Meal,comfort/hedonic treat—enjoy occasionally
+Double cheeseburger,happy,comfort/hedonic treat—enjoy occasionally,UPF/hedonic,burger,Main Meal,comfort/hedonic treat—enjoy occasionally
+Burger steak with gravy,happy,tea theanine can calm while keeping attention,"UPF/hedonic,hydration,theanine/low-caf","burger,drink",Main Meal,tea theanine can calm while keeping attention
+Thin-crust pepperoni pizza,happy,comfort/hedonic treat—enjoy occasionally,UPF/hedonic,other,Other / Flexible,comfort/hedonic treat—enjoy occasionally
+Hawaiian pizza,happy,comfort/hedonic treat—enjoy occasionally,UPF/hedonic,other,Other / Flexible,comfort/hedonic treat—enjoy occasionally
+Chicken wings (garlic parmesan),happy,comfort/hedonic treat—enjoy occasionally,"UPF/hedonic,protein",other,Other / Flexible,comfort/hedonic treat—enjoy occasionally
+French fries,happy,comfort/hedonic treat—enjoy occasionally,UPF/hedonic,other,Snack,comfort/hedonic treat—enjoy occasionally
+Jolly spaghetti (sweet-style),happy,comfort/hedonic treat—enjoy occasionally,UPF/hedonic,other,Main Meal,comfort/hedonic treat—enjoy occasionally
+Palabok fiesta,happy,familiar comfort food that boosts enjoyment,,other,Other / Flexible,familiar comfort food that boosts enjoyment
+Siomai rice,happy,comfort/hedonic treat—enjoy occasionally,UPF/hedonic,other,Main Meal,comfort/hedonic treat—enjoy occasionally
+Siopao asado,happy,comfort/hedonic treat—enjoy occasionally,UPF/hedonic,other,Other / Flexible,comfort/hedonic treat—enjoy occasionally
+Shawarma wrap,happy,comfort/hedonic treat—enjoy occasionally,UPF/hedonic,other,Other / Flexible,comfort/hedonic treat—enjoy occasionally
+Takoyaki,happy,comfort/hedonic treat—enjoy occasionally,UPF/hedonic,other,Other / Flexible,comfort/hedonic treat—enjoy occasionally
+Tonkatsu rice bowl,happy,familiar comfort food that boosts enjoyment,,rice bowl,Main Meal,familiar comfort food that boosts enjoyment
+Tempura rice bowl,happy,comfort/hedonic treat—enjoy occasionally,UPF/hedonic,rice bowl,Main Meal,comfort/hedonic treat—enjoy occasionally
+Ramen (tonkotsu),happy,warm broth/comfort food can soothe stress,"UPF/hedonic,comfort",soup,Main Meal,warm broth/comfort food can soothe stress
+California maki,happy,familiar comfort food that boosts enjoyment,,other,Other / Flexible,familiar comfort food that boosts enjoyment
+Gyoza,happy,familiar comfort food that boosts enjoyment,,other,Other / Flexible,familiar comfort food that boosts enjoyment
+Halo-halo,happy,familiar comfort food that boosts enjoyment,dessert,dessert,Dessert / Sweet Snack,familiar comfort food that boosts enjoyment
+Ube ice cream,happy,comfort/hedonic treat—enjoy occasionally,"UPF/hedonic,dessert",dessert,Dessert / Sweet Snack,comfort/hedonic treat—enjoy occasionally
+Leche flan,happy,familiar comfort food that boosts enjoyment,dessert,dessert,Dessert / Sweet Snack,familiar comfort food that boosts enjoyment
+Mango float,happy,"low‑GI, fiber‑rich carbs steady energy and irritability","dessert,fiber,fruit,low-GI",dessert,Fruit Snack,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Buko pandan,happy,higher fruit/veg intake is linked with better mood,"dessert,fiber,fruit",dessert,Dessert / Sweet Snack,higher fruit/veg intake is linked with better mood
+Donut (glazed),happy,comfort/hedonic treat—enjoy occasionally,"UPF/hedonic,dessert",dessert,Dessert / Sweet Snack,comfort/hedonic treat—enjoy occasionally
+Ensaymada (cheese),happy,familiar comfort food that boosts enjoyment,dessert,dessert,Dessert / Sweet Snack,familiar comfort food that boosts enjoyment
+Spam and egg rice bowl,happy,comfort/hedonic treat—enjoy occasionally,UPF/hedonic,rice bowl,Main Meal,comfort/hedonic treat—enjoy occasionally
+Longsilog,happy,familiar comfort food that boosts enjoyment,,rice bowl,Main Meal,familiar comfort food that boosts enjoyment
+Tapsilog,happy,familiar comfort food that boosts enjoyment,,rice bowl,Main Meal,familiar comfort food that boosts enjoyment
+Tosilog,happy,familiar comfort food that boosts enjoyment,,rice bowl,Main Meal,familiar comfort food that boosts enjoyment
+Burger with bacon,happy,comfort/hedonic treat—enjoy occasionally,UPF/hedonic,burger,Main Meal,comfort/hedonic treat—enjoy occasionally
+Bistek Tagalog,sad,balanced protein meal to stabilize energy and mood,protein,other,Other / Flexible,balanced protein meal to stabilize energy and mood
+Adobong pusit,sad,nourishing choice often linked with mood support,,other,Main Meal,nourishing choice often linked with mood support
+Paksiw na isda,sad,fish omega‑3s linked with better mood over time,"omega-3,protein",other,Other / Flexible,fish omega‑3s linked with better mood over time
+Nilagang baka,sad,balanced protein meal to stabilize energy and mood,"comfort,protein",soup,Main Meal,balanced protein meal to stabilize energy and mood
+Sinigang na salmon belly,sad,fish omega‑3s linked with better mood over time,"comfort,omega-3,protein",soup,Main Meal,fish omega‑3s linked with better mood over time
+Tinapang bangus,sad,fish omega‑3s linked with better mood over time,"omega-3,protein",other,Main Meal,fish omega‑3s linked with better mood over time
+Paksiw na bangus,sad,fish omega‑3s linked with better mood over time,"omega-3,protein",other,Main Meal,fish omega‑3s linked with better mood over time
+Inihaw na tilapia,sad,fish omega‑3s linked with better mood over time,"omega-3,protein",other,Other / Flexible,fish omega‑3s linked with better mood over time
+Bangusilog,sad,fish omega‑3s linked with better mood over time,"omega-3,protein",rice bowl,Main Meal,fish omega‑3s linked with better mood over time
+Tinola with malunggay,sad,higher fruit/veg intake is linked with better mood,"comfort,fiber,veg",soup,Main Meal,higher fruit/veg intake is linked with better mood
+Tortang talong,sad,nourishing choice often linked with mood support,,other,Other / Flexible,nourishing choice often linked with mood support
+Ginisang sayote,sad,higher fruit/veg intake is linked with better mood,"fiber,veg",other,Other / Flexible,higher fruit/veg intake is linked with better mood
+Ginisang repolyo with tofu,sad,higher fruit/veg intake is linked with better mood,"fiber,veg",other,Other / Flexible,higher fruit/veg intake is linked with better mood
+Ginisang monggo with malunggay,sad,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,low-GI,veg",other,Other / Flexible,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Ensaladang talong,sad,higher fruit/veg intake is linked with better mood,"fiber,veg",other,Veggie Snack / Side,higher fruit/veg intake is linked with better mood
+"Sardine pasta (olive oil, garlic)",sad,fish omega‑3s linked with better mood over time,"omega-3,protein",other,Other / Flexible,fish omega‑3s linked with better mood over time
+Tuyo with kamatis,sad,nourishing choice often linked with mood support,,other,Other / Flexible,nourishing choice often linked with mood support
+Lumpiang sariwa,sad,nourishing choice often linked with mood support,,other,Other / Flexible,nourishing choice often linked with mood support
+Kansi (Ilonggo beef soup),sad,balanced protein meal to stabilize energy and mood,"comfort,protein",soup,Soup / Main Meal,balanced protein meal to stabilize energy and mood
+Pochero (beef with banana saba),sad,"low‑GI, fiber‑rich carbs steady energy and irritability","comfort,fiber,fruit,low-GI,protein",soup,Fruit Snack,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Arroz caldo with egg,stress,warm broth/comfort food can soothe stress,comfort,soup,Soup / Main Meal,warm broth/comfort food can soothe stress
+Goto with egg,stress,warm broth/comfort food can soothe stress,comfort,soup,Soup / Main Meal,warm broth/comfort food can soothe stress
+Chicken sotanghon soup,stress,balanced protein meal to stabilize energy and mood,"comfort,protein",soup,Soup / Main Meal,balanced protein meal to stabilize energy and mood
+Batchoy (moderate),stress,warm broth/comfort food can soothe stress,comfort,soup,Soup / Main Meal,warm broth/comfort food can soothe stress
+Lomi (moderate),stress,warm broth/comfort food can soothe stress,comfort,soup,Soup / Main Meal,warm broth/comfort food can soothe stress
+Miso soup,stress,warm broth/comfort food can soothe stress,comfort,soup,Soup / Main Meal,warm broth/comfort food can soothe stress
+Taho (warm),stress,"simple, soothing choice to take the edge off",,drink,Drink,"simple, soothing choice to take the edge off"
+Suman with tablea dip (moderate),stress,cocoa flavanols can give a small mood lift,"cocoa,dessert","dessert,drink",Drink,cocoa flavanols can give a small mood lift
+Boiled corn on the cob,stress,"simple, soothing choice to take the edge off",,other,Other / Flexible,"simple, soothing choice to take the edge off"
+Fresh buko juice (no sugar),stress,hydrating and gentle—good when tense,"fiber,fruit,hydration",drink,Drink,hydrating and gentle—good when tense
+Papaya slices,stress,higher fruit/veg intake is linked with better mood,"fiber,fruit",other,Fruit Snack,higher fruit/veg intake is linked with better mood
+Watermelon slices,stress,higher fruit/veg intake is linked with better mood,"fiber,fruit",other,Fruit Snack,higher fruit/veg intake is linked with better mood
+Cucumber-tomato salad,stress,higher fruit/veg intake is linked with better mood,"fiber,veg",other,Veggie Snack / Side,higher fruit/veg intake is linked with better mood
+Chicken Caesar salad (light dressing),stress,higher fruit/veg intake is linked with better mood,"fiber,protein,veg",other,Veggie Snack / Side,higher fruit/veg intake is linked with better mood
+Tuna sandwich on whole-wheat,stress,fish omega‑3s linked with better mood over time,"fiber,low-GI,omega-3,protein",other,Main Meal,fish omega‑3s linked with better mood over time
+Avocado toast (moderate),stress,"simple, soothing choice to take the edge off",,other,Other / Flexible,"simple, soothing choice to take the edge off"
+Greek yogurt with honey (light),stress,fermented/probiotic foods may ease stress and improve mood,probiotic,other,Other / Flexible,fermented/probiotic foods may ease stress and improve mood
+Granola with yogurt (moderate),stress,fermented/probiotic foods may ease stress and improve mood,"fiber,low-GI,probiotic",other,Other / Flexible,fermented/probiotic foods may ease stress and improve mood
+Calamansi tea with honey,stress,tea theanine can calm while keeping attention,"hydration,theanine/low-caf",drink,Drink,tea theanine can calm while keeping attention
+Salabat (ginger tea),stress,tea theanine can calm while keeping attention,"hydration,theanine/low-caf",drink,Drink,tea theanine can calm while keeping attention
+Ginataang kalabasa at sitaw,angry,higher fruit/veg intake is linked with better mood,"fiber,veg",other,Other / Flexible,higher fruit/veg intake is linked with better mood
+Ginisang pechay with tofu,angry,higher fruit/veg intake is linked with better mood,"fiber,veg",other,Other / Flexible,higher fruit/veg intake is linked with better mood
+Adobong kangkong,angry,higher fruit/veg intake is linked with better mood,"fiber,veg",other,Main Meal,higher fruit/veg intake is linked with better mood
+Boiled eggs,angry,steady‑energy foods to help with irritability,,other,Other / Flexible,steady‑energy foods to help with irritability
+Peanut butter on whole-wheat pandesal (small),angry,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,low-GI",other,Snack,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Chicken salad sandwich (whole-wheat),angry,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,low-GI,protein,veg",other,Snack,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Tuna brown rice bowl,angry,fish omega‑3s linked with better mood over time,"fiber,low-GI,omega-3,protein",rice bowl,Main Meal,fish omega‑3s linked with better mood over time
+Chickpea-monggo salad (if available),angry,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,low-GI,veg",other,Veggie Snack / Side,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Atchara side with grilled fish,angry,steady‑energy foods to help with irritability,,other,Other / Flexible,steady‑energy foods to help with irritability
+Corn rice (half portion),angry,steady‑energy foods to help with irritability,,rice bowl,Main Meal,steady‑energy foods to help with irritability
+Brown rice sushi bowl (salmon/tuna),angry,fish omega‑3s linked with better mood over time,"fiber,low-GI,omega-3,protein",rice bowl,Main Meal,fish omega‑3s linked with better mood over time
+"Inihaw na liempo (small portion, with brown rice)",angry,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,low-GI,protein",rice bowl,Main Meal,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Tinola with brown rice,angry,"low‑GI, fiber‑rich carbs steady energy and irritability","comfort,fiber,low-GI","rice bowl,soup",Main Meal,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Arroz caldo (brown rice) with chicken,angry,"low‑GI, fiber‑rich carbs steady energy and irritability","comfort,fiber,low-GI,protein","rice bowl,soup",Main Meal,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Edamame (if available),angry,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,low-GI",other,Other / Flexible,"low‑GI, fiber‑rich carbs steady energy and irritability"
+"Trail mix (unsalted nuts + dried fruit, small)",angry,"low‑GI, fiber‑rich carbs steady energy and irritability","fiber,low-GI",other,Snack,"low‑GI, fiber‑rich carbs steady energy and irritability"
+Fresh apple with peanut butter (small),angry,higher fruit/veg intake is linked with better mood,"fiber,fruit",other,Snack,higher fruit/veg intake is linked with better mood
+Lumpiang sariwa (peanut sauce light),angry,steady‑energy foods to help with irritability,,other,Snack,steady‑energy foods to help with irritability
+Egg drop soup (light),angry,warm broth/comfort food can soothe stress,comfort,soup,Soup / Main Meal,warm broth/comfort food can soothe stress
+Veggie omelette (talbos + sibuyas),angry,higher fruit/veg intake is linked with better mood,"fiber,veg",other,Veggie Snack / Side,higher fruit/veg intake is linked with better mood
+Nilagang manok,fear,warm broth/comfort food can soothe stress,"comfort,protein",soup,Main Meal,warm broth/comfort food can soothe stress
+Nilagang baka (lean cuts),fear,warm broth/comfort food can soothe stress,"comfort,protein",soup,Main Meal,warm broth/comfort food can soothe stress
+"Bulalo soup (light broth, moderate)",fear,warm broth/comfort food can soothe stress,comfort,soup,Soup / Main Meal,warm broth/comfort food can soothe stress
+Halaan soup (clam soup),fear,warm broth/comfort food can soothe stress,comfort,soup,Soup / Main Meal,warm broth/comfort food can soothe stress
+Sinigang na isda (light sour broth),fear,fish omega‑3s linked with better mood over time,"comfort,omega-3,protein",soup,Main Meal,fish omega‑3s linked with better mood over time
+Congee with fish fillet,fear,warm broth/comfort food can soothe stress,comfort,soup,Main Meal,warm broth/comfort food can soothe stress
+Chicken congee with ginger,fear,warm broth/comfort food can soothe stress,"comfort,protein",soup,Main Meal,warm broth/comfort food can soothe stress
+"Ramen (shio, less spicy)",fear,warm broth/comfort food can soothe stress,"UPF/hedonic,comfort",soup,Main Meal,warm broth/comfort food can soothe stress
+Salmon teriyaki with rice (small portion),fear,fish omega‑3s linked with better mood over time,"omega-3,protein",rice bowl,Main Meal,fish omega‑3s linked with better mood over time
+Tuna maki,fear,fish omega‑3s linked with better mood over time,"omega-3,protein",other,Main Meal,fish omega‑3s linked with better mood over time
+Kani salad,fear,higher fruit/veg intake is linked with better mood,"fiber,veg",other,Veggie Snack / Side,higher fruit/veg intake is linked with better mood
+Gimbap (tuna or veggie),fear,fish omega‑3s linked with better mood over time,"omega-3,protein",other,Main Meal,fish omega‑3s linked with better mood over time
+"Korean tofu stew (soft tofu, mild)",fear,"gentle, calming choice when feeling anxious",,other,Other / Flexible,"gentle, calming choice when feeling anxious"
+Golden milk (turmeric latte; dairy/non-dairy),fear,hydrating and gentle—good when tense,hydration,drink,Drink,hydrating and gentle—good when tense
+Warm milk (or soy milk) with banana,fear,hydrating and gentle—good when tense,"fiber,fruit,hydration",drink,Fruit Snack,hydrating and gentle—good when tense
+Chamomile tea (if available),fear,tea theanine can calm while keeping attention,"hydration,theanine/low-caf",drink,Drink,tea theanine can calm while keeping attention
+Decaf green tea,fear,tea theanine can calm while keeping attention,"hydration,theanine/low-caf",drink,Drink,tea theanine can calm while keeping attention
+Buko water (unsweetened),fear,hydrating and gentle—good when tense,"fiber,fruit,hydration",drink,Dessert / Sweet Snack,hydrating and gentle—good when tense
+Warm calamansi water,fear,hydrating and gentle—good when tense,hydration,drink,Drink,hydrating and gentle—good when tense
+"Jollibee Chickenjoy with rice (1-pc, regular)",happy,classic Filipino comfort meal; crunchy chicken + rice feels like a reward treat when you did something good,"fastfood,main meal",rice bowl,Main Meal,classic Filipino comfort meal; crunchy chicken + rice feels like a reward treat when you did something good
+Jollibee Jolly Spaghetti (regular serving),happy,"sweet-style spaghetti is linked with birthdays and celebrations, so it feels party-like even on a normal day","fastfood,pasta,hedonic",other,Main Meal,"sweet-style spaghetti is linked with birthdays and celebrations, so it feels party-like even on a normal day"
+McDonald's Cheeseburger with small fries,happy,"salty, cheesy, and familiar combo that gives quick pleasure and feels like a small treat","fastfood,burger,hedonic",burger,Main Meal,"salty, cheesy, and familiar combo that gives quick pleasure and feels like a small treat"
+McDonald's Coke Float / McFloat (small),happy,"cold, fizzy, and sweet—good for ""reward"" vibes on a hot day or after school","fastfood,drink,hedonic","drink,dessert",Drink,"cold, fizzy, and sweet—good for ""reward"" vibes on a hot day or after school"
+7-Eleven Big Bite hotdog + drink combo,stress,quick and filling when you are rushing or cramming and just need something easy to grab,"fastfood,convenience","burger,drink",Drink,quick and filling when you are rushing or cramming and just need something easy to grab
+"Fast-food chicken nuggets (4–6 pcs, with dip)",happy,"bite-sized, crunchy, and fun to share with friends so it feels playful","fastfood,protein,hedonic",other,Other / Flexible,"bite-sized, crunchy, and fun to share with friends so it feels playful"
+"Burger steak with rice (Jollibee-style, 1-pc)",sad,"savory gravy + rice is warm and heavy, giving a ""comfort ulam"" feeling when you are down","fastfood,main meal",rice bowl,Main Meal,"savory gravy + rice is warm and heavy, giving a ""comfort ulam"" feeling when you are down"
+Fast-food vanilla sundae (small),happy,cold and sweet dessert that feels like a reward after a long or tiring day,"fastfood,dessert,hedonic",dessert,Dessert / Sweet Snack,cold and sweet dessert that feels like a reward after a long or tiring day
+"Milk tea (small size, less sugar)",stress,sweet and creamy drink that feels relaxing to sip while studying or venting with friends,"drink,hedonic",drink,Drink,sweet and creamy drink that feels relaxing to sip while studying or venting with friends
+Fast-food fried chicken + spaghetti combo meal,happy,"birthday-party combo for many Filipinos, so it feels celebratory and nostalgic","fastfood,main meal,combo","rice bowl,burger",Main Meal,"birthday-party combo for many Filipinos, so it feels celebratory and nostalgic"
