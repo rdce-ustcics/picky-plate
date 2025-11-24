@@ -13,6 +13,45 @@
   --sidebar-open:290px;
 }
 
+/* ========== TOGGLE BUTTON (Desktop) - Right edge, vertically centered ========== */
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 7%;
+  right: -18px;
+  transform: translateY(-50%);
+  z-index: 110;
+  background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%);
+  border: 2px solid rgba(255, 196, 45, 0.3);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: var(--pap-orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-toggle-btn:hover {
+  transform: translateY(-50%) scale(1.15);
+  box-shadow: 0 6px 16px rgba(255, 138, 61, 0.5);
+}
+
+.sidebar-toggle-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+/* Rotate arrow when expanded */
+.pap-sidebar.is-expanded .sidebar-toggle-btn {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.pap-sidebar.is-expanded .sidebar-toggle-btn:hover {
+  transform: translateY(-50%) rotate(180deg) scale(1.15);
+}
+
 /* ========== MOBILE MENU BUTTON ========== */
 .mobile-menu-btn {
   position: fixed;
@@ -71,13 +110,19 @@
   flex-direction: column;
   gap: 16px;
   transition: width .3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
+  overflow: visible; /* CHANGED: Allow toggle button to show outside */
   z-index: 100;
 }
 
-.pap-sidebar:hover{ 
+/* Click-based expansion */
+.pap-sidebar.is-expanded { 
   width: var(--sidebar-open);
   box-shadow: 4px 0 32px rgba(255, 196, 45, 0.12);
+}
+
+/* Clip content when collapsed to hide labels, but allow toggle button */
+.pap-sidebar:not(.is-expanded) {
+  clip-path: inset(0 -20px 0 0); /* Allow 20px overflow on right for button */
 }
 
 /* Logo Container */
@@ -129,13 +174,13 @@
   white-space: nowrap;
 }
 
-/* When expanded: show text, hide image */
-.pap-sidebar:hover .pap-logo-image{
+/* Show text when expanded via click */
+.pap-sidebar.is-expanded .pap-logo-image{
   opacity: 0;
   pointer-events: none;
 }
 
-.pap-sidebar:hover .pap-logo-text{
+.pap-sidebar.is-expanded .pap-logo-text{
   opacity: 1;
 }
 
@@ -150,15 +195,17 @@
   line-height: 0.8;
 }
 
-/* Nav container - CHANGED: removed flex: 1 */
+/* Nav container */
 .pap-nav{
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 4px;
-  margin-bottom: 24px; /* Added spacing before login card */
+  margin-bottom: 24px;
+  flex: 1;
 }
 
 /* Base links */
@@ -237,7 +284,7 @@
   transform: scale(1.15);
 }
 
-/* Label reveal on hover */
+/* Label visibility based on is-expanded class */
 .pap-label{
   opacity: 0;
   transform: translateX(-8px);
@@ -245,23 +292,23 @@
   pointer-events: none;
 }
 
-.pap-sidebar:hover .pap-label{
+.pap-sidebar.is-expanded .pap-label{
   opacity: 1;
   transform: none;
   pointer-events: auto;
 }
 
-/* Collapsed state */
-.pap-sidebar:not(:hover) .pap-login-card{ 
+/* Collapsed state based on is-expanded class */
+.pap-sidebar:not(.is-expanded) .pap-login-card{ 
   display: none; 
 }
 
-.pap-sidebar:not(:hover) .pap-contact-pill{
+.pap-sidebar:not(.is-expanded) .pap-contact-pill{
   padding: 14px;
   border-radius: 16px;
 }
 
-/* Login card - CHANGED: removed margin-top: auto */
+/* Login card */
 .pap-login-card{
   background: linear-gradient(135deg, var(--pap-yellow) 0%, var(--pap-orange) 100%);
   border-radius: 20px;
@@ -354,6 +401,11 @@
     display: block !important;
   }
 
+  /* Hide desktop toggle button on mobile */
+  .sidebar-toggle-btn {
+    display: none !important;
+  }
+
   .pap-sidebar {
     position: fixed;
     top: 0;
@@ -364,6 +416,8 @@
     z-index: 1000;
     transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: none;
+    overflow: hidden; /* Hide overflow on mobile */
+    clip-path: none; /* Remove clip-path on mobile */
   }
 
   .pap-sidebar.mobile-open {
@@ -393,7 +447,7 @@
     padding: 14px !important;
   }
 
-  .pap-sidebar:hover {
+  .pap-sidebar.mobile-open {
     width: 85vw;
     max-width: 320px;
   }

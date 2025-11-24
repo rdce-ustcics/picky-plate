@@ -15,7 +15,13 @@ export default function Login() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [formData, setFormData] = useState({ name: "", email: "", password: "", confirmPassword: "" });
+  const [formData, setFormData] = useState({ 
+    firstName: "", 
+    lastName: "", 
+    email: "", 
+    password: "", 
+    confirmPassword: "" 
+  });
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
   const [apiError, setApiError] = useState("");
@@ -23,11 +29,13 @@ export default function Login() {
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const validatePassword = (password) => password.length >= 8;
-  const validateName = (name) => name.trim().length >= 2;
+  const validateFirstName = (firstName) => firstName.trim().length >= 2;
+  const validateLastName = (lastName) => lastName.trim().length >= 2;
 
   const validateForm = () => {
     const newErrors = {};
-    if (!isLogin && !validateName(formData.name)) newErrors.name = "Name must be at least 2 characters";
+    if (!isLogin && !validateFirstName(formData.firstName)) newErrors.firstName = "First name must be at least 2 characters";
+    if (!isLogin && !validateLastName(formData.lastName)) newErrors.lastName = "Last name must be at least 2 characters";
     if (!formData.email) newErrors.email = "Email is required";
     else if (!validateEmail(formData.email)) newErrors.email = "Please enter a valid email address";
     if (!formData.password) newErrors.password = "Password is required";
@@ -42,9 +50,13 @@ export default function Login() {
   const handleBlur = (field) => {
     setTouched((t) => ({ ...t, [field]: true }));
     const errs = { ...errors };
-    if (field === "name" && !isLogin) {
-      if (!validateName(formData.name)) errs.name = "Name must be at least 2 characters";
-      else delete errs.name;
+    if (field === "firstName" && !isLogin) {
+      if (!validateFirstName(formData.firstName)) errs.firstName = "First name must be at least 2 characters";
+      else delete errs.firstName;
+    }
+    if (field === "lastName" && !isLogin) {
+      if (!validateLastName(formData.lastName)) errs.lastName = "Last name must be at least 2 characters";
+      else delete errs.lastName;
     }
     if (field === "email") {
       if (!formData.email) errs.email = "Email is required";
@@ -73,7 +85,8 @@ export default function Login() {
 
     if (touched[name]) {
       const errs = { ...errors };
-      if (name === "name" && !isLogin && validateName(value)) delete errs.name;
+      if (name === "firstName" && !isLogin && validateFirstName(value)) delete errs.firstName;
+      if (name === "lastName" && !isLogin && validateLastName(value)) delete errs.lastName;
       if (name === "email" && validateEmail(value)) delete errs.email;
       if (name === "password") {
         if (validatePassword(value)) delete errs.password;
@@ -91,7 +104,7 @@ export default function Login() {
 
     const errs = validateForm();
     setErrors(errs);
-    setTouched({ name: true, email: true, password: true, confirmPassword: true });
+    setTouched({ firstName: true, lastName: true, email: true, password: true, confirmPassword: true });
     if (Object.keys(errs).length > 0) return;
 
     setIsLoading(true);
@@ -113,7 +126,9 @@ export default function Login() {
         return navigate("/", { replace: true });
         } else {
           // SIGNUP → create account, send OTP, then go to OTP page
-          const result = await authSignup(formData.name, formData.email, formData.password);
+          // Combine firstName and lastName for the name field
+          const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
+          const result = await authSignup(fullName, formData.email, formData.password);
           if (!result?.success) throw new Error(result?.message || "Signup failed");
 
           // Request OTP for this email
@@ -163,7 +178,7 @@ export default function Login() {
 
   const switchMode = () => {
     setIsLogin((v) => !v);
-    setFormData({ name: "", email: "", password: "", confirmPassword: "" });
+    setFormData({ firstName: "", lastName: "", email: "", password: "", confirmPassword: "" });
     setErrors({});
     setTouched({});
     setApiError("");
@@ -205,31 +220,62 @@ export default function Login() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+            {/* First Name and Last Name - Side by Side */}
             {!isLogin && (
-              <div>
-                <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">Full Name</label>
-                <div className="relative">
-                  <User className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    onBlur={() => handleBlur("name")}
-                    disabled={isLoading}
-                    className={`w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 border-2 rounded-xl focus:outline-none transition text-sm sm:text-base ${
-                      touched.name && errors.name ? "border-red-500 focus:border-red-500" : "border-gray-200 focus:border-yellow-400"
-                    } ${isLoading ? "bg-gray-50 cursor-not-allowed" : ""}`}
-                    placeholder="Enter your full name"
-                    autoComplete="name"
-                  />
-                </div>
-                {touched.name && errors.name && (
-                  <div className="flex items-center gap-2 mt-2 text-red-500 text-xs sm:text-sm">
-                    <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span>{errors.name}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* First Name */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">First Name</label>
+                  <div className="relative">
+                    <User className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+                    <input
+                      type="text"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur("firstName")}
+                      disabled={isLoading}
+                      className={`w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 border-2 rounded-xl focus:outline-none transition text-sm sm:text-base ${
+                        touched.firstName && errors.firstName ? "border-red-500 focus:border-red-500" : "border-gray-200 focus:border-yellow-400"
+                      } ${isLoading ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                      placeholder="First name"
+                      autoComplete="given-name"
+                    />
                   </div>
-                )}
+                  {touched.firstName && errors.firstName && (
+                    <div className="flex items-center gap-2 mt-2 text-red-500 text-xs sm:text-sm">
+                      <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span>{errors.firstName}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Last Name */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-2">Last Name</label>
+                  <div className="relative">
+                    <User className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+                    <input
+                      type="text"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur("lastName")}
+                      disabled={isLoading}
+                      className={`w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 border-2 rounded-xl focus:outline-none transition text-sm sm:text-base ${
+                        touched.lastName && errors.lastName ? "border-red-500 focus:border-red-500" : "border-gray-200 focus:border-yellow-400"
+                      } ${isLoading ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                      placeholder="Last name"
+                      autoComplete="family-name"
+                    />
+                  </div>
+                  {touched.lastName && errors.lastName && (
+                    <div className="flex items-center gap-2 mt-2 text-red-500 text-xs sm:text-sm">
+                      <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span>{errors.lastName}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -419,8 +465,6 @@ export default function Login() {
             <h2 className="text-5xl font-bold mb-6">PickAPlate</h2>
             <p className="text-xl mb-4">Discover Smarter Food Choices</p>
             <p className="text-lg opacity-90">Join thousands of food lovers exploring the best dishes in town</p>
-
-        
           </div>
         </div>
       </div> 

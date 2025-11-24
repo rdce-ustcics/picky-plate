@@ -1,15 +1,16 @@
 // src/modules/Sidebar/sidebar.js
 import { useState, useEffect } from "react";
 import { NavLink, Link } from "react-router-dom";
-import { FiGrid, FiUser, FiUsers, FiGlobe, FiSettings, FiMessageCircle, FiMenu, FiX, FiBookOpen, FiMapPin } from "react-icons/fi";
+import { FiGrid, FiUser, FiUsers, FiGlobe, FiSettings, FiMessageCircle, FiMenu, FiX, FiBookOpen, FiMapPin, FiChevronRight } from "react-icons/fi";
 import { useAuth } from "../../auth/AuthContext";
 import "./sidebar.css";
 
 const Sidebar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false); // NEW: State for desktop sidebar toggle
 
-  // ADD THESE DEBUG LINES
+  // Debug lines
   console.log('🔍 Sidebar Debug:');
   console.log('User:', user);
   console.log('User Role:', user?.role);
@@ -22,6 +23,9 @@ const Sidebar = () => {
   }, [isMobileMenuOpen]);
 
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
+  // NEW: Toggle desktop sidebar
+  const toggleSidebar = () => setIsExpanded(!isExpanded);
 
   // Items array with conditional admin button
   const items = [
@@ -53,10 +57,20 @@ const Sidebar = () => {
       {/* Overlay */}
       {isMobileMenuOpen && <div className="mobile-overlay" onClick={closeMobileMenu} />}
 
-      {/* Sidebar */}
-      <aside className={`pap-sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
+      {/* Sidebar - CHANGED: Added is-expanded class based on state */}
+      <aside className={`pap-sidebar ${isMobileMenuOpen ? "mobile-open" : ""} ${isExpanded ? "is-expanded" : ""}`}>
+        
+        {/* NEW: Toggle Button for Desktop */}
+        <button 
+          className="sidebar-toggle-btn" 
+          onClick={toggleSidebar}
+          aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          <FiChevronRight size={18} />
+        </button>
+
         <Link to="/" className="pap-logo-container" onClick={closeMobileMenu}>
-          {/* 🔄 CHANGED: Using picklogo.png instead of emoji */}
+          {/* Logo Image */}
           <div className="pap-logo-image">
             <img 
               src="/images/picklogo.png" 
