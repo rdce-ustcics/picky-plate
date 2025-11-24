@@ -112,7 +112,8 @@ router.get("/", async (req, res) => {
       const safe = String(authorId).trim();
       const or = [{ author: new RegExp(`^${escapeRegExp(safe)}$`, "i") }];
       if (/^[0-9a-fA-F]{24}$/.test(safe)) {
-        or.push({ createdBy: safe });
+        const mongoose = require('mongoose');
+        or.push({ createdBy: new mongoose.Types.ObjectId(safe) });
       }
       q.$and = (q.$and || []).concat([{ $or: or }]);
     }
@@ -242,6 +243,116 @@ router.post("/", protect, async (req, res) => {
   } catch (e) {
     console.error("create_recipe_error:", e);
     res.status(500).json({ success: false, error: "create_failed" });
+  }
+});
+
+/**
+ * PUT /api/recipes/:id
+ * Update a recipe - Only the creator can edit
+ */
+router.put("/:id", protect, async (req, res) => {
+  try {
+    const recipe = await Recipe.findById(req.params.id);
+
+    if (!recipe) {
+      return res.status(404).json({ success: false, error: "Recipe not found" });
+    }
+
+    // Check if user is the creator
+    const userId = String(req.user?._id || req.user?.id || "");
+    const recipeCreatorId = String(recipe.createdBy || "");
+
+    if (userId !== recipeCreatorId) {
+      return res.status(403).json({
+        success: false,
+        error: "You can only edit your own recipes"
+      });
+    }
+
+    // Update allowed fields
+    const {
+      title,
+      image,
+      prepTime,
+      cookTime,
+      difficulty,
+      description,
+      servings,
+      notes,
+      ingredients,
+      instructions,
+      tags,
+      allergens,
+    } = req.body;
+
+    if (title !== undefined) recipe.title = title;
+    if (image !== undefined) recipe.image = image;
+    if (prepTime !== undefined) recipe.prepTime = prepTime;
+    if (cookTime !== undefined) recipe.cookTime = cookTime;
+    if (difficulty !== undefined) recipe.difficulty = difficulty;
+    if (description !== undefined) recipe.description = description;
+    if (servings !== undefined) recipe.servings = servings;
+    if (notes !== undefined) recipe.notes = notes;
+
+    if (ingredients !== undefined) {
+      recipe.ingredients = Array.isArray(ingredients) ? ingredients : [];
+    }
+    if (instructions !== undefined) {
+      recipe.instructions = Array.isArray(instructions) ? instructions : [];
+    }
+
+    if (tags !== undefined) {
+      const cleanTags = (Array.isArray(tags) ? tags : String(tags).split(","))
+        .map((t) => String(t).trim().toLowerCase())
+        .filter(Boolean);
+      recipe.tags = cleanTags;
+    }
+
+    if (allergens !== undefined) {
+      const cleanAllergens = (Array.isArray(allergens) ? allergens : String(allergens).split(","))
+        .map((a) => String(a).trim().toLowerCase())
+        .filter(Boolean);
+      recipe.allergens = cleanAllergens;
+    }
+
+    await recipe.save();
+
+    res.json({ success: true, recipe });
+  } catch (e) {
+    console.error("update_recipe_error:", e);
+    res.status(500).json({ success: false, error: "update_failed" });
+  }
+});
+
+/**
+ * DELETE /api/recipes/:id
+ * Delete a recipe - Only the creator can delete
+ */
+router.delete("/:id", protect, async (req, res) => {
+  try {
+    const recipe = await Recipe.findById(req.params.id);
+
+    if (!recipe) {
+      return res.status(404).json({ success: false, error: "Recipe not found" });
+    }
+
+    // Check if user is the creator
+    const userId = String(req.user?._id || req.user?.id || "");
+    const recipeCreatorId = String(recipe.createdBy || "");
+
+    if (userId !== recipeCreatorId) {
+      return res.status(403).json({
+        success: false,
+        error: "You can only delete your own recipes"
+      });
+    }
+
+    await Recipe.findByIdAndDelete(req.params.id);
+
+    res.json({ success: true, message: "Recipe deleted successfully" });
+  } catch (e) {
+    console.error("delete_recipe_error:", e);
+    res.status(500).json({ success: false, error: "delete_failed" });
   }
 });
 

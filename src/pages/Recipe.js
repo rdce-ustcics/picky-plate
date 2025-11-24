@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle,
-  Filter, Search, FileText, Download, Flag
+  Filter, Search, FileText, Download, Flag, Edit, Trash2, AlertCircle, Loader
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import html2canvas from "html2canvas";
@@ -46,7 +46,7 @@ const REPORT_REASONS = [
 
 
 export default function CommunityRecipes() {
-  const { isAuthenticated, authHeaders } = useAuth();
+  const { isAuthenticated, authHeaders, user } = useAuth();
 
   // Identify active user (used for "My Recipes")
   const activeUserId = (() => {
@@ -94,6 +94,27 @@ export default function CommunityRecipes() {
   const [reportReason, setReportReason] = useState("");
   const [reportComment, setReportComment] = useState("");
   const [reportLoading, setReportLoading] = useState(false);
+
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingRecipe, setEditingRecipe] = useState(null);
+  const [editForm, setEditForm] = useState({
+    title: "",
+    description: "",
+    prepTime: "",
+    cookTime: "",
+    difficulty: "Easy",
+    servings: "",
+    notes: "",
+    ingredients: [""],
+    instructions: [""],
+    tags: [],
+    allergens: [],
+    image: ""
+  });
+  const [editImagePreview, setEditImagePreview] = useState(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editErrors, setEditErrors] = useState({});
 
   const navigate = useNavigate();
 
@@ -371,6 +392,300 @@ export default function CommunityRecipes() {
       alert("Failed to report. Please try again.");
     } finally {
       setReportLoading(false);
+    }
+  }
+
+  // Check if current user is the creator of the recipe
+  const isRecipeOwner = (recipe) => {
+    if (!user || !recipe) return false;
+    const userId = String(user._id || user.id || "");
+    const recipeCreatorId = String(recipe.createdBy || "");
+    return userId === recipeCreatorId;
+  };
+
+  // Open edit modal with recipe data
+  function handleEditRecipe(recipe) {
+    if (!isRecipeOwner(recipe)) {
+      alert("You can only edit your own recipes");
+      return;
+    }
+
+    setEditingRecipe(recipe);
+    setEditForm({
+      title: recipe.title || "",
+      description: recipe.description || "",
+      prepTime: recipe.prepTime || "",
+      cookTime: recipe.cookTime || "",
+      difficulty: recipe.difficulty || "Easy",
+      servings: recipe.servings || "",
+      notes: recipe.notes || "",
+      ingredients: recipe.ingredients?.length > 0 ? recipe.ingredients : [""],
+      instructions: recipe.instructions?.length > 0 ? recipe.instructions : [""],
+      tags: recipe.tags || [],
+      allergens: recipe.allergens || [],
+      image: recipe.image || ""
+    });
+    setEditImagePreview(recipe.image || null);
+    setEditErrors({});
+    setShowEditModal(true);
+    setSelectedRecipe(null); // Close detail modal
+  }
+
+  // Close edit modal
+  function closeEditModal() {
+    setShowEditModal(false);
+    setEditingRecipe(null);
+    setEditForm({
+      title: "",
+      description: "",
+      prepTime: "",
+      cookTime: "",
+      difficulty: "Easy",
+      servings: "",
+      notes: "",
+      ingredients: [""],
+      instructions: [""],
+      tags: [],
+      allergens: [],
+      image: ""
+    });
+    setEditImagePreview(null);
+    setEditErrors({});
+  }
+
+  // Validate image is landscape
+  const validateImageOrientation = (file) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        img.onload = () => {
+          const width = img.width;
+          const height = img.height;
+
+          if (width > height) {
+            resolve(true); // Landscape
+          } else {
+            reject(new Error("Image must be landscape (width > height)"));
+          }
+        };
+        img.src = e.target.result;
+      };
+
+      reader.onerror = () => reject(new Error("Failed to read image"));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Handle image upload for edit
+  const handleEditImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    if (!file.type.startsWith('image/')) {
+      setEditErrors(prev => ({ ...prev, image: "Please upload an image file" }));
+      return;
+    }
+
+    // Check file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setEditErrors(prev => ({ ...prev, image: "Image must be less than 5MB" }));
+      return;
+    }
+
+    try {
+      await validateImageOrientation(file);
+
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditImagePreview(reader.result);
+        setEditForm(prev => ({ ...prev, image: reader.result }));
+        setEditErrors(prev => ({ ...prev, image: null }));
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      setEditErrors(prev => ({ ...prev, image: error.message }));
+      e.target.value = ""; // Clear file input
+    }
+  };
+
+  // Validate edit form
+  const validateEditForm = () => {
+    const errors = {};
+
+    if (!editForm.title.trim()) {
+      errors.title = "Title is required";
+    }
+
+    if (!editForm.description.trim()) {
+      errors.description = "Description is required";
+    }
+
+    const validIngredients = editForm.ingredients.filter(ing => ing.trim());
+    if (validIngredients.length === 0) {
+      errors.ingredients = "At least one ingredient is required";
+    }
+
+    const validInstructions = editForm.instructions.filter(inst => inst.trim());
+    if (validInstructions.length === 0) {
+      errors.instructions = "At least one instruction is required";
+    }
+
+    return errors;
+  };
+
+  // Submit edit form
+  async function submitEditForm() {
+    const errors = validateEditForm();
+
+    if (Object.keys(errors).length > 0) {
+      setEditErrors(errors);
+      return;
+    }
+
+    setEditLoading(true);
+
+    try {
+      const cleanedData = {
+        ...editForm,
+        ingredients: editForm.ingredients.filter(ing => ing.trim()),
+        instructions: editForm.instructions.filter(inst => inst.trim())
+      };
+
+      const res = await fetch(`${API_BASE}/api/recipes/${editingRecipe._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders()
+        },
+        body: JSON.stringify(cleanedData)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        alert(data.error || "Failed to update recipe");
+        return;
+      }
+
+      // Update recipe in list
+      setItems(prev => prev.map(item =>
+        item._id === editingRecipe._id ? { ...item, ...data.recipe } : item
+      ));
+
+      alert("Recipe updated successfully!");
+      closeEditModal();
+
+      // Refresh the list
+      await fetchList();
+    } catch (e) {
+      console.error("update_recipe_error:", e);
+      alert("Failed to update recipe. Please try again.");
+    } finally {
+      setEditLoading(false);
+    }
+  }
+
+  // Edit form handlers
+  const handleEditFormChange = (field, value) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
+    if (editErrors[field]) {
+      setEditErrors(prev => ({ ...prev, [field]: null }));
+    }
+  };
+
+  const addEditIngredient = () => {
+    setEditForm(prev => ({ ...prev, ingredients: [...prev.ingredients, ""] }));
+  };
+
+  const removeEditIngredient = (index) => {
+    setEditForm(prev => ({
+      ...prev,
+      ingredients: prev.ingredients.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleEditIngredientChange = (index, value) => {
+    const newIngredients = [...editForm.ingredients];
+    newIngredients[index] = value;
+    setEditForm(prev => ({ ...prev, ingredients: newIngredients }));
+    if (editErrors.ingredients) {
+      setEditErrors(prev => ({ ...prev, ingredients: null }));
+    }
+  };
+
+  const addEditInstruction = () => {
+    setEditForm(prev => ({ ...prev, instructions: [...prev.instructions, ""] }));
+  };
+
+  const removeEditInstruction = (index) => {
+    setEditForm(prev => ({
+      ...prev,
+      instructions: prev.instructions.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleEditInstructionChange = (index, value) => {
+    const newInstructions = [...editForm.instructions];
+    newInstructions[index] = value;
+    setEditForm(prev => ({ ...prev, instructions: newInstructions }));
+    if (editErrors.instructions) {
+      setEditErrors(prev => ({ ...prev, instructions: null }));
+    }
+  };
+
+  const toggleEditTag = (tag) => {
+    setEditForm(prev => ({
+      ...prev,
+      tags: prev.tags.includes(tag)
+        ? prev.tags.filter(t => t !== tag)
+        : [...prev.tags, tag]
+    }));
+  };
+
+  const toggleEditAllergen = (allergen) => {
+    setEditForm(prev => ({
+      ...prev,
+      allergens: prev.allergens.includes(allergen)
+        ? prev.allergens.filter(a => a !== allergen)
+        : [...prev.allergens, allergen]
+    }));
+  };
+
+  // Delete recipe
+  async function handleDeleteRecipe(recipe) {
+    if (!isRecipeOwner(recipe)) {
+      alert("You can only delete your own recipes");
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete "${recipe.title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/recipes/${recipe._id}`, {
+        method: "DELETE",
+        headers: authHeaders()
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        alert(data.error || "Failed to delete recipe");
+        return;
+      }
+
+      // Remove from list and close modal
+      setItems((prev) => prev.filter((it) => it._id !== recipe._id));
+      setSelectedRecipe(null);
+      alert("Recipe deleted successfully");
+    } catch (e) {
+      console.error("delete_recipe_error:", e);
+      alert("Failed to delete recipe. Please try again.");
     }
   }
 
@@ -1040,20 +1355,46 @@ export default function CommunityRecipes() {
                   Download PDF
                 </button>
 
-                {/* Report button */}
-                <button
-                  onClick={openReport}
-                  disabled={!!selectedRecipe?.reportedByMe}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-2xl shadow-md transition border-2 font-bold
-                    ${selectedRecipe?.reportedByMe
-                      ? "bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed"
-                      : "bg-white hover:bg-red-50 text-amber-700 border-amber-200 hover:border-red-300 hover:text-red-700"
-                    }`}
-                  title={selectedRecipe?.reportedByMe ? "You have already reported this recipe" : "Report this recipe"}
-                >
-                  <Flag className="w-4 h-4" />
-                  {selectedRecipe?.reportedByMe ? "Reported" : "Report Recipe"}
-                </button>
+                {/* Edit button - Only show for recipe owner */}
+                {isRecipeOwner(selectedRecipe) && (
+                  <button
+                    onClick={() => handleEditRecipe(selectedRecipe)}
+                    className="bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-white font-bold px-6 py-3 rounded-2xl shadow-lg transition flex items-center gap-2"
+                    title="Edit your recipe"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Edit Recipe
+                  </button>
+                )}
+
+                {/* Delete button - Only show for recipe owner */}
+                {isRecipeOwner(selectedRecipe) && (
+                  <button
+                    onClick={() => handleDeleteRecipe(selectedRecipe)}
+                    className="bg-white hover:bg-red-50 text-red-700 border-2 border-red-300 hover:border-red-400 font-bold px-6 py-3 rounded-2xl shadow-md transition flex items-center gap-2"
+                    title="Delete your recipe"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                )}
+
+                {/* Report button - Only show if NOT the owner */}
+                {!isRecipeOwner(selectedRecipe) && (
+                  <button
+                    onClick={openReport}
+                    disabled={!!selectedRecipe?.reportedByMe}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-2xl shadow-md transition border-2 font-bold
+                      ${selectedRecipe?.reportedByMe
+                        ? "bg-gray-200 border-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-white hover:bg-red-50 text-amber-700 border-amber-200 hover:border-red-300 hover:text-red-700"
+                      }`}
+                    title={selectedRecipe?.reportedByMe ? "You have already reported this recipe" : "Report this recipe"}
+                  >
+                    <Flag className="w-4 h-4" />
+                    {selectedRecipe?.reportedByMe ? "Reported" : "Report Recipe"}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1125,6 +1466,340 @@ export default function CommunityRecipes() {
             <p className="text-xs text-amber-700 mt-4 font-medium">
               You can report a recipe only once. Reaching 20 total reports (lifetime) or 5 reports in a week flags it for review.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Recipe Modal */}
+      {showEditModal && editingRecipe && (
+        <div
+          className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 overflow-y-auto"
+          onClick={closeEditModal}
+        >
+          <div
+            className="w-full max-w-4xl bg-gradient-to-br from-amber-50 to-yellow-50 rounded-3xl shadow-2xl p-6 sm:p-8 border-4 border-amber-300 my-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-amber-400 to-yellow-500 flex items-center justify-center shadow-md">
+                  <Edit className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-amber-900">Edit Recipe</h3>
+              </div>
+              <button
+                onClick={closeEditModal}
+                className="w-10 h-10 rounded-xl bg-white hover:bg-amber-50 flex items-center justify-center transition shadow-md"
+              >
+                <X className="w-5 h-5 text-amber-900" />
+              </button>
+            </div>
+
+            <div className="space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
+              {/* Image Upload */}
+              <div>
+                <label className="block text-sm font-bold text-amber-900 mb-2">
+                  Recipe Image (Landscape only) <span className="text-red-600">*</span>
+                </label>
+                <div className="space-y-3">
+                  {editImagePreview && (
+                    <div className="relative rounded-2xl overflow-hidden border-4 border-amber-300">
+                      <img
+                        src={editImagePreview}
+                        alt="Preview"
+                        className="w-full h-64 object-cover"
+                      />
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEditImageUpload}
+                    className="w-full border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-white outline-none focus:ring-4 focus:ring-amber-300 font-medium text-amber-900"
+                  />
+                  {editErrors.image && (
+                    <p className="text-sm text-red-600 font-semibold flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {editErrors.image}
+                    </p>
+                  )}
+                  <p className="text-xs text-amber-700 font-medium">
+                    Image must be landscape orientation (width &gt; height). Max size: 5MB
+                  </p>
+                </div>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-bold text-amber-900 mb-2">
+                  Recipe Title <span className="text-red-600">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => handleEditFormChange("title", e.target.value)}
+                  className={`w-full border-2 rounded-2xl px-4 py-3 text-sm bg-white outline-none focus:ring-4 focus:ring-amber-300 font-medium text-amber-900 ${
+                    editErrors.title ? "border-red-500" : "border-amber-200"
+                  }`}
+                  placeholder="Enter recipe title..."
+                />
+                {editErrors.title && (
+                  <p className="text-sm text-red-600 font-semibold mt-1">{editErrors.title}</p>
+                )}
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-bold text-amber-900 mb-2">
+                  Description <span className="text-red-600">*</span>
+                </label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => handleEditFormChange("description", e.target.value)}
+                  rows={4}
+                  className={`w-full border-2 rounded-2xl px-4 py-3 text-sm bg-white outline-none focus:ring-4 focus:ring-amber-300 font-medium text-amber-900 ${
+                    editErrors.description ? "border-red-500" : "border-amber-200"
+                  }`}
+                  placeholder="Describe your recipe..."
+                />
+                {editErrors.description && (
+                  <p className="text-sm text-red-600 font-semibold mt-1">{editErrors.description}</p>
+                )}
+              </div>
+
+              {/* Recipe Details Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-amber-900 mb-2">Prep Time</label>
+                  <select
+                    value={editForm.prepTime}
+                    onChange={(e) => handleEditFormChange("prepTime", e.target.value)}
+                    className="w-full border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-white outline-none focus:ring-4 focus:ring-amber-300 font-medium text-amber-900"
+                  >
+                    <option value="">Select prep time...</option>
+                    {PREP_TIME_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-amber-900 mb-2">Cook Time</label>
+                  <select
+                    value={editForm.cookTime}
+                    onChange={(e) => handleEditFormChange("cookTime", e.target.value)}
+                    className="w-full border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-white outline-none focus:ring-4 focus:ring-amber-300 font-medium text-amber-900"
+                  >
+                    <option value="">Select cook time...</option>
+                    {COOK_TIME_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-amber-900 mb-2">Difficulty</label>
+                  <select
+                    value={editForm.difficulty}
+                    onChange={(e) => handleEditFormChange("difficulty", e.target.value)}
+                    className="w-full border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-white outline-none focus:ring-4 focus:ring-amber-300 font-medium text-amber-900"
+                  >
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-amber-900 mb-2">Servings</label>
+                  <select
+                    value={editForm.servings}
+                    onChange={(e) => handleEditFormChange("servings", e.target.value)}
+                    className="w-full border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-white outline-none focus:ring-4 focus:ring-amber-300 font-medium text-amber-900"
+                  >
+                    <option value="">Select servings...</option>
+                    {SERVING_SIZE_OPTIONS.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-sm font-bold text-amber-900 mb-2">Tags</label>
+                <div className="flex flex-wrap gap-2 p-4 bg-white border-2 border-amber-200 rounded-2xl max-h-48 overflow-y-auto">
+                  {TAG_OPTIONS.map((tag) => {
+                    const isSelected = editForm.tags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => toggleEditTag(tag)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition ${
+                          isSelected
+                            ? "bg-gradient-to-r from-amber-400 to-yellow-500 text-white border-amber-400"
+                            : "bg-amber-50 text-amber-800 border-amber-200 hover:border-amber-300"
+                        }`}
+                      >
+                        #{tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Allergens */}
+              <div>
+                <label className="block text-sm font-bold text-amber-900 mb-2">Allergens</label>
+                <div className="flex flex-wrap gap-2 p-4 bg-white border-2 border-amber-200 rounded-2xl">
+                  {ALLERGENS.map((allergen) => {
+                    const isSelected = editForm.allergens.includes(allergen);
+                    return (
+                      <button
+                        key={allergen}
+                        type="button"
+                        onClick={() => toggleEditAllergen(allergen)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold border-2 transition ${
+                          isSelected
+                            ? "bg-red-500 text-white border-red-500"
+                            : "bg-red-50 text-red-700 border-red-200 hover:border-red-300"
+                        }`}
+                      >
+                        {allergen}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Ingredients */}
+              <div>
+                <label className="block text-sm font-bold text-amber-900 mb-2">
+                  Ingredients <span className="text-red-600">*</span>
+                </label>
+                <div className="space-y-2">
+                  {editForm.ingredients.map((ingredient, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={ingredient}
+                        onChange={(e) => handleEditIngredientChange(index, e.target.value)}
+                        className="flex-1 border-2 border-amber-200 rounded-2xl px-4 py-2.5 text-sm bg-white outline-none focus:ring-4 focus:ring-amber-300 font-medium text-amber-900"
+                        placeholder={`Ingredient ${index + 1}...`}
+                      />
+                      {editForm.ingredients.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeEditIngredient(index)}
+                          className="w-10 h-10 rounded-xl bg-red-100 hover:bg-red-200 text-red-700 flex items-center justify-center transition"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addEditIngredient}
+                    className="w-full bg-white hover:bg-amber-50 border-2 border-amber-200 rounded-2xl px-4 py-2.5 text-sm font-bold text-amber-900 flex items-center justify-center gap-2 transition"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    Add Ingredient
+                  </button>
+                </div>
+                {editErrors.ingredients && (
+                  <p className="text-sm text-red-600 font-semibold mt-1">{editErrors.ingredients}</p>
+                )}
+              </div>
+
+              {/* Instructions */}
+              <div>
+                <label className="block text-sm font-bold text-amber-900 mb-2">
+                  Instructions <span className="text-red-600">*</span>
+                </label>
+                <div className="space-y-2">
+                  {editForm.instructions.map((instruction, index) => (
+                    <div key={index} className="flex gap-2">
+                      <div className="w-8 h-10 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 text-white font-bold flex items-center justify-center flex-shrink-0 text-sm">
+                        {index + 1}
+                      </div>
+                      <textarea
+                        value={instruction}
+                        onChange={(e) => handleEditInstructionChange(index, e.target.value)}
+                        rows={2}
+                        className="flex-1 border-2 border-amber-200 rounded-2xl px-4 py-2.5 text-sm bg-white outline-none focus:ring-4 focus:ring-amber-300 font-medium text-amber-900"
+                        placeholder={`Step ${index + 1}...`}
+                      />
+                      {editForm.instructions.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeEditInstruction(index)}
+                          className="w-10 h-10 rounded-xl bg-red-100 hover:bg-red-200 text-red-700 flex items-center justify-center transition flex-shrink-0"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={addEditInstruction}
+                    className="w-full bg-white hover:bg-amber-50 border-2 border-amber-200 rounded-2xl px-4 py-2.5 text-sm font-bold text-amber-900 flex items-center justify-center gap-2 transition"
+                  >
+                    <PlusCircle className="w-4 h-4" />
+                    Add Step
+                  </button>
+                </div>
+                {editErrors.instructions && (
+                  <p className="text-sm text-red-600 font-semibold mt-1">{editErrors.instructions}</p>
+                )}
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-bold text-amber-900 mb-2">Chef's Notes (Optional)</label>
+                <textarea
+                  value={editForm.notes}
+                  onChange={(e) => handleEditFormChange("notes", e.target.value)}
+                  rows={3}
+                  className="w-full border-2 border-amber-200 rounded-2xl px-4 py-3 text-sm bg-white outline-none focus:ring-4 focus:ring-amber-300 font-medium text-amber-900"
+                  placeholder="Any tips or variations..."
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-3 mt-6 pt-6 border-t-2 border-amber-200">
+              <button
+                onClick={closeEditModal}
+                className="px-6 py-3 text-sm rounded-2xl border-2 border-amber-200 hover:bg-white font-bold text-amber-900 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitEditForm}
+                disabled={editLoading}
+                className={`px-6 py-3 text-sm rounded-2xl text-white font-bold shadow-lg transition flex items-center gap-2 ${
+                  editLoading
+                    ? "bg-amber-300 cursor-not-allowed"
+                    : "bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600"
+                }`}
+              >
+                {editLoading ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Edit className="w-4 h-4" />
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

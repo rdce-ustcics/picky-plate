@@ -25,18 +25,26 @@ router.get("/admin/all", requireAdmin, async (req, res) => {
 /**
  * GET /api/cultural-recipes
  * Public endpoint - get all active cultural recipes
- * Optional query: region (filter by region)
+ * Optional query: region (filter by region), includeImages (boolean)
  */
 router.get("/", async (req, res) => {
   try {
-    const { region } = req.query;
+    const { region, includeImages } = req.query;
     const query = { isActive: true };
 
     if (region && region !== "All") {
       query.region = region;
     }
 
+    let selectFields = 'name desc region isActive createdAt updatedAt _id';
+
+    // Include images if requested
+    if (includeImages === 'true') {
+      selectFields += ' img';
+    }
+
     const recipes = await CulturalRecipe.find(query)
+      .select(selectFields)
       .sort({ createdAt: -1 })
       .lean();
 

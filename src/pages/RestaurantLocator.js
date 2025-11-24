@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from "react";
-import { GoogleMap, LoadScript, Marker, InfoWindow, MarkerClusterer, Circle } from "@react-google-maps/api";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { GoogleMap, LoadScript, Marker, InfoWindow, MarkerClusterer } from "@react-google-maps/api";
 import LoadingModal from "../components/LoadingModal";
 import "./RestaurantLocator.css";
 
@@ -36,7 +36,6 @@ const mapOptions = {
 };
 
 export default function RestaurantLocator() {
-  const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
 
   const [restaurants, setRestaurants] = useState([]);
@@ -58,14 +57,11 @@ export default function RestaurantLocator() {
   const [availableCuisines, setAvailableCuisines] = useState([]);
   const [activeView, setActiveView] = useState("map"); // map or list
   const [showFilterModal, setShowFilterModal] = useState(false); // Filter modal state
-  const [selectedMarker, setSelectedMarker] = useState(null); // For InfoWindow
+  const [activeQuickFilter, setActiveQuickFilter] = useState(null);
   const [mapCenter, setMapCenter] = useState(defaultCenter);
   const [mapZoom, setMapZoom] = useState(11);
-  const [visibleRestaurants, setVisibleRestaurants] = useState([]);
-  const [mapBounds, setMapBounds] = useState(null);
-
-  // NEW: State to track which quick filter is active
-  const [activeQuickFilter, setActiveQuickFilter] = useState(null);
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [cacheStatus, setCacheStatus] = useState('checking');
 
   const METRO_MANILA_CITIES = [
     "Manila", "Quezon City", "Caloocan", "Las Piñas", "Makati", "Makati City",
@@ -108,7 +104,6 @@ export default function RestaurantLocator() {
     );
   };
 
-  // Restaurant chain logos/images mapping (case-sensitive to match data)
   const RESTAURANT_IMAGES = {
     "Jollibee": "https://upload.wikimedia.org/wikipedia/en/thumb/8/84/Jollibee_2011_logo.svg/220px-Jollibee_2011_logo.svg.png",
     "McDonald's": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/McDonald%27s_Golden_Arches.svg/220px-McDonald%27s_Golden_Arches.svg.png",
@@ -317,8 +312,54 @@ export default function RestaurantLocator() {
     setActiveQuickFilter(null); // Reset active quick filter
   };
 
-  // Get user's current location with high accuracy
-  const getUserLocation = (forceRefresh = false) => {
+  // Map load callback
+  const onMapLoad = useCallback((map) => {
+    mapInstanceRef.current = map;
+    setIsMapLoaded(true);
+    setTimeout(() => {
+      getUserLocation();
+    }, 500);
+  }, []);
+
+  // Limit markers for performance
+  const displayedRestaurants = useMemo(() => {
+    const hasActiveFilters =
+      searchQuery !== "" ||
+      selectedPriceLevel !== "all" ||
+      minRating > 0 ||
+      selectedCuisine !== "all" ||
+      deliveryFilter !== "all" ||
+      openNowFilter ||
+      showNearbyOnly;
+
+    const maxMarkers = hasActiveFilters ? 500 : 200;
+    return filteredRestaurants.slice(0, maxMarkers);
+  }, [filteredRestaurants, searchQuery, selectedPriceLevel, minRating,
+      selectedCuisine, deliveryFilter, openNowFilter, showNearbyOnly]);
+
+  // Get marker icon based on price level
+  const getMarkerIcon = (priceLevelNum) => {
+    const colors = {
+      1: '#65a30d',
+      2: '#e2a044',
+      3: '#dc7928',
+      4: '#dc2626'
+    };
+
+    const color = colors[priceLevelNum] || '#9ca3af';
+
+    return {
+      path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
+      fillColor: color,
+      fillOpacity: 0.9,
+      strokeColor: '#fff',
+      strokeWeight: 2,
+      scale: 8
+    };
+  };
+
+  // Get user's current location
+  const getUserLocation = () => {
     setLocationLoading(true);
     setLocationError(null);
     if (!navigator.geolocation) {
@@ -327,104 +368,18 @@ export default function RestaurantLocator() {
       return;
     }
 
-    console.log('🔍 Starting location acquisition...');
-    console.log('Device info:', {
-      userAgent: navigator.userAgent,
-      platform: navigator.platform,
-      hasGeolocation: !!navigator.geolocation
-    });
-
-    // Use watchPosition for continuous updates to get better accuracy
-    let bestAccuracy = Infinity;
-    let bestPosition = null;
-    let watchId = null;
-    let updateCount = 0;
-    const maxUpdates = 5; // Try to get 5 position updates
-    const maxWaitTime = 20000; // Wait up to 20 seconds
-
-    const finishLocationAcquisition = () => {
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-      }
-
-      if (bestPosition) {
-        const { latitude, longitude } = bestPosition.coords;
-        const location = {
-          lat: latitude,
-          lng: longitude,
-          accuracy: bestPosition.coords.accuracy
-        };
-
-        console.log('✅ Final location:', {
-          latitude,
-          longitude,
-          accuracy: `${bestPosition.coords.accuracy.toFixed(1)}m`,
-          updates: updateCount
-        });
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+        const location = { lat: latitude, lng: longitude, accuracy: accuracy };
 
         setUserLocation(location);
+        setLocationLoading(false);
         setMapCenter({ lat: latitude, lng: longitude });
-        setMapZoom(15);
+        setMapZoom(14);
         setShowNearbyOnly(true);
-      }
-
-      setLocationLoading(false);
-    };
-
-    // Set a timeout to finish after maxWaitTime
-    const timeoutId = setTimeout(() => {
-      console.log('⏱️ Location timeout reached');
-      finishLocationAcquisition();
-    }, maxWaitTime);
-
-    watchId = navigator.geolocation.watchPosition(
-      (position) => {
-        updateCount++;
-        const { latitude, longitude, accuracy, altitude, altitudeAccuracy, heading, speed } = position.coords;
-
-        console.log(`📍 Location update #${updateCount}:`, {
-          latitude: latitude.toFixed(6),
-          longitude: longitude.toFixed(6),
-          accuracy: `${accuracy.toFixed(1)}m`,
-          altitude: altitude ? `${altitude.toFixed(1)}m` : 'N/A',
-          speed: speed ? `${speed.toFixed(1)}m/s` : 'N/A',
-          timestamp: new Date(position.timestamp).toLocaleTimeString()
-        });
-
-        // Keep track of the most accurate position
-        if (accuracy < bestAccuracy) {
-          bestAccuracy = accuracy;
-          bestPosition = position;
-          console.log(`🎯 New best accuracy: ${accuracy.toFixed(1)}m`);
-
-          // Update the UI immediately with better position
-          const location = { lat: latitude, lng: longitude, accuracy: accuracy };
-          setUserLocation(location);
-          setMapCenter({ lat: latitude, lng: longitude });
-          setMapZoom(15);
-
-          // If we got very good accuracy, we can stop early
-          if (accuracy <= 20) {
-            console.log('✅ Excellent accuracy achieved!');
-            clearTimeout(timeoutId);
-            finishLocationAcquisition();
-            return;
-          }
-        }
-
-        // After collecting enough samples, stop
-        if (updateCount >= maxUpdates) {
-          console.log('✅ Maximum updates reached');
-          clearTimeout(timeoutId);
-          finishLocationAcquisition();
-        }
       },
       (error) => {
-        clearTimeout(timeoutId);
-        if (watchId !== null) {
-          navigator.geolocation.clearWatch(watchId);
-        }
-
         let errorMessage = "Unable to get your location";
         switch(error.code) {
           case error.PERMISSION_DENIED:
@@ -449,94 +404,68 @@ export default function RestaurantLocator() {
         setLocationLoading(false);
       },
       {
-        enableHighAccuracy: true, // Critical: Force GPS usage
-        timeout: 30000, // 30 seconds per reading
-        maximumAge: 0 // Never use cached position
+        enableHighAccuracy: true,
+        timeout: 30000,
+        maximumAge: 0
       }
     );
   };
 
-  // Get marker icon color based on price level
-  const getMarkerColor = (priceLevel) => {
-    const priceLevelNum = typeof priceLevel === 'string' ? getPriceLevelNum(priceLevel) : priceLevel;
-    const colors = {
-      1: '#65a30d',
-      2: '#e2a044',
-      3: '#dc7928',
-      4: '#dc2626',
-      null: '#9ca3af'
-    };
-    return colors[priceLevelNum] || colors[null];
-  };
-
-  // Handle map load
-  const onMapLoad = (map) => {
-    mapInstanceRef.current = map;
-    // Don't auto-fetch location on load - let user click "Near Me" button instead
-    // This makes the page load much faster
-  };
-
-  // Handle map bounds change to only show visible markers (debounced)
-  const boundsChangeTimeoutRef = useRef(null);
-
-  const onBoundsChanged = () => {
-    // Debounce: Only update bounds after user stops moving the map for 300ms
-    if (boundsChangeTimeoutRef.current) {
-      clearTimeout(boundsChangeTimeoutRef.current);
-    }
-
-    boundsChangeTimeoutRef.current = setTimeout(() => {
-      if (mapInstanceRef.current) {
-        const bounds = mapInstanceRef.current.getBounds();
-        if (bounds) {
-          setMapBounds(bounds);
-        }
-      }
-    }, 300);
-  };
-
-  // Filter restaurants within map bounds
-  useEffect(() => {
-    // Determine max markers based on filter status
-    const hasActiveFilters =
-      searchQuery !== "" ||
-      selectedPriceLevel !== "all" ||
-      minRating > 0 ||
-      selectedCuisine !== "all" ||
-      deliveryFilter !== "all" ||
-      openNowFilter ||
-      showNearbyOnly;
-
-    // If filters are active, show ALL filtered results (not just viewport)
-    // If no filters, only show what's in viewport for performance
-    if (hasActiveFilters) {
-      // Show all filtered results (up to 1000 for performance)
-      const maxMarkers = Math.min(filteredRestaurants.length, 1000);
-      setVisibleRestaurants(filteredRestaurants.slice(0, maxMarkers));
-      return;
-    }
-
-    // No filters: only show restaurants in viewport
-    if (!mapBounds) {
-      // Initially show first 50 restaurants until map loads
-      setVisibleRestaurants(filteredRestaurants.slice(0, 50));
-      return;
-    }
-
-    const visible = filteredRestaurants.filter(restaurant => {
-      if (!restaurant.lat || !restaurant.lng) return false;
-
-      const position = new window.google.maps.LatLng(restaurant.lat, restaurant.lng);
-      return mapBounds.contains(position);
-    });
-
-    // Limit to 200 markers in viewport when no filters
-    setVisibleRestaurants(visible.slice(0, 200));
-  }, [mapBounds, filteredRestaurants, searchQuery, selectedPriceLevel, minRating,
-      selectedCuisine, deliveryFilter, openNowFilter, showNearbyOnly]);
 
   useEffect(() => {
     const loadAllRestaurants = async () => {
+      const CACHE_KEY = 'pickplate_restaurants_cache';
+      const CACHE_EXPIRY_KEY = 'pickplate_restaurants_cache_expiry';
+      const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+      // Check if we have cached data that's still valid
+      try {
+        const cachedData = localStorage.getItem(CACHE_KEY);
+        const cacheExpiry = localStorage.getItem(CACHE_EXPIRY_KEY);
+        const now = Date.now();
+
+        if (cachedData && cacheExpiry && now < parseInt(cacheExpiry)) {
+          console.log('✅ Loading restaurants from cache...');
+          setCacheStatus('cached');
+          const parsedData = JSON.parse(cachedData);
+
+          // Extract cuisines
+          const cuisineSet = new Set();
+          parsedData.forEach(item => {
+            if (item.cuisine) {
+              const cuisines = item.cuisine.split(',').map(c => c.trim());
+              cuisines.forEach(c => {
+                if (c && c.length > 0) {
+                  const formatted = c.charAt(0).toUpperCase() + c.slice(1).toLowerCase();
+                  cuisineSet.add(formatted);
+                }
+              });
+            }
+            if (item.types && item.types.length > 0) {
+              item.types.forEach(type => {
+                if (type && type !== 'restaurant' && type.length > 0) {
+                  const formatted = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase().replace(/_/g, ' ');
+                  cuisineSet.add(formatted);
+                }
+              });
+            }
+          });
+
+          const sortedCuisines = Array.from(cuisineSet).sort();
+          setAvailableCuisines(sortedCuisines);
+          setRestaurants(parsedData);
+          setFilteredRestaurants(parsedData);
+          setLoading(false);
+          console.log(`✅ Loaded ${parsedData.length} restaurants from cache (instant load!)`);
+          return;
+        }
+      } catch (cacheError) {
+        console.warn('⚠️ Cache read error, loading fresh data:', cacheError);
+      }
+
+      // If no valid cache, fetch fresh data
+      console.log('📡 Fetching fresh restaurant data...');
+      setCacheStatus('loading');
       const startTime = performance.now();
 
       try {
@@ -553,49 +482,42 @@ export default function RestaurantLocator() {
         const allItems = [...ncrData.items, ...osmData.items];
         console.log("Total restaurants before filtering:", allItems.length);
 
-        // Filter and process in one pass for better performance
-        const processedData = [];
-        const cuisineSet = new Set();
-        let filteredOutCount = 0;
-
-        for (const item of allItems) {
+        // Filter for valid data - show ALL valid restaurants
+        const validData = allItems.filter(item => {
           // Check basic validity
           if (!item || !item.name || typeof item.lat !== 'number' ||
               typeof item.lng !== 'number' || item.lat === 0 || item.lng === 0) {
-            continue;
+            return false;
           }
 
-          // Filter: Only include restaurants within NCR
-          const withinNCRBounds = isWithinNCR(item.lat, item.lng);
-          const hasNCRAddress = addressContainsMetroManila(item.address);
+          // For now, include ALL valid restaurants
+          // We can filter by location later if needed
+          return true;
+        });
 
-          // Restaurant must either be within NCR bounds OR have NCR in address
-          if (!withinNCRBounds && !hasNCRAddress) {
-            filteredOutCount++;
-            continue;
-          }
+        console.log("Valid restaurants after filtering:", validData.length);
 
-          // Process the item
-          const processed = {
-            ...item,
-            id: item.id || `${item.name}_${item.lat}_${item.lng}`,
-            name: String(item.name || 'Unknown'),
-            address: String(item.address || ''),
-            types: Array.isArray(item.types) ? item.types : [],
-            priceLevelNum: getPriceLevelNum(item.priceLevel),
-            cuisine: item.cuisine || '',
-            openingHours: item.openingHours || '',
-            hasOnlineDelivery: item.hasOnlineDelivery || false,
-            hasTableBooking: item.hasTableBooking || false,
-            isDeliveringNow: item.isDeliveringNow || false,
-            takeaway: item.takeaway || false,
-            source: item.source || 'unknown',
-            image: getRestaurantImage(item.name)
-          };
+        // Process and deduplicate restaurants
+        const processedData = validData.map(item => ({
+          ...item,
+          id: item.id || `${item.name}_${item.lat}_${item.lng}`,
+          name: String(item.name || 'Unknown'),
+          address: String(item.address || ''),
+          types: Array.isArray(item.types) ? item.types : [],
+          priceLevelNum: getPriceLevelNum(item.priceLevel),
+          cuisine: item.cuisine || '',
+          openingHours: item.openingHours || '',
+          hasOnlineDelivery: item.hasOnlineDelivery || false,
+          hasTableBooking: item.hasTableBooking || false,
+          isDeliveringNow: item.isDeliveringNow || false,
+          takeaway: item.takeaway || false,
+          source: item.source || 'unknown',
+          image: getRestaurantImage(item.name) // Add image for each restaurant
+        }));
 
-          processedData.push(processed);
-
-          // Extract cuisines
+        // Extract all unique cuisines
+        const cuisineSet = new Set();
+        processedData.forEach(item => {
           if (item.cuisine) {
             const cuisines = item.cuisine.split(',').map(c => c.trim());
             cuisines.forEach(c => {
@@ -613,8 +535,7 @@ export default function RestaurantLocator() {
               }
             });
           }
-        }
-
+        });
 
         const sortedCuisines = Array.from(cuisineSet).sort();
         setAvailableCuisines(sortedCuisines);
@@ -622,50 +543,56 @@ export default function RestaurantLocator() {
         setFilteredRestaurants(processedData);
         setLoading(false);
 
-        const loadTime = ((performance.now() - startTime) / 1000).toFixed(2);
-        console.log(`✅ Loaded ${processedData.length} restaurants in ${loadTime}s`);
-        console.log(`🚫 Filtered out ${filteredOutCount} restaurants outside NCR`);
-        console.log(`📍 NCR restaurants only: ${processedData.length} places`);
+        // Cache the processed data
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(processedData));
+          localStorage.setItem(CACHE_EXPIRY_KEY, (Date.now() + CACHE_DURATION).toString());
+          setCacheStatus('fresh');
+          console.log(`✅ Successfully loaded ${processedData.length} restaurants and cached for 24 hours!`);
+        } catch (cacheError) {
+          console.warn('⚠️ Failed to cache data (localStorage might be full):', cacheError);
+          setCacheStatus('error');
+        }
       } catch (error) {
         console.error("Error loading restaurant data:", error);
         try {
           const response = await fetch("/data/ncr_food_places2.json");
           const data = await response.json();
-
-          const processedData = [];
-          for (const item of data.items) {
+          const validData = data.items.filter(item => {
+            // Check basic validity
             if (!item || !item.name || typeof item.lat !== 'number' ||
                 typeof item.lng !== 'number' || item.lat === 0 || item.lng === 0) {
-              continue;
+              return false;
             }
 
-            // Filter: Only include restaurants within NCR
-            const withinNCRBounds = isWithinNCR(item.lat, item.lng);
-            const hasNCRAddress = addressContainsMetroManila(item.address);
-
-            if (!withinNCRBounds && !hasNCRAddress) {
-              continue;
-            }
-
-            processedData.push({
-              ...item,
-              name: String(item.name || 'Unknown'),
-              address: String(item.address || ''),
-              types: Array.isArray(item.types) ? item.types : [],
-              priceLevelNum: getPriceLevelNum(item.priceLevel),
-              cuisine: item.cuisine || '',
-              openingHours: item.openingHours || '',
-              hasOnlineDelivery: item.hasOnlineDelivery || false,
-              hasTableBooking: item.hasTableBooking || false,
-              isDeliveringNow: item.isDeliveringNow || false,
-              takeaway: item.takeaway || false,
-              image: getRestaurantImage(item.name)
-            });
-          }
-
-
+            // Include all valid restaurants
+            return true;
+          });
+          const processedData = validData.map(item => ({
+            ...item,
+            name: String(item.name || 'Unknown'),
+            address: String(item.address || ''),
+            types: Array.isArray(item.types) ? item.types : [],
+            priceLevelNum: getPriceLevelNum(item.priceLevel),
+            cuisine: item.cuisine || '',
+            openingHours: item.openingHours || '',
+            hasOnlineDelivery: item.hasOnlineDelivery || false,
+            hasTableBooking: item.hasTableBooking || false,
+            isDeliveringNow: item.isDeliveringNow || false,
+            takeaway: item.takeaway || false,
+            image: getRestaurantImage(item.name)
+          }));
           setRestaurants(processedData);
           setFilteredRestaurants(processedData);
+
+          // Cache fallback data too
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify(processedData));
+            localStorage.setItem(CACHE_EXPIRY_KEY, (Date.now() + CACHE_DURATION).toString());
+          } catch (e) {
+            console.warn('Cache error:', e);
+          }
+
           console.log(`⚠️ Loaded ${processedData.length} restaurants from NCR data only`);
         } catch (fallbackError) {
           console.error("Failed to load any restaurant data:", fallbackError);
@@ -777,115 +704,100 @@ export default function RestaurantLocator() {
 
   const handleRestaurantClick = (restaurant) => {
     setSelectedRestaurant(restaurant);
-    setSelectedMarker(restaurant);
     if (restaurant.lat && restaurant.lng) {
       setMapCenter({ lat: restaurant.lat, lng: restaurant.lng });
       setMapZoom(16);
+      setActiveView('map');
     }
   };
 
+  if (!GOOGLE_MAPS_API_KEY) {
+    return (
+      <div className="restaurant-locator">
+        <div className="error-container" style={{ padding: '40px', textAlign: 'center' }}>
+          <h2>⚠️ Google Maps API Key Missing</h2>
+          <p>Please add your Google Maps API key to the .env file:</p>
+          <pre style={{ background: '#f5f5f5', padding: '10px', borderRadius: '5px', display: 'inline-block' }}>
+            REACT_APP_GOOGLE_MAPS_API_KEY=your_api_key_here
+          </pre>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <>
+    <LoadScript googleMapsApiKey={GOOGLE_MAPS_API_KEY}>
       {loading && <LoadingModal message="Loading restaurant data..." />}
       <div className="restaurant-locator">
-        <header className="app-header">
-          <div className="header-content">
-            <div className="brand">
-              <div className="brand-text">
-                <h1>Restaurant Locator</h1>
-                <p>Discover delicious places near you</p>
-              </div>
-            </div>
-            <div className="header-stats">
-              <span className="stat-value">{filteredRestaurants.length}</span>
-              <span className="stat-label">Places Found</span>
+        {/* Header */}
+      <header className="app-header">
+        <div className="header-content">
+          <div className="brand">
+            <div className="logo-icon">🍴</div>
+            <div className="brand-text">
+              <h1>Pick-A-Plate</h1>
+              <p>Your personal food companion</p>
             </div>
           </div>
-        </header>
-        <div className="main-layout">
-          <div className="sidebar-filters">
-            <div className="search-section">
-              <input
-                type="text"
-                placeholder="Search restaurants..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="search-input"
-              />
-            </div>
+          <div className="header-stats">
+            <span className="stat-value">{filteredRestaurants.length}</span>
+            <span className="stat-label">Places Found</span>
+          </div>
+        </div>
+      </header>
 
-            {/* FIXED: Quick Filters with proper active state */}
-            <div className="quick-filters">
-              {quickFilters.map(filter => (
-                <button
-                  key={filter.id}
-                  className={`quick-filter ${activeQuickFilter === filter.id ? 'active' : ''}`}
-                  onClick={() => handleQuickFilter(filter.id)}
-                >
-                  {filter.icon} {filter.label}
-                </button>
-              ))}
-            </div>
+      {/* Main Layout */}
+      <div className="main-layout">
+        {/* Sidebar Filters */}
+        <div className="sidebar-filters">
+          {/* Search Section */}
+          <div className="search-section">
+            <input
+              type="text"
+              placeholder="Search restaurants..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input"
+            />
+          </div>
 
-            <div className="filter-actions">
+          {/* Quick Filters */}
+          <div className="quick-filters">
+            {quickFilters.map(filter => (
               <button
-                className="advanced-filters-btn"
-                onClick={() => setShowFilterModal(true)}
+                key={filter.id}
+                className={`quick-filter ${activeQuickFilter === filter.id ? 'active' : ''}`}
+                onClick={() => handleQuickFilter(filter.id)}
               >
-                ⚙️ Filters
-                {(selectedPriceLevel !== "all" || minRating > 0 || selectedCuisine !== "all" ||
-                  deliveryFilter !== "all" || openNowFilter) && (
-                  <span className="filter-count">
-                    {[selectedPriceLevel !== "all", minRating > 0, selectedCuisine !== "all",
-                      deliveryFilter !== "all", openNowFilter].filter(Boolean).length}
-                  </span>
-                )}
+                <span className="filter-icon">{filter.icon}</span>
+                {filter.label}
               </button>
-              <button className="reset-btn" onClick={resetFilters}>
-                🔄 Reset
-              </button>
-            </div>
-            {locationError && (
-              <div className="alert alert-warning">
-                ⚠️ {locationError}
-              </div>
-            )}
+            ))}
+          </div>
 
-          {userLocation && userLocation.accuracy && (
-            <div className={`alert ${userLocation.accuracy > 100 ? 'alert-warning' : 'alert-info'}`}
-                 style={{ fontSize: '12px', padding: '8px 12px', marginTop: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  📍 Location accuracy: ±{userLocation.accuracy.toFixed(0)}m
-                  {userLocation.accuracy > 100 && (
-                    <div style={{ marginTop: '4px', fontSize: '11px' }}>
-                      GPS signal weak. Move near a window or outside for better accuracy.
-                    </div>
-                  )}
-                </div>
-                <button
-                  onClick={() => getUserLocation(true)}
-                  disabled={locationLoading}
-                  style={{
-                    padding: '4px 12px',
-                    fontSize: '11px',
-                    background: '#4285F4',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: locationLoading ? 'wait' : 'pointer',
-                    opacity: locationLoading ? 0.6 : 1
-                  }}
-                >
-                  {locationLoading ? 'Updating...' : 'Refresh'}
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Filter Actions */}
+          <div className="filter-actions">
+            <button
+              className="advanced-filters-btn"
+              onClick={() => setShowFilterModal(true)}
+            >
+              ⚙️ Filters
+              {(selectedPriceLevel !== "all" || minRating > 0 || selectedCuisine !== "all" ||
+                deliveryFilter !== "all" || openNowFilter) && (
+                <span className="filter-count">
+                  {[selectedPriceLevel !== "all", minRating > 0, selectedCuisine !== "all",
+                    deliveryFilter !== "all", openNowFilter].filter(Boolean).length}
+                </span>
+              )}
+            </button>
+            <button className="reset-btn" onClick={resetFilters}>
+              🔄 Reset
+            </button>
+          </div>
 
-          {locationLoading && (
-            <div className="alert alert-info" style={{ fontSize: '12px', padding: '8px 12px', marginTop: '10px' }}>
-              🔄 Getting precise location... This may take up to 20 seconds for best accuracy.
+          {locationError && (
+            <div className="alert alert-warning">
+              ⚠️ {locationError}
             </div>
           )}
         </div>
@@ -912,160 +824,81 @@ export default function RestaurantLocator() {
 
           {/* Map Container - Show when map view is active */}
           {activeView === 'map' && (
-            <div className="map-container">
-              {mapError && (
-                <div style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  background: 'white',
-                  padding: '20px',
-                  borderRadius: '8px',
-                  boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-                  zIndex: 1000,
-                  maxWidth: '400px',
-                  textAlign: 'center'
-                }}>
-                  <h3 style={{ color: '#dc2626', marginBottom: '10px' }}>Map Loading Error</h3>
-                  <p style={{ marginBottom: '10px' }}>{mapError}</p>
-                  <p style={{ fontSize: '12px', color: '#666' }}>Please check the browser console for more details.</p>
-                </div>
-              )}
-
-              <LoadScript
-                googleMapsApiKey={GOOGLE_MAPS_API_KEY}
-                onLoad={() => {
-                  console.log('Google Maps Script loaded successfully!');
-                  setMapError(null);
-                }}
-                onError={(error) => {
-                  console.error('Google Maps Script loading error:', error);
-                  setMapError('Failed to load Google Maps. Please check your API key and billing settings.');
-                }}
+            <div className="map-container" style={{ width: '100%', height: '100%' }}>
+              <GoogleMap
+                mapContainerStyle={mapContainerStyle}
+                center={mapCenter}
+                zoom={mapZoom}
+                options={mapOptions}
+                onLoad={onMapLoad}
               >
-                <GoogleMap
-                  mapContainerStyle={mapContainerStyle}
-                  center={mapCenter}
-                  zoom={mapZoom}
-                  options={mapOptions}
-                  onLoad={onMapLoad}
-                  onBoundsChanged={onBoundsChanged}
-                  onError={(error) => {
-                    console.error('Google Maps error:', error);
-                    setMapError('Google Maps failed to initialize.');
-                  }}
-                >
-                  {/* User Location Marker with Accuracy Circle */}
-                  {userLocation && (
-                    <>
-                      {/* Accuracy radius circle */}
-                      <Circle
-                        center={userLocation}
-                        radius={userLocation.accuracy || 50}
-                        options={{
-                          fillColor: '#4285F4',
-                          fillOpacity: 0.15,
-                          strokeColor: '#4285F4',
-                          strokeOpacity: 0.4,
-                          strokeWeight: 1
-                        }}
-                      />
-                      {/* Your location marker */}
-                      <Marker
-                        position={userLocation}
-                        icon={{
-                          path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
-                          scale: 12,
-                          fillColor: '#4285F4',
-                          fillOpacity: 1,
-                          strokeColor: '#ffffff',
-                          strokeWeight: 3
-                        }}
-                        title={`Your Location (±${userLocation.accuracy ? userLocation.accuracy.toFixed(0) : '50'}m)`}
-                      />
-                    </>
-                  )}
+                {/* User Location Marker */}
+                {userLocation && isMapLoaded && (
+                  <Marker
+                    position={{ lat: userLocation.lat, lng: userLocation.lng }}
+                    icon={{
+                      path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
+                      fillColor: '#4285F4',
+                      fillOpacity: 1,
+                      strokeColor: '#ffffff',
+                      strokeWeight: 3,
+                      scale: 10
+                    }}
+                    title="Your Location"
+                  />
+                )}
 
-                  {/* Restaurant Markers with Clustering - Only visible ones */}
+                {/* Restaurant Markers with Clustering */}
+                {isMapLoaded && (
                   <MarkerClusterer>
                     {(clusterer) =>
-                      visibleRestaurants.map((restaurant, index) => {
+                      displayedRestaurants.map((restaurant, index) => {
                         if (!restaurant.lat || !restaurant.lng) return null;
                         return (
                           <Marker
-                            key={`${restaurant.lat}-${restaurant.lng}-${index}`}
+                            key={restaurant.id || index}
                             position={{ lat: restaurant.lat, lng: restaurant.lng }}
                             clusterer={clusterer}
-                            onClick={() => {
-                              setSelectedMarker(restaurant);
-                              setSelectedRestaurant(restaurant);
-                            }}
-                            icon={{
-                              path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
-                              scale: 8,
-                              fillColor: getMarkerColor(restaurant.priceLevel),
-                              fillOpacity: 1,
-                              strokeColor: '#ffffff',
-                              strokeWeight: 2
-                            }}
+                            icon={getMarkerIcon(restaurant.priceLevelNum)}
+                            title={restaurant.name}
+                            onClick={() => setSelectedRestaurant(restaurant)}
                           />
                         );
                       })
                     }
                   </MarkerClusterer>
+                )}
 
-                  {/* InfoWindow for selected marker */}
-                  {selectedMarker && (
-                    <InfoWindow
-                      position={{ lat: selectedMarker.lat, lng: selectedMarker.lng }}
-                      onCloseClick={() => setSelectedMarker(null)}
-                    >
-                      <div className="info-window-content" style={{ minWidth: '200px' }}>
-                        <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: 'bold' }}>
-                          {selectedMarker.name}
-                        </h3>
-                        <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#666' }}>
-                          {selectedMarker.address}
-                        </p>
-                        <div style={{ margin: '8px 0' }}>
-                          <span style={{ marginRight: '8px' }}>⭐ {selectedMarker.rating || 'N/A'}</span>
-                          <span style={{ fontSize: '12px', color: '#666' }}>
-                            ({selectedMarker.userRatingCount || 0} reviews)
-                          </span>
-                        </div>
-                        {selectedMarker.priceLevelNum && (
-                          <p style={{ margin: '4px 0', fontWeight: 'bold' }}>
-                            {getPriceLevelSymbol(selectedMarker.priceLevelNum)}
-                          </p>
-                        )}
-                        {selectedMarker.googleMapsUri && (
-                          <a
-                            href={selectedMarker.googleMapsUri}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              display: 'inline-block',
-                              marginTop: '8px',
-                              color: '#1a73e8',
-                              textDecoration: 'none',
-                              fontSize: '13px'
-                            }}
-                          >
-                            View on Google Maps →
-                          </a>
-                        )}
-                      </div>
-                    </InfoWindow>
-                  )}
-                </GoogleMap>
-              </LoadScript>
+                {/* Info Window for Selected Restaurant */}
+                {selectedRestaurant && selectedRestaurant.lat && selectedRestaurant.lng && (
+                  <InfoWindow
+                    position={{ lat: selectedRestaurant.lat, lng: selectedRestaurant.lng }}
+                    onCloseClick={() => setSelectedRestaurant(null)}
+                  >
+                    <div className="info-window">
+                      <h3>{selectedRestaurant.name}</h3>
+                      <p>{selectedRestaurant.address}</p>
+                      {selectedRestaurant.rating && (
+                        <p>⭐ {selectedRestaurant.rating} ({selectedRestaurant.userRatingCount || 0} reviews)</p>
+                      )}
+                      {selectedRestaurant.priceLevelNum && (
+                        <p>{getPriceLevelSymbol(selectedRestaurant.priceLevelNum)}</p>
+                      )}
+                      {selectedRestaurant.googleMapsUri && (
+                        <a href={selectedRestaurant.googleMapsUri} target="_blank" rel="noopener noreferrer">
+                          View on Google Maps →
+                        </a>
+                      )}
+                    </div>
+                  </InfoWindow>
+                )}
+              </GoogleMap>
 
               {userLocation && (
                 <button
                   className="locate-me-btn"
                   onClick={() => {
-                    setMapCenter(userLocation);
+                    setMapCenter({ lat: userLocation.lat, lng: userLocation.lng });
                     setMapZoom(14);
                   }}
                   title="Center on my location"
@@ -1078,233 +911,255 @@ export default function RestaurantLocator() {
 
           {/* List Container - Show when list view is active */}
           {activeView === 'list' && (
-              <div className="list-container">
-                {loading ? (
-                  <div className="loading-state">
-                    <div className="spinner"></div>
-                    <p>Loading delicious places...</p>
-                  </div>
-                ) : filteredRestaurants.length === 0 ? (
-                  <div className="empty-state">
-                    <div className="empty-icon">🍽️</div>
-                    <h3>No restaurants found</h3>
-                    <p>Try adjusting your filters or search in a different area</p>
-                    <button className="primary-btn" onClick={resetFilters}>
-                      Reset Filters
-                    </button>
-                  </div>
-                ) : (
-                  <div className="restaurant-grid">
-                    {filteredRestaurants.map((restaurant, index) => (
-                      <div
-                        key={restaurant.id || index}
-                        className="restaurant-card"
-                        onClick={() => handleRestaurantClick(restaurant)}
-                      >
-                        <div className="card-image">
-                          <img
-                            src={restaurant.image || getRestaurantImage(restaurant.name)}
-                            alt={restaurant.name}
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = "https://img.icons8.com/color/200/restaurant.png";
-                            }}
-                          />
-                          {restaurant.rating && restaurant.rating >= 4.5 && (
-                            <span className="promo-badge">
-                              <span className="promo-title">TOP RATED</span>
-                              <span className="promo-subtitle">⭐ {restaurant.rating}</span>
-                            </span>
-                          )}
-                        </div>
-                        <div className="card-content">
-                          <h3 className="restaurant-name">{restaurant.name}</h3>
-                          <div className="restaurant-meta">
-                            <span className="cuisine-type">
-                              {restaurant.cuisine || restaurant.types?.[0] || 'Restaurant'}
-                            </span>
-                            {restaurant.priceLevelNum && (
-                              <span className="price-level">
-                                {getPriceLevelSymbol(restaurant.priceLevelNum)}
-                              </span>
-                            )}
-                          </div>
-                          <p className="restaurant-address">{restaurant.address}</p>
-                          {restaurant.rating && (
-                            <div className="rating-info">
-                              {renderStars(restaurant.rating)}
-                              <span className="rating-text">
-                                {restaurant.rating} ({restaurant.userRatingCount || 0})
-                              </span>
-                            </div>
-                          )}
-                          {restaurant.distance !== undefined && userLocation && (
-                            <div className="distance-info">
-                              📍 {restaurant.distance.toFixed(1)} km away
-                            </div>
-                          )}
-                          <div className="service-badges">
-                            {restaurant.hasOnlineDelivery && (
-                              <span className="badge delivery">Delivery</span>
-                            )}
-                            {restaurant.takeaway && (
-                              <span className="badge pickup">Pickup</span>
-                            )}
-                            {restaurant.hasTableBooking && (
-                              <span className="badge reservation">Reserve</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-        {showFilterModal && (
-          <div className="modal-overlay" onClick={() => setShowFilterModal(false)}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-              <div className="modal-header">
-                <h2>Advanced Filters</h2>
-                <button className="modal-close" onClick={() => setShowFilterModal(false)}>
-                  ✕
-                </button>
-              </div>
-              <div className="modal-body">
-                <div className="filter-section">
-                  <h3> Cuisine Type</h3>
-                  <select
-                    value={selectedCuisine}
-                    onChange={(e) => setSelectedCuisine(e.target.value)}
-                    className="modal-select"
-                  >
-                    <option value="all">All Cuisines</option>
-                    <optgroup label="Popular">
-                      <option value="filipino">Filipino</option>
-                      <option value="korean">Korean</option>
-                      <option value="japanese">Japanese</option>
-                      <option value="chinese">Chinese</option>
-                      <option value="american">American</option>
-                      <option value="italian">Italian</option>
-                      <option value="mexican">Mexican</option>
-                      <option value="indian">Indian</option>
-                    </optgroup>
-                    <optgroup label="All Available">
-                      {availableCuisines.map(cuisine => (
-                        <option key={cuisine} value={cuisine.toLowerCase()}>
-                          {cuisine}
-                        </option>
-                      ))}
-                    </optgroup>
-                  </select>
+            <div className="list-container">
+              {loading ? (
+                <div className="loading-state">
+                  <div className="spinner"></div>
+                  <p>Loading delicious places...</p>
                 </div>
-                <div className="filter-section">
-                  <h3> Price Range</h3>
-                  <select
-                    value={selectedPriceLevel}
-                    onChange={(e) => setSelectedPriceLevel(e.target.value)}
-                    className="modal-select"
-                  >
-                    <option value="all">All Prices</option>
-                    <option value="1">₱ - Budget Friendly</option>
-                    <option value="2">₱₱ - Moderate</option>
-                    <option value="3">₱₱₱ - Premium</option>
-                    <option value="4">₱₱₱₱ - Luxury</option>
-                  </select>
+              ) : filteredRestaurants.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">🍽️</div>
+                  <h3>No restaurants found</h3>
+                  <p>Try adjusting your filters or search in a different area</p>
+                  <button className="primary-btn" onClick={resetFilters}>
+                    Reset Filters
+                  </button>
                 </div>
-                <div className="filter-section">
-                  <h3> Minimum Rating</h3>
-                  <select
-                    value={minRating}
-                    onChange={(e) => setMinRating(parseFloat(e.target.value))}
-                    className="modal-select"
-                  >
-                    <option value="0">All Ratings</option>
-                    <option value="3">3+ Stars</option>
-                    <option value="3.5">3.5+ Stars</option>
-                    <option value="4">4+ Stars</option>
-                    <option value="4.5">4.5+ Stars</option>
-                  </select>
-                </div>
-                <div className="filter-section">
-                  <h3> Service Type</h3>
-                  <select
-                    value={deliveryFilter}
-                    onChange={(e) => setDeliveryFilter(e.target.value)}
-                    className="modal-select"
-                  >
-                    <option value="all">All Services</option>
-                    <option value="delivery">Delivery Available</option>
-                    <option value="pickup">Pickup/Takeout Available</option>
-                    <option value="dine-in">Dine-in Only</option>
-                  </select>
-                </div>
-                {userLocation && (
-                  <div className="filter-section">
-                    <h3>📍 Distance</h3>
-                    <label className="modal-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={showNearbyOnly}
-                        onChange={(e) => setShowNearbyOnly(e.target.checked)}
-                      />
-                      <span>Show Nearby Only</span>
-                    </label>
-                    {showNearbyOnly && (
-                      <div className="modal-slider-container">
-                        <label className="slider-label">
-                          Maximum Distance: {searchRadius} km
-                        </label>
-                        <input
-                          type="range"
-                          min="1"
-                          max="20"
-                          step="0.5"
-                          value={searchRadius}
-                          onChange={(e) => setSearchRadius(parseFloat(e.target.value))}
-                          className="modal-slider"
+              ) : (
+                <div className="restaurant-grid">
+                  {filteredRestaurants.map((restaurant, index) => (
+                    <div
+                      key={restaurant.id || index}
+                      className="restaurant-card"
+                      onClick={() => handleRestaurantClick(restaurant)}
+                    >
+                      {/* Card Image */}
+                      <div className="card-image">
+                        <img
+                          src={restaurant.image || getRestaurantImage(restaurant.name)}
+                          alt={restaurant.name}
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = "https://img.icons8.com/color/200/restaurant.png";
+                          }}
                         />
-                        <div className="slider-markers">
-                          <span>1 km</span>
-                          <span>10 km</span>
-                          <span>20 km</span>
+                        {restaurant.rating && restaurant.rating >= 4.5 && (
+                          <span className="promo-badge">
+                            <span className="promo-title">TOP RATED</span>
+                            <span className="promo-subtitle">⭐ {restaurant.rating}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="card-content">
+                        <h3 className="restaurant-name">{restaurant.name}</h3>
+
+                        <div className="restaurant-meta">
+                          <span className="cuisine-type">
+                            {restaurant.cuisine || restaurant.types?.[0] || 'Restaurant'}
+                          </span>
+                          {restaurant.priceLevelNum && (
+                            <span className="price-level">
+                              {getPriceLevelSymbol(restaurant.priceLevelNum)}
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="restaurant-address">{restaurant.address}</p>
+
+                        {restaurant.rating && (
+                          <div className="rating-info">
+                            {renderStars(restaurant.rating)}
+                            <span className="rating-text">
+                              {restaurant.rating} ({restaurant.userRatingCount || 0})
+                            </span>
+                          </div>
+                        )}
+
+                        {restaurant.distance !== undefined && userLocation && (
+                          <div className="distance-info">
+                            📍 {restaurant.distance.toFixed(1)} km away
+                          </div>
+                        )}
+
+                        <div className="service-badges">
+                          {restaurant.hasOnlineDelivery && (
+                            <span className="badge delivery">Delivery</span>
+                          )}
+                          {restaurant.takeaway && (
+                            <span className="badge pickup">Pickup</span>
+                          )}
+                          {restaurant.hasTableBooking && (
+                            <span className="badge reservation">Reserve</span>
+                          )}
                         </div>
                       </div>
-                    )}
-                  </div>
-                )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Filter Modal */}
+      {showFilterModal && (
+        <div className="modal-overlay" onClick={() => setShowFilterModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Advanced Filters</h2>
+              <button className="modal-close" onClick={() => setShowFilterModal(false)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {/* Cuisine Type Filter */}
+              <div className="filter-section">
+                <h3>🍜 Cuisine Type</h3>
+                <select
+                  value={selectedCuisine}
+                  onChange={(e) => setSelectedCuisine(e.target.value)}
+                  className="modal-select"
+                >
+                  <option value="all">All Cuisines</option>
+                  <optgroup label="Popular">
+                    <option value="filipino">Filipino</option>
+                    <option value="korean">Korean</option>
+                    <option value="japanese">Japanese</option>
+                    <option value="chinese">Chinese</option>
+                    <option value="american">American</option>
+                    <option value="italian">Italian</option>
+                    <option value="mexican">Mexican</option>
+                    <option value="indian">Indian</option>
+                  </optgroup>
+                  <optgroup label="All Available">
+                    {availableCuisines.map(cuisine => (
+                      <option key={cuisine} value={cuisine.toLowerCase()}>
+                        {cuisine}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              {/* Price Range Filter */}
+              <div className="filter-section">
+                <h3>💰 Price Range</h3>
+                <select
+                  value={selectedPriceLevel}
+                  onChange={(e) => setSelectedPriceLevel(e.target.value)}
+                  className="modal-select"
+                >
+                  <option value="all">All Prices</option>
+                  <option value="1">₱ - Budget Friendly</option>
+                  <option value="2">₱₱ - Moderate</option>
+                  <option value="3">₱₱₱ - Premium</option>
+                  <option value="4">₱₱₱₱ - Luxury</option>
+                </select>
+              </div>
+
+              {/* Minimum Rating Filter */}
+              <div className="filter-section">
+                <h3>⭐ Minimum Rating</h3>
+                <select
+                  value={minRating}
+                  onChange={(e) => setMinRating(parseFloat(e.target.value))}
+                  className="modal-select"
+                >
+                  <option value="0">All Ratings</option>
+                  <option value="3">3+ Stars</option>
+                  <option value="3.5">3.5+ Stars</option>
+                  <option value="4">4+ Stars</option>
+                  <option value="4.5">4.5+ Stars</option>
+                </select>
+              </div>
+
+              {/* Service Type Filter */}
+              <div className="filter-section">
+                <h3>🚚 Service Type</h3>
+                <select
+                  value={deliveryFilter}
+                  onChange={(e) => setDeliveryFilter(e.target.value)}
+                  className="modal-select"
+                >
+                  <option value="all">All Services</option>
+                  <option value="delivery">Delivery Available</option>
+                  <option value="pickup">Pickup/Takeout Available</option>
+                  <option value="dine-in">Dine-in Only</option>
+                </select>
+              </div>
+
+              {/* Distance Filter */}
+              {userLocation && (
                 <div className="filter-section">
-                  <h3> Operating Hours</h3>
+                  <h3>📍 Distance</h3>
                   <label className="modal-checkbox">
                     <input
                       type="checkbox"
-                      checked={openNowFilter}
-                      onChange={(e) => setOpenNowFilter(e.target.checked)}
+                      checked={showNearbyOnly}
+                      onChange={(e) => setShowNearbyOnly(e.target.checked)}
                     />
-                    <span>Open Now</span>
+                    <span>Show Nearby Only</span>
                   </label>
+                  {showNearbyOnly && (
+                    <div className="modal-slider-container">
+                      <label className="slider-label">
+                        Maximum Distance: {searchRadius} km
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="20"
+                        step="0.5"
+                        value={searchRadius}
+                        onChange={(e) => setSearchRadius(parseFloat(e.target.value))}
+                        className="modal-slider"
+                      />
+                      <div className="slider-markers">
+                        <span>1 km</span>
+                        <span>10 km</span>
+                        <span>20 km</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div className="modal-footer">
-                <button
-                  className="modal-btn secondary"
-                  onClick={() => {
-                    resetFilters();
-                    setShowFilterModal(false);
-                  }}
-                >
-                  Reset All
-                </button>
-                <button className="modal-btn primary" onClick={() => setShowFilterModal(false)}>
-                  Apply Filters
-                </button>
+              )}
+
+              {/* Open Now Filter */}
+              <div className="filter-section">
+                <h3>🕒 Operating Hours</h3>
+                <label className="modal-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={openNowFilter}
+                    onChange={(e) => setOpenNowFilter(e.target.checked)}
+                  />
+                  <span>Open Now</span>
+                </label>
               </div>
             </div>
+
+            <div className="modal-footer">
+              <button
+                className="modal-btn secondary"
+                onClick={() => {
+                  resetFilters();
+                  setShowFilterModal(false);
+                }}
+              >
+                Reset All
+              </button>
+              <button className="modal-btn primary" onClick={() => setShowFilterModal(false)}>
+                Apply Filters
+              </button>
+            </div>
           </div>
-        )}
+        </div>
+      )}
       </div>
-    </>
+    </LoadScript>
   );
 }

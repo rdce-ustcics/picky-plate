@@ -40,32 +40,84 @@ export default function Explorer() {
         params.set("region", region);
       }
 
+      // Step 1: Fetch without images for instant display
       const res = await fetch(`${API_BASE}/api/cultural-recipes?${params}`);
       const data = await res.json();
 
       if (res.ok && data.success) {
-        setDishes(data.recipes.map(r => ({
+        const recipesWithPlaceholders = data.recipes.map(r => ({
           id: r._id,
           name: r.name,
           desc: r.desc,
           region: r.region,
-          img: r.img || "/images/default-dish.png",
-          recipe: r.recipe,
+          img: "/images/default-dish.png",
+          recipe: r.recipe || [],
           ingredients: r.ingredients || [],
           instructions: r.instructions || [],
-          isActive: r.isActive
-        })));
+          isActive: r.isActive,
+          imageLoading: true // Track individual image loading state
+        }));
+
+        setDishes(recipesWithPlaceholders);
         setError(null);
+        setLoading(false);
+
+        // Step 2: Load images one by one
+        loadImagesOneByOne(recipesWithPlaceholders);
       } else {
         setError("Failed to load recipes");
         setDishes([]);
+        setLoading(false);
       }
     } catch (e) {
       console.error("Error fetching cultural recipes:", e);
       setError("Failed to load recipes");
       setDishes([]);
-    } finally {
       setLoading(false);
+    }
+  };
+
+  // Load images in parallel batches for faster progressive loading
+  const loadImagesOneByOne = async (recipes) => {
+    const BATCH_SIZE = 10; // Load 10 images at once for speed
+
+    for (let i = 0; i < recipes.length; i += BATCH_SIZE) {
+      const batch = recipes.slice(i, i + BATCH_SIZE);
+
+      // Load this batch in parallel
+      await Promise.all(
+        batch.map(async (recipe) => {
+          try {
+            const res = await fetch(`${API_BASE}/api/cultural-recipes/${recipe.id}`);
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+              // Update this specific recipe with its image
+              setDishes(prevDishes =>
+                prevDishes.map(dish =>
+                  dish.id === recipe.id
+                    ? {
+                        ...dish,
+                        img: data.recipe.img || "/images/default-dish.png",
+                        imageLoading: false
+                      }
+                    : dish
+                )
+              );
+            }
+          } catch (e) {
+            console.error(`Failed to load image for ${recipe.name}:`, e);
+            // Mark as done loading even if failed
+            setDishes(prevDishes =>
+              prevDishes.map(dish =>
+                dish.id === recipe.id
+                  ? { ...dish, imageLoading: false }
+                  : dish
+              )
+            );
+          }
+        })
+      );
     }
   };
 
@@ -84,6 +136,32 @@ export default function Explorer() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Fetch full recipe details when opening modal
+  const fetchRecipeDetails = async (recipeId) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/cultural-recipes/${recipeId}`);
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        return {
+          id: data.recipe._id,
+          name: data.recipe.name,
+          desc: data.recipe.desc,
+          region: data.recipe.region,
+          img: data.recipe.img || "/images/default-dish.png",
+          recipe: data.recipe.recipe || [],
+          ingredients: data.recipe.ingredients || [],
+          instructions: data.recipe.instructions || [],
+          isActive: data.recipe.isActive
+        };
+      }
+      return null;
+    } catch (e) {
+      console.error("Error fetching recipe details:", e);
+      return null;
+    }
+  };
 
   const filtered = useMemo(
     () => (region === "All" ? dishes : dishes.filter((d) => d.region === region)),
@@ -221,17 +299,27 @@ export default function Explorer() {
     setShowEditForm(true);
   };
 
-  const openEditForm = (dish) => {
-    setEditingRecipe(dish);
-    setImagePreview(dish.img || null);
+  const openEditForm = async (dish) => {
+    // Fetch full recipe details to ensure we have all fields including image
+    setLoading(true);
+    const fullRecipe = await fetchRecipeDetails(dish.id);
+    setLoading(false);
+
+    if (!fullRecipe) {
+      alert("Failed to load recipe details");
+      return;
+    }
+
+    setEditingRecipe(fullRecipe);
+    setImagePreview(fullRecipe.img || null);
     setRecipeForm({
-      name: dish.name,
-      desc: dish.desc,
-      region: dish.region,
-      img: dish.img || "",
-      ingredients: (dish.ingredients && dish.ingredients.length > 0) ? dish.ingredients : [""],
-      instructions: (dish.instructions && dish.instructions.length > 0) ? dish.instructions : [""],
-      recipe: (dish.recipe && dish.recipe.length > 0) ? dish.recipe : [""] // Backward compatibility
+      name: fullRecipe.name,
+      desc: fullRecipe.desc,
+      region: fullRecipe.region,
+      img: fullRecipe.img || "",
+      ingredients: (fullRecipe.ingredients && fullRecipe.ingredients.length > 0) ? fullRecipe.ingredients : [""],
+      instructions: (fullRecipe.instructions && fullRecipe.instructions.length > 0) ? fullRecipe.instructions : [""],
+      recipe: (fullRecipe.recipe && fullRecipe.recipe.length > 0) ? fullRecipe.recipe : [""] // Backward compatibility
     });
     setShowEditForm(true);
   };
@@ -468,12 +556,50 @@ export default function Explorer() {
         <div className="explorer-grid">
           {filtered.map((dish) => (
             <div key={dish.id} className="dish-card">
-              <img src={dish.img} alt={dish.name} />
+              <div style={{ position: 'relative' }}>
+                <img
+                  src={dish.img}
+                  alt={dish.name}
+                  style={{
+                    opacity: dish.imageLoading ? 0.5 : 1,
+                    transition: 'opacity 0.4s ease-in-out'
+                  }}
+                />
+                {dish.imageLoading && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                    color: 'white',
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    pointerEvents: 'none'
+                  }}>
+                    Loading...
+                  </div>
+                )}
+              </div>
               <h2>{dish.name}</h2>
               <p>{dish.desc}</p>
 
               <div className="card-actions">
-                <button className="btn-primary" onClick={() => setModalDish(dish)}>
+                <button
+                  className="btn-primary"
+                  onClick={async () => {
+                    setLoading(true);
+                    const fullRecipe = await fetchRecipeDetails(dish.id);
+                    setLoading(false);
+                    if (fullRecipe) {
+                      setModalDish(fullRecipe);
+                    } else {
+                      alert("Failed to load recipe details");
+                    }
+                  }}
+                >
                   Click here to view recipe
                 </button>
               </div>
@@ -482,9 +608,9 @@ export default function Explorer() {
                 <div className="admin-controls">
                   <button
                     className="btn-admin-edit"
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
-                      openEditForm(dish);
+                      await openEditForm(dish);
                     }}
                     title="Edit recipe"
                   >
@@ -571,7 +697,7 @@ export default function Explorer() {
               </button>
               {isAdmin && (
                 <>
-                  <button className="btn-admin-edit" onClick={() => { setModalDish(null); openEditForm(modalDish); }}>
+                  <button className="btn-admin-edit" onClick={async () => { setModalDish(null); await openEditForm(modalDish); }}>
                     <Edit className="icon-xs" />
                     Edit
                   </button>
