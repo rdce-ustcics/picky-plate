@@ -62,6 +62,8 @@ export default function RestaurantLocator() {
   const [mapZoom, setMapZoom] = useState(11);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [cacheStatus, setCacheStatus] = useState('checking');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
 
   const METRO_MANILA_CITIES = [
     "Manila", "Quezon City", "Caloocan", "Las Piñas", "Makati", "Makati City",
@@ -336,6 +338,15 @@ export default function RestaurantLocator() {
     return filteredRestaurants.slice(0, maxMarkers);
   }, [filteredRestaurants, searchQuery, selectedPriceLevel, minRating,
       selectedCuisine, deliveryFilter, openNowFilter, showNearbyOnly]);
+
+  // Pagination calculations for list view
+  const paginatedRestaurants = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredRestaurants.slice(startIndex, endIndex);
+  }, [filteredRestaurants, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredRestaurants.length / itemsPerPage);
 
   // Get marker icon based on price level
   const getMarkerIcon = (priceLevelNum) => {
@@ -681,6 +692,11 @@ export default function RestaurantLocator() {
   }, [searchQuery, selectedPriceLevel, minRating, restaurants, userLocation, showNearbyOnly, searchRadius,
       selectedCuisine, deliveryFilter, openNowFilter]);
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedPriceLevel, minRating, selectedCuisine, deliveryFilter, openNowFilter, showNearbyOnly, searchRadius]);
+
   const getPriceLevelSymbol = (level) => {
     if (!level) return '';
     return '₱'.repeat(level);
@@ -927,8 +943,9 @@ export default function RestaurantLocator() {
                   </button>
                 </div>
               ) : (
+                <>
                 <div className="restaurant-grid">
-                  {filteredRestaurants.map((restaurant, index) => (
+                  {paginatedRestaurants.map((restaurant, index) => (
                     <div
                       key={restaurant.id || index}
                       className="restaurant-card"
@@ -998,6 +1015,35 @@ export default function RestaurantLocator() {
                     </div>
                   ))}
                 </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="pagination-controls">
+                    <button
+                      className="pagination-btn"
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                    >
+                      ← Previous
+                    </button>
+
+                    <div className="pagination-info">
+                      <span>Page {currentPage} of {totalPages}</span>
+                      <span className="pagination-count">
+                        ({filteredRestaurants.length} restaurants)
+                      </span>
+                    </div>
+
+                    <button
+                      className="pagination-btn"
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                )}
+                </>
               )}
             </div>
           )}
