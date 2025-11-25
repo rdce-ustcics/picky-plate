@@ -12,7 +12,7 @@ export default function Dashboard() {
   const { authHeaders } = useAuth();  // ✅ get JWT headers
 
   // API base configuration
-  const API = process.env.REACT_APP_API_BASE || "";
+const API = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
   // Active user identification
   const activeUserId = (() => {

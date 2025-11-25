@@ -4,7 +4,7 @@ import { Mail, Lock, User, Eye, EyeOff, AlertCircle, Loader } from "lucide-react
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
-const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:4000").replace(/\/+$/, "");
+const API_BASE = (process.env.REACT_APP_API_URL || "http://localhost:4000").replace(/\/+$/, "");
 
 export default function Login() {
   const navigate = useNavigate();
