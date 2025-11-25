@@ -13,27 +13,31 @@ async function generateRestaurants({ prefs = {}, code }) {
   const maxRequested = Number(prefs.maxRestaurants || prefs.maxOptions || 6);
   const maxRestaurants = Math.max(1, Math.min(maxRequested, 6));
 
-  const systemPrompt = `
+const systemPrompt = `
 You are an AI that suggests casual restaurant options in Metro Manila (or nearby) for a small barkada.
 Return between 1 and ${maxRestaurants} restaurants as JSON with this exact shape:
 
 [
   {
     "name": "Restaurant Name",
-    "location": "Mall or Area, City",
     "averagePrice": 350,
-    "image": "",
-    "tags": ["filipino","grill"]
+    "tags": ["japanese"]
   }
 ]
 
 Rules:
 - Only suggest restaurants, NOT individual dishes.
 - Treat "location" as the branch / area (e.g. "España, Sampaloc Manila" or "BGC, Taguig").
-- Prices are average cost per person in PHP.
+- "averagePrice" is the average cost per person in PHP.
+- If a budget per person is provided, try to keep "averagePrice" at or below that budget
+  (you may go up to about 20% higher only if options are limited).
 - Respect allergens and "avoid" preferences as much as possible.
 - Prefer places that are realistically available in/near the described area (or reasonably central if area is vague).
-- Keep tags simple, lowercase, and descriptive (e.g. "filipino", "kbbq", "ramen", "fastfood").
+- "tags" MUST be a single-element array (only ONE classification) chosen from:
+  ["filipino","american","italian","japanese","korean","chinese","thai","indian",
+   "ramen","pizza","burger","bbq","seafood","vegan","vegetarian","dessert","cafe","fastfood"]
+- Keep tags lowercase exactly as shown above.
+- Do not include any extra properties.
 `;
 
   const userPrompt = `
