@@ -1551,7 +1551,7 @@ function renderMoodPill() {
                     const showLearnedNote = !!m.learned;
                     let displayContent = m.content;
 
-                    if (isAuthenticated && m.role === "assistant") {
+                    if (m.role === "assistant") {
                       const extracted = extractRecommendationOptions(m.content);
                       if (extracted?.options?.length) {
                         options.push(...extracted.options);
@@ -1601,7 +1601,7 @@ function renderMoodPill() {
                           {displayContent}
 
                           {/* Recommendation choices */}
-                          {isAuthenticated && options.length > 0 && (
+                          {options.length > 0 && (
                             <div
                               style={{
                                 marginTop: 8,
@@ -1653,7 +1653,7 @@ function renderMoodPill() {
                                       )}
                                     </div>
 
-                                    {!hideButton && (
+                                    {!hideButton && isAuthenticated &&  (
                                       <button
                                         onClick={() =>
                                           handleChooseRecommendation(opt, idx)
