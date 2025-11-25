@@ -333,12 +333,8 @@ function isRestaurantOption(text) {
   const keywords = [
     "restaurant",
     "house",
-    "barbecue",
-    "bbq",
     "grill",
     "express",
-    "korean",
-    "japanese",
     "diner",
     "cafe",
     "bistro",
@@ -1703,7 +1699,8 @@ function renderMoodPill() {
                                         if (
                       m.role === "user" &&
                       typeof m.content === "string" &&
-                      m.content.startsWith('Give me a simple recipe for "')
+                      m.content.startsWith('Give me a simple recipe for "') ||     
+                      m.content.startsWith("The user finalized their decision") 
                     ) {
                       return null; // don't render this bubble at all
                     }
@@ -1718,17 +1715,6 @@ function renderMoodPill() {
                     
 
                     if (m.role === "assistant") {
-                      const isSystemRecipePrompt =
-                        m.content.startsWith('Give me a simple recipe for "');
-
-                      const isSystemRestaurantPrompt =
-                        m.content.startsWith("The user finalized their decision");
-
-                      // ❌ Skip formatting for internal prompts
-                      if (isSystemRecipePrompt || isSystemRestaurantPrompt) {
-                        return null;
-                      }
-
                       const extracted = extractRecommendationOptions(m.content);
                       if (extracted?.options?.length) {
                         options.push(...extracted.options);
