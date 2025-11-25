@@ -1,28 +1,46 @@
 // server/utils/mailer.js
-const nodemailer = require('nodemailer');
+const sgMail = require('@sendgrid/mail');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 587),
-  secure: String(process.env.SMTP_SECURE || 'false') === 'true',
-  auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-});
+// Initialize SendGrid with API key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 async function sendOtpEmail({ to, code, subject = 'Your PickAPlate verification code' }) {
   const html = `
-    <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto">
-      <h2>PickAPlate</h2>
-      <p>Use this one-time code:</p>
-      <div style="font-size:28px;font-weight:700;letter-spacing:6px">${code}</div>
-      <p>This code expires soon. If you didn’t request it, you can ignore this email.</p>
+    <div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;padding:40px 20px;background-color:#ffffff;">
+      <div style="text-align:center;margin-bottom:30px;">
+        <h1 style="color:#F59E0B;font-size:32px;margin:0;">🍽️ PickAPlate</h1>
+      </div>
+      
+      <div style="background-color:#FEF3C7;border-radius:12px;padding:30px;text-align:center;margin-bottom:30px;">
+        <h2 style="color:#92400E;font-size:24px;margin:0 0 20px 0;">Your Verification Code</h2>
+        <div style="background-color:#ffffff;border-radius:8px;padding:20px;margin:20px 0;">
+          <p style="color:#92400E;font-size:16px;margin:0 0 15px 0;">Use this one-time code:</p>
+          <div style="font-size:36px;font-weight:700;letter-spacing:8px;color:#F59E0B;font-family:monospace;">${code}</div>
+        </div>
+        <p style="color:#92400E;font-size:14px;margin:20px 0 0 0;">This code expires in ${process.env.OTP_CODE_TTL_MIN || 10} minutes.</p>
+      </div>
+      
+      <div style="text-align:center;color:#6B7280;font-size:12px;">
+        <p style="margin:10px 0;">If you didn't request this code, you can safely ignore this email.</p>
+        <p style="margin:10px 0;">© ${new Date().getFullYear()} PickAPlate. All rights reserved.</p>
+      </div>
     </div>
   `;
-  await transporter.sendMail({
-    from: process.env.MAIL_FROM || 'PickAPlate <noreply@pickaplate.local>',
+
+  const msg = {
     to,
+    from: process.env.MAIL_FROM || 'PickAPlate <noreply.pickaplate@gmail.com>',
     subject,
     html,
-  });
+  };
+
+  try {
+    await sgMail.send(msg);
+    console.log(`✅ OTP email sent to ${to}`);
+  } catch (error) {
+    console.error('❌ SendGrid error:', error.response?.body || error.message);
+    throw new Error('Failed to send email');
+  }
 }
 
 const sendResetOtpEmail = ({ to, code }) =>
