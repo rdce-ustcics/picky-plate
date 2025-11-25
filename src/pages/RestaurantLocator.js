@@ -493,19 +493,25 @@ export default function RestaurantLocator() {
         const allItems = [...ncrData.items, ...osmData.items];
         console.log("Total restaurants before filtering:", allItems.length);
 
-        // Filter for valid data - show ALL valid restaurants
-        const validData = allItems.filter(item => {
-          // Check basic validity
-          if (!item || !item.name || typeof item.lat !== 'number' ||
-              typeof item.lng !== 'number' || item.lat === 0 || item.lng === 0) {
-            return false;
-          }
+// Filter for valid data - show ALL valid restaurants
+const validData = allItems.filter(item => {
+  // Check basic validity
+  if (!item || !item.name) return false;
+  
+  // ✅ STRICT coordinate validation
+  if (typeof item.lat !== 'number' || 
+      typeof item.lng !== 'number' ||
+      item.lat === 0 || 
+      item.lng === 0 ||
+      isNaN(item.lat) || 
+      isNaN(item.lng) ||
+      item.lat < -90 || item.lat > 90 ||
+      item.lng < -180 || item.lng > 180) {
+    return false;
+  }
 
-          // For now, include ALL valid restaurants
-          // We can filter by location later if needed
-          return true;
-        });
-
+  return true;
+});
         console.log("Valid restaurants after filtering:", validData.length);
 
         // Process and deduplicate restaurants
@@ -868,12 +874,20 @@ export default function RestaurantLocator() {
                 {isMapLoaded && (
                   <MarkerClusterer>
                     {(clusterer) =>
-                      displayedRestaurants.map((restaurant, index) => {
-                        if (!restaurant.lat || !restaurant.lng) return null;
-                        return (
-                          <Marker
-                            key={restaurant.id || index}
-                            position={{ lat: restaurant.lat, lng: restaurant.lng }}
+displayedRestaurants.map((restaurant, index) => {
+  // ✅ STRICT validation - check for valid numbers
+  if (!restaurant.lat || !restaurant.lng || 
+      typeof restaurant.lat !== 'number' || 
+      typeof restaurant.lng !== 'number' ||
+      restaurant.lat === 0 || restaurant.lng === 0 ||
+      isNaN(restaurant.lat) || isNaN(restaurant.lng)) {
+    return null;
+  }
+  
+  return (
+    <Marker
+      key={restaurant.id || index}
+      position={{ lat: restaurant.lat, lng: restaurant.lng }}
                             clusterer={clusterer}
                             icon={getMarkerIcon(restaurant.priceLevelNum)}
                             title={restaurant.name}
