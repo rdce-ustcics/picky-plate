@@ -578,9 +578,6 @@ export default function CommunityRecipes() {
 
       alert("Recipe updated successfully!");
       closeEditModal();
-
-      // Refresh the list
-      await fetchList();
     } catch (e) {
       console.error("update_recipe_error:", e);
       alert("Failed to update recipe. Please try again.");
