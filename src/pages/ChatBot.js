@@ -1530,7 +1530,6 @@ function renderMoodPill() {
                   }}
                 >
                   {activeChat?.title || "Chat"}
-                  {activeChat?.closed && " (closed)"}
                 </span>
               </div>
 
@@ -2178,9 +2177,8 @@ function renderMoodPill() {
               </span>
               <br />
               <br />
-              Are you sure with your decision? After confirming, you won&apos;t
-              be able to send new messages in this chat, and we&apos;ll help you
-              get a recipe or restaurant for it.
+              Choosing this will add it to your food history and help the
+              chatbot learn more about your preferences. Would you like to proceed?
             </div>
             <div
               style={{
