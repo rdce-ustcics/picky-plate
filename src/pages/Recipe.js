@@ -73,7 +73,8 @@ export default function CommunityRecipes() {
   const [loading, setLoading] = useState(false);
 
   // filters
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState("");        // Actual search query used for API
+  const [searchInput, setSearchInput] = useState(""); // Input field value (doesn't trigger search)
   const [selectedTags, setSelectedTags] = useState([]);
 
   const [excludeAllergens, setExcludeAllergens] = useState([]);
@@ -350,9 +351,24 @@ export default function CommunityRecipes() {
     }
   };
 
+  // Handle search submission (Enter key or button click)
+  const handleSearchSubmit = () => {
+    setSearch(searchInput.trim());
+    setPage(1);
+  };
+
+  // Handle Enter key in search input
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSearchSubmit();
+    }
+  };
+
   // reset all
   const resetFilters = () => {
     setSearch("");
+    setSearchInput("");
     setSelectedTags([]);
     setExcludeAllergens([]);
     setExcludeTerms([]);
@@ -835,14 +851,24 @@ export default function CommunityRecipes() {
             {/* FILTERS SECTION */}
             <div className="mt-8 space-y-4">
               {/* Main Search Bar */}
-              <div className="relative">
-                <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-600" />
-                <input
-                  value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  className="w-full bg-white border-2 border-amber-200 rounded-3xl pl-14 pr-6 py-4 text-base outline-none focus:ring-4 focus:ring-amber-300 focus:border-amber-400 transition shadow-md placeholder-amber-400"
-                  placeholder="Search for delicious recipes..."
-                />
+              <div className="relative flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-600" />
+                  <input
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    onKeyDown={handleSearchKeyDown}
+                    className="w-full bg-white border-2 border-amber-200 rounded-3xl pl-14 pr-6 py-4 text-base outline-none focus:ring-4 focus:ring-amber-300 focus:border-amber-400 transition shadow-md placeholder-amber-400"
+                    placeholder="Search for delicious recipes..."
+                  />
+                </div>
+                <button
+                  onClick={handleSearchSubmit}
+                  className="bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600 text-white font-bold px-6 py-4 rounded-3xl flex items-center gap-2 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <Search className="w-5 h-5" />
+                  <span className="hidden sm:inline">Search</span>
+                </button>
               </div>
 
               {/* Quick Filters Row */}
@@ -902,7 +928,7 @@ export default function CommunityRecipes() {
                 </button>
 
                 {/* Clear Filters */}
-                {(search || activeFiltersCount > 0 || showMine) && (
+                {(search || searchInput || activeFiltersCount > 0 || showMine) && (
                   <button
                     onClick={resetFilters}
                     className="bg-white border-2 border-amber-200 rounded-2xl px-5 py-3 text-sm hover:bg-red-50 hover:border-red-300 hover:text-red-700 transition font-semibold shadow-md"
@@ -1033,8 +1059,22 @@ export default function CommunityRecipes() {
               )}
 
               {/* Active Filter Chips */}
-              {(selectedTags.length > 0 || excludeAllergens.length > 0 || excludeTerms.length > 0) && (
+              {(search || selectedTags.length > 0 || excludeAllergens.length > 0 || excludeTerms.length > 0) && (
                 <div className="flex flex-wrap gap-2 pt-2">
+                  {/* Active Search Chip */}
+                  {search && (
+                    <span className="chip inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-blue-500 text-white shadow-md">
+                      <Search className="w-3 h-3" />
+                      "{search}"
+                      <button
+                        className="hover:bg-white/30 rounded-full p-1 transition"
+                        onClick={() => { setSearch(""); setSearchInput(""); }}
+                        aria-label="Clear search"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  )}
                   {selectedTags.map((tag) => (
                     <span key={`tag-${tag}`} className="chip inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md">
                       #{tag}
