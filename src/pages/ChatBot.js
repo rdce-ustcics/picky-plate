@@ -264,6 +264,21 @@ function getDishTitle(text) {
   return t;
 }
 
+function cleanRecipeTitle(raw) {
+  if (!raw) return "";
+  let t = raw.trim();
+
+  // strip markdown bold/italic wrappers
+  t = t.replace(/^\*\*(.+)\*\*$/, "$1");
+  t = t.replace(/^\*(.+)\*$/, "$1");
+
+  // remove trailing "Recipe" (case-insensitive)
+  t = t.replace(/\s*\b[Rr]ecipe\b\s*$/, "");
+
+  return t.trim();
+}
+
+
 function stripRecommendationLines(text) {
   if (!text) return "";
 
@@ -272,6 +287,69 @@ function stripRecommendationLines(text) {
     .filter((line) => !/^(\d+\.|-|•)\s+/.test(line.trim()))
     .join("\n")
     .trim();
+}
+
+function parseRecipe(content) {
+  if (!content) return null;
+
+  const lines = content.split("\n").map(l => l.trim()).filter(Boolean);
+
+  const recipe = { title: "", ingredients: [], steps: [] };
+
+  let mode = null;
+
+  for (let line of lines) {
+    const lower = line.toLowerCase();
+
+    if (lower.includes("ingredients")) {
+      mode = "ingredients";
+      continue;
+    }
+    if (lower.includes("steps") || lower.includes("instructions")) {
+      mode = "steps";
+      continue;
+    }
+
+    // title (first line)
+      if (!recipe.title) {
+        recipe.title = cleanRecipeTitle(line);
+        continue;
+      }
+
+    if (mode === "ingredients") recipe.ingredients.push(line);
+    else if (mode === "steps") recipe.steps.push(line);
+  }
+
+  if (!recipe.ingredients.length || !recipe.steps.length) return null;
+  return recipe;
+}
+
+function isRestaurantOption(text) {
+  if (!text) return false;
+
+  const lower = text.toLowerCase();
+
+  // Very strong indicators (most restaurant names or descriptions include these)
+  const keywords = [
+    "restaurant",
+    "house",
+    "barbecue",
+    "bbq",
+    "grill",
+    "express",
+    "korean",
+    "japanese",
+    "diner",
+    "cafe",
+    "bistro",
+    "bar and grill",
+    "kitchen",
+    "known for",
+    "serves",
+    "offers",
+  ];
+
+  return keywords.some((k) => lower.includes(k));
 }
 
 export default function ChatBot() {
@@ -308,6 +386,8 @@ export default function ChatBot() {
 
   const prevAuthRef = useRef(isAuthenticated);
   const suppressLocalLoadRef = useRef(false);
+  const [chosenRestaurant, setChosenRestaurant] = useState(null);
+
 
   function clearLocalChatStorage() {
     try {
@@ -383,6 +463,18 @@ export default function ChatBot() {
   const activeChat = chats.find((c) => c.id === activeChatId) || null;
   const chatHasFinalChoice = !!activeChat && !!activeChat.hasFinalChoice;
   const isInputLocked = !isAuthenticated && guestLimitReached;
+
+      // Detect if the last assistant message is a recipe
+    const lastAssistantMessage = activeChat?.messages
+      ?.filter((m) => m.role === "assistant")
+      ?.slice(-1)[0];
+
+    const lastRecipe = lastAssistantMessage
+      ? parseRecipe(lastAssistantMessage.content)
+      : null;
+
+    const isLastMessageRecipe = !!lastRecipe;
+    const lastRecipeTitle = lastRecipe ? cleanRecipeTitle(lastRecipe.title) : "";
 
   async function apiChat({ message, history = [], chatId = null, mood = null }) {
     const recent = history
@@ -788,16 +880,47 @@ export default function ChatBot() {
     }
   }
 
-  function handleChooseRecommendation(text, msgIndex) {
-    if (!isAuthenticated || !activeChatId) return;
-    if (!text) return;
+function handleChooseRecommendation(text, msgIndex) {
+  if (!isAuthenticated || !activeChatId) return;
+  if (!text) return;
 
-    const titleOnly = getDishTitle(text);
+  const titleOnly = getDishTitle(text);
 
-    setPendingChoice(titleOnly);
-    setPendingChoiceMessageIndex(msgIndex);
-    setShowConfirmChoiceModal(true);
+  // 🔍 Smart restaurant detection
+  const restaurant = isRestaurantOption(text);
+
+  if (restaurant) {
+    // Store restaurant name
+    setChosenRestaurant(titleOnly);
+    setCtaChatId(activeChatId);
+    setPostDecisionStep("restaurant-choice");
+
+    // 🔥 Add a chatbot message acknowledging the restaurant choice
+    setChats((prev) =>
+      prev.map((c) =>
+        c.id === activeChatId
+          ? {
+              ...c,
+              messages: [
+                ...c.messages,
+                {
+                  role: "assistant",
+                  content: `Excellent choice! "${titleOnly}" is a great pick. You can use the button below to locate this restaurant near you!`,
+                },
+              ],
+            }
+          : c
+      )
+    );
+
+    return; // stop here (no confirmation modal)
   }
+
+  // Default—recipe or dish flow
+  setPendingChoice(titleOnly);
+  setPendingChoiceMessageIndex(msgIndex);
+  setShowConfirmChoiceModal(true);
+}
 
   async function confirmRecommendationChoice() {
     if (!activeChatId || !pendingChoice) return;
@@ -854,13 +977,44 @@ export default function ChatBot() {
     setPendingChoiceMessageIndex(null);
   }
 
-  function goToRecipePage() {
-    if (!chosenRecommendation) return;
-    const q = encodeURIComponent(chosenRecommendation);
-    setPostDecisionStep("done");
-    navigate(`/recipes?q=${q}`);
-  }
+async function goToRecipePage() {
+  if (!chosenRecommendation || !activeChatId) return;
 
+  const chat = chats.find(c => c.id === activeChatId);
+  const history = chat?.messages || [];
+  const dish = chosenRecommendation;
+
+  setIsTyping(true);
+
+  try {
+    const { reply } = await apiChat({
+      message: `Give me a simple recipe for "${dish}". Return ONLY:\n\nTitle\n\nIngredients:\n- item\n- item\n\nSteps:\n1. step\n2. step\n\nDo NOT add anything else.`,
+      history,
+      chatId: chat?.chatId || null,
+    });
+
+    const finalNote =
+      `\n\nOur chatbot isn't always right — check if there's a community recipe for this?`;
+
+    setChats(prev =>
+      prev.map(c =>
+        c.id === activeChatId
+          ? {
+              ...c,
+              messages: [
+                ...c.messages,
+                { role: "assistant", content: reply + finalNote },
+              ],
+            }
+          : c
+      )
+    );
+  } catch (e) {
+    console.error("recipe_flow_error:", e);
+  } finally {
+    setIsTyping(false);
+  }
+}
   async function fetchRestaurantsForChoice() {
     if (!chosenRecommendation || !activeChatId) return;
 
@@ -1546,11 +1700,35 @@ function renderMoodPill() {
               >
                 {activeChat?.messages?.length ? (
                   activeChat.messages.map((m, idx) => {
+                                        if (
+                      m.role === "user" &&
+                      typeof m.content === "string" &&
+                      m.content.startsWith('Give me a simple recipe for "')
+                    ) {
+                      return null; // don't render this bubble at all
+                    }
+
                     const options = [];
                     const showLearnedNote = !!m.learned;
                     let displayContent = m.content;
 
+                    const parsedRecipe = parseRecipe(m.content);
+                    const isRecipe = !!parsedRecipe;
+
+                    
+
                     if (m.role === "assistant") {
+                      const isSystemRecipePrompt =
+                        m.content.startsWith('Give me a simple recipe for "');
+
+                      const isSystemRestaurantPrompt =
+                        m.content.startsWith("The user finalized their decision");
+
+                      // ❌ Skip formatting for internal prompts
+                      if (isSystemRecipePrompt || isSystemRestaurantPrompt) {
+                        return null;
+                      }
+
                       const extracted = extractRecommendationOptions(m.content);
                       if (extracted?.options?.length) {
                         options.push(...extracted.options);
@@ -1596,11 +1774,33 @@ function renderMoodPill() {
                             boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
                           }}
                         >
-                          {/* Main text */}
-                          {displayContent}
+                            {/* Recipe rendering */}
+                            {isRecipe ? (
+                              <div style={{ fontSize: 14 }}>
+                                <div style={{ fontWeight: 700, marginBottom: 8 }}>
+                                  {cleanRecipeTitle(parsedRecipe.title)}
+                                </div>
+
+                                <div style={{ marginBottom: 6, fontWeight: 600 }}>Ingredients</div>
+                                <ul style={{ marginLeft: 20, marginBottom: 12 }}>
+                                  {parsedRecipe.ingredients.map((i, ix) => (
+                                    <li key={ix} style={{ marginBottom: 4 }}>{i}</li>
+                                  ))}
+                                </ul>
+
+                                <div style={{ marginBottom: 6, fontWeight: 600 }}>Steps</div>
+                                <ol style={{ marginLeft: 20 }}>
+                                  {parsedRecipe.steps.map((s, ix) => (
+                                    <li key={ix} style={{ marginBottom: 6 }}>{s}</li>
+                                  ))}
+                                </ol>
+                              </div>
+                            ) : (
+                              <>{displayContent}</>
+                            )}
 
                           {/* Recommendation choices */}
-                          {options.length > 0 && (
+                          {!isRecipe && options.length > 0 && (
                             <div
                               style={{
                                 marginTop: 8,
@@ -1727,53 +1927,125 @@ function renderMoodPill() {
                   background: brand.secondary,
                 }}
               >
-                {/* Post-decision CTA buttons */}
-                {isAuthenticated &&
-                  postDecisionStep === "awaitingType" &&
-                  chosenRecommendation && 
-                  activeChatId === ctaChatId &&(
-                    <div
-                      style={{
-                        maxWidth: 768,
-                        margin: "0 auto 8px",
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 8,
-                        justifyContent: "center",
-                      }}
-                    >
-                      <button
-                        onClick={goToRecipePage}
-                        style={{
-                          padding: "8px 12px",
-                          borderRadius: 999,
-                          border: "1px solid #F4E4C1",
-                          background: "#FFFFFF",
-                          fontSize: 13,
-                          cursor: "pointer",
-                          fontWeight: 500,
-                        }}
-                      >
-                        I want a recipe for this
-                      </button>
-                      <button
-                        onClick={fetchRestaurantsForChoice}
-                        style={{
-                          padding: "8px 12px",
-                          borderRadius: 999,
-                          border: "none",
-                          background:
-                            "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)",
-                          color: "#fff",
-                          fontSize: 13,
-                          cursor: "pointer",
-                          fontWeight: 600,
-                        }}
-                      >
-                        Show me restaurants
-                      </button>
-                    </div>
-                  )}
+
+        {/* CTA AREA */}
+        {isAuthenticated && (
+          <>
+            {/* 1️⃣ Recipe CTA — ONLY when last message is a recipe */}
+            {isLastMessageRecipe && (
+              <div
+                style={{
+                  maxWidth: 768,
+                  margin: "0 auto 8px",
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
+                <button
+                    onClick={() => {
+                      if (!lastRecipeTitle) return;
+                      navigate(`/recipes?q=${encodeURIComponent(lastRecipeTitle)}`);
+                    }}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: 999,
+                    border: "1px solid #F4E4C1",
+                    background: "#FFFFFF",
+                    fontSize: 13,
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                >
+                  Go to Community Recipes
+                </button>
+              </div>
+            )}
+
+                        {/* 3️⃣ Restaurant CTA */}
+            {postDecisionStep === "restaurant-choice" &&
+              chosenRestaurant &&
+              activeChatId === ctaChatId && (
+                <div
+                  style={{
+                    maxWidth: 768,
+                    margin: "0 auto 8px",
+                    display: "flex",
+                    justifyContent: "center",
+                  }}
+                >
+                  <button
+                    onClick={() =>
+                      navigate(
+                        `/restaurants?q=${encodeURIComponent(chosenRestaurant)}`
+                      )
+                    }
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: 999,
+                      border: "1px solid #F4E4C1",
+                      background: "#FFFFFF",
+                      fontSize: 13,
+                      cursor: "pointer",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Go to Restaurant Locator
+                  </button>
+                </div>
+            )}
+
+
+            {/* 2️⃣ Normal CTAs — ONLY after user picks something, AND not a recipe */}
+            {!isLastMessageRecipe &&
+              postDecisionStep === "awaitingType" &&
+              chosenRecommendation &&
+              activeChatId === ctaChatId && (
+                <div
+                  style={{
+                    maxWidth: 768,
+                    margin: "0 auto 8px",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 8,
+                    justifyContent: "center",
+                  }}
+                >
+                  <button
+                    onClick={goToRecipePage}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: 999,
+                      border: "1px solid #F4E4C1",
+                      background: "#FFFFFF",
+                      fontSize: 13,
+                      cursor: "pointer",
+                      fontWeight: 500,
+                    }}
+                  >
+                    I want a recipe for this
+                  </button>
+
+                  <button
+                    onClick={fetchRestaurantsForChoice}
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: 999,
+                      border: "none",
+                      background:
+                        "linear-gradient(135deg, #FFC42D 0%, #FFD700 100%)",
+                      color: "#fff",
+                      fontSize: 13,
+                      cursor: "pointer",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Show me restaurants
+                  </button>
+                </div>
+              )}
+          </>
+        )}
+
 
                 <div
                   style={{
