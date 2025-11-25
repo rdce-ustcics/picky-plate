@@ -124,50 +124,59 @@ export default function Login() {
         try { localStorage.setItem("pap:activeUserId", formData.email); } catch {}
         setSuccessMessage(result?.message || "Logged in successfully");
         return navigate("/", { replace: true });
-        } else {
-          // SIGNUP → create account, send OTP, then go to OTP page
-          // Combine firstName and lastName for the name field
-          const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
-          const result = await authSignup(fullName, formData.email, formData.password);
-          if (!result?.success) throw new Error(result?.message || "Signup failed");
+} else {
+  // SIGNUP → create account, send OTP, then go to OTP page
+  const fullName = `${formData.firstName.trim()} ${formData.lastName.trim()}`;
+  const result = await authSignup(fullName, formData.email, formData.password);
+  
+  if (!result?.success) {
+    throw new Error(result?.message || "Signup failed");
+  }
 
-          // Request OTP for this email
-          let initialCooldown = 0;
-          try {
-            const res = await fetch(`${API_BASE}/api/auth/request-otp`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ email: formData.email }),
-              credentials: "include",
-            });
+  // Request OTP for this email
+  let initialCooldown = 0;
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/request-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: formData.email }),
+      credentials: "include",
+    });
 
-            const data = await res.json().catch(() => ({}));
+    const data = await res.json().catch(() => ({}));
 
-            if (!res.ok || data?.success === false) {
-              // If it failed, show an error, but still allow user to hit "Send Code" later
-              console.error("Failed to send OTP after signup:", data?.message || res.statusText);
-            } else {
-              // Backend can send cooldownSec; default to 60
-              initialCooldown = Number.isFinite(data?.cooldownSec) ? Number(data.cooldownSec) : 60;
-            }
-          } catch (err) {
-            console.error("Failed to send OTP after signup:", err);
-          }
+    if (!res.ok || data?.success === false) {
+      console.error("Failed to send OTP after signup:", data?.message || res.statusText);
+      // Still continue to OTP page - user can resend code
+    } else {
+      initialCooldown = Number.isFinite(data?.cooldownSec) ? Number(data.cooldownSec) : 60;
+    }
+  } catch (err) {
+    console.error("Failed to send OTP after signup:", err);
+    // Still continue to OTP page - user can resend code
+  }
 
-          try {
-            sessionStorage.setItem("pap:onboardingTrigger", "1");
-            localStorage.setItem("pap:onboardingForce", "1");
-          } catch {}
+  try {
+    sessionStorage.setItem("pap:onboardingTrigger", "1");
+    localStorage.setItem("pap:onboardingForce", "1");
+  } catch {}
 
-          setSuccessMessage(result?.message || "Account created successfully");
-          return navigate("/verify-otp", {
-            replace: true,
-            state: {
-              email: formData.email,
-              initialCooldown, // ⬅ used by VerifyOtp as starting cooldown
-            },
-          });
-        }
+  // ✅ CRITICAL: Stop loading BEFORE navigating
+  setIsLoading(false);
+  
+  setSuccessMessage(result?.message || "Account created successfully");
+  
+  // Small delay to show success message
+  setTimeout(() => {
+    navigate("/verify-otp", {
+      replace: true,
+      state: {
+        email: formData.email,
+        initialCooldown,
+      },
+    });
+  }, 500);
+}
     } catch (err) {
       console.error("Auth error:", err);
       setApiError(err?.message || "Unable to connect to server. Please try again.");
