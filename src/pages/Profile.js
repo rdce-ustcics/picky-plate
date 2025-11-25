@@ -5,8 +5,8 @@ import './Profile.css';
 
 export default function Profile() {
   // API base configuration (matching Dashboard)
-  const API = process.env.REACT_APP_API_BASE || "";
-  const { authHeaders } = useAuth();  // ✅ get JWT headers
+const API = process.env.REACT_APP_API_URL || "http://localhost:4000";
+  const { authHeaders } = useAuth();
 
   // ---- Identify active user ----
   const activeUserId = useMemo(() => {
