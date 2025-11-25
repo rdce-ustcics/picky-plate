@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:4000").replace(/\/+$/, "");
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 function safeLen() {
   const n = Number.parseInt(process.env.REACT_APP_OTP_LEN, 10);
