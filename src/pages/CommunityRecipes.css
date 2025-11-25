@@ -38,9 +38,102 @@
 }
 
 .recipe-card-image {
-  transition: transform 0.5s ease;
+  transition: transform 0.5s ease, opacity 0.4s ease-in-out;
 }
 
 .recipe-card:hover .recipe-card-image {
   transform: scale(1.1);
+}
+
+/* Skeleton Loading Animation for Images */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.image-skeleton {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #e0e0e0 50%,
+    #f0f0f0 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Image loading state */
+.recipe-card .relative {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+}
+
+/* Loading indicator pulse animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.image-loading-indicator {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Waiting state animation for placeholder */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.recipe-card .w-12 {
+  animation: float 2s ease-in-out infinite;
+}
+
+/* Fade in animation for loaded images */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.recipe-card-image {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* Progressive loading wave effect */
+@keyframes wave {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.image-skeleton {
+  background: linear-gradient(
+    90deg,
+    #fef3c7 0%,
+    #fde68a 25%,
+    #fef3c7 50%,
+    #fde68a 75%,
+    #fef3c7 100%
+  );
+  background-size: 400% 100%;
+  animation: wave 2s linear infinite;
 }

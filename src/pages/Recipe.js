@@ -1,7 +1,7 @@
 // client/src/pages/CommunityRecipes.js
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
-import {  
+import {
   Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle,
   Filter, Search, FileText, Download, Flag, Edit, Trash2, AlertCircle, Loader
 } from "lucide-react";
@@ -13,6 +13,11 @@ import { useNavigate } from "react-router-dom";
 import "./CommunityRecipes.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
+
+// Default placeholder for fast initial render
+const PLACEHOLDER_IMAGE = "/images/default-dish.png";
+// Batch size for progressive image loading (load N images at a time)
+const IMAGE_BATCH_SIZE = 4;
 
 const TAG_OPTIONS = [
   "filipino","american","italian","japanese","korean","chinese","thai","indian",
@@ -173,7 +178,74 @@ export default function CommunityRecipes() {
     page
   ]);
 
-  // fetch recipes
+  // Progressive image loading - load images one by one in batches
+  const loadImagesProgressively = useCallback(async (recipes) => {
+    // Process images in small batches for faster perceived loading
+    for (let i = 0; i < recipes.length; i += IMAGE_BATCH_SIZE) {
+      const batch = recipes.slice(i, i + IMAGE_BATCH_SIZE);
+
+      // Activate this batch - set imageActivated to true so images start loading
+      setItems(prevItems =>
+        prevItems.map(item => {
+          const inBatch = batch.some(r => r._id === item._id);
+          return inBatch ? { ...item, imageActivated: true } : item;
+        })
+      );
+
+      // Wait for this batch to load before starting the next
+      // This creates a visual "one by one" effect
+      await Promise.all(
+        batch.map(recipe =>
+          new Promise((resolve) => {
+            // If no image, resolve immediately
+            if (!recipe.image) {
+              setItems(prev =>
+                prev.map(item =>
+                  item._id === recipe._id
+                    ? { ...item, imageLoading: false }
+                    : item
+                )
+              );
+              resolve();
+              return;
+            }
+
+            // Preload the image
+            const img = new Image();
+            img.onload = () => {
+              setItems(prev =>
+                prev.map(item =>
+                  item._id === recipe._id
+                    ? { ...item, imageLoading: false }
+                    : item
+                )
+              );
+              resolve();
+            };
+            img.onerror = () => {
+              setItems(prev =>
+                prev.map(item =>
+                  item._id === recipe._id
+                    ? { ...item, imageLoading: false }
+                    : item
+                )
+              );
+              resolve();
+            };
+            // Start loading
+            img.src = recipe.image;
+          })
+        )
+      );
+
+      // Small delay between batches for smoother visual effect
+      if (i + IMAGE_BATCH_SIZE < recipes.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+  }, []);
+
+  // fetch recipes with progressive image loading
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -185,21 +257,54 @@ export default function CommunityRecipes() {
         const res = await fetch(`${API_BASE}/api/recipes?${query}`, { headers });
         const data = await res.json();
         if (res.ok) {
-          setItems(data.items || []);
+          // Step 1: Set recipes with placeholder images for instant display
+          const recipesWithPlaceholders = (data.items || []).map(recipe => ({
+            ...recipe,
+            imageActivated: false, // Image not yet activated for loading
+            imageLoading: true,    // Will show loading state when activated
+            actualImage: recipe.image // Store actual image URL
+          }));
+          setItems(recipesWithPlaceholders);
           setTotal(data.total || 0);
           setPages(data.pages || 1);
+          setLoading(false);
+
+          // Step 2: Load images progressively one batch at a time
+          loadImagesProgressively(recipesWithPlaceholders);
         } else {
           console.error("recipes_list_error:", data);
           setItems([]); setTotal(0); setPages(1);
+          setLoading(false);
         }
       } catch (e) {
         console.error("recipes_list_error:", e);
         setItems([]); setTotal(0); setPages(1);
-      } finally {
         setLoading(false);
       }
     })();
-  }, [query, isAuthenticated, authHeaders, activeUserId]);
+  }, [query, isAuthenticated, authHeaders, activeUserId, loadImagesProgressively]);
+
+  // Handle image load completion for progressive loading
+  const handleImageLoad = useCallback((recipeId) => {
+    setItems(prevItems =>
+      prevItems.map(item =>
+        item._id === recipeId
+          ? { ...item, imageLoading: false }
+          : item
+      )
+    );
+  }, []);
+
+  // Handle image error - mark as loaded to remove loading state
+  const handleImageError = useCallback((recipeId) => {
+    setItems(prevItems =>
+      prevItems.map(item =>
+        item._id === recipeId
+          ? { ...item, imageLoading: false }
+          : item
+      )
+    );
+  }, []);
 
   // toggles
   const toggleTag = (tag) => {
@@ -1001,13 +1106,53 @@ export default function CommunityRecipes() {
                     className="recipe-card bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all cursor-pointer group border-2 border-amber-100 hover:border-amber-300"
                     onClick={() => setSelectedRecipe(recipe)}
                   >
-                    <div className="relative overflow-hidden">
-                      <img
-                        crossOrigin="anonymous"
-                        src={recipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
-                        alt={recipe.title}
-                        className="recipe-card-image w-full h-56 object-cover"
-                      />
+                    <div
+                      className={`relative overflow-hidden ${!recipe.imageActivated || recipe.imageLoading ? 'image-skeleton' : ''}`}
+                      style={{ minHeight: '224px', backgroundColor: '#fef3c7' }}
+                    >
+                      {/* Show placeholder until image is activated */}
+                      {!recipe.imageActivated ? (
+                        <div className="w-full h-56 flex items-center justify-center bg-gradient-to-br from-amber-100 to-yellow-100">
+                          <div className="text-center">
+                            <ChefHat className="w-12 h-12 mx-auto text-amber-300 mb-2" />
+                            <span className="text-amber-400 text-sm font-medium">Waiting...</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <img
+                          crossOrigin="anonymous"
+                          src={recipe.actualImage || recipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
+                          alt={recipe.title}
+                          className="recipe-card-image w-full h-56 object-cover"
+                          onLoad={() => handleImageLoad(recipe._id)}
+                          onError={() => handleImageError(recipe._id)}
+                          style={{
+                            opacity: recipe.imageLoading ? 0.5 : 1,
+                            transition: 'opacity 0.4s ease-in-out'
+                          }}
+                        />
+                      )}
+                      {/* Loading indicator overlay - show when activated but still loading */}
+                      {recipe.imageActivated && recipe.imageLoading && (
+                        <div
+                          className="image-loading-indicator"
+                          style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                            color: 'white',
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            pointerEvents: 'none',
+                            zIndex: 10
+                          }}>
+                          Loading...
+                        </div>
+                      )}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition" />
                     </div>
 
