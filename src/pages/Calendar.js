@@ -7,7 +7,7 @@ import { useAuth } from "../auth/AuthContext";
 import BotPng from "../assets/bot.png";
 import "./Calendar.css";
 
-const API_BASE = "http://localhost:4000";
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 // ---------- Helpers ----------
 function startOfWeek(d){ const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); x.setDate(x.getDate()-x.getDay()); x.setHours(0,0,0,0); return x; }

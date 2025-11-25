@@ -3,7 +3,7 @@ import { Globe, Clock, TrendingUp, Users, X } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import LoadingModal from "../components/LoadingModal";
 
-const API_BASE = "http://localhost:4000";
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 export default function Admin() {
   const { authHeaders } = useAuth();

@@ -1,7 +1,7 @@
 // client/src/pages/CommunityRecipes.js
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import {
+import {  
   Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle,
   Filter, Search, FileText, Download, Flag, Edit, Trash2, AlertCircle, Loader
 } from "lucide-react";
@@ -12,7 +12,7 @@ import LoadingModal from "../components/LoadingModal";
 import { useNavigate } from "react-router-dom";
 import "./CommunityRecipes.css";
 
-const API_BASE = "http://localhost:4000";
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 const TAG_OPTIONS = [
   "filipino","american","italian","japanese","korean","chinese","thai","indian",

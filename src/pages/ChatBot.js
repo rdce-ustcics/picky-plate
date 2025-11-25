@@ -22,7 +22,7 @@ import {
 import { useAuth } from "../auth/AuthContext";
 
 const BOT_PNG = `${process.env.PUBLIC_URL || ""}/images/PickAPlate.png`;
-const API_BASE = "http://localhost:4000";
+const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 const SESSION_ID = getSessionId();
 
 const brand = {
