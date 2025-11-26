@@ -624,6 +624,8 @@ async function extractAndSavePreferences({ owner, conversation }) {
       content:
         "You are an information extraction assistant for a food chatbot. " +
         "From the conversation, detect explicit, stable user food preferences. Never treat dish selections (e.g., 'I'm choosing this') as likes. Only treat explicit statements of preference like 'I like ____'. " +
+        "Never use the I'm Choosing This button to add to preferences" +
+        "Do not assume, infer , or guess. When a user says Recommend me ____ it does not mean they automatically like it. It's just a mood" +
         "Only capture statements where the user clearly says they like/dislike something, " +
         "have an allergy, follow or stop following a diet, or call something a favorite, " +
         "or mentions they want kiddie meals. " +

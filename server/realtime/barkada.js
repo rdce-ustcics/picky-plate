@@ -99,6 +99,7 @@ const sanitizeSessionForClient = (s, requestingToken = null) => {
       price: o.price,
       image: o.image,
       restaurant: o.restaurant,
+      tags: Array.from(o.tags || []),   // 👈 important for classification/images
     })),
     settings: s.settings,
     createdAt: s.createdAt,
@@ -144,6 +145,7 @@ const sanitizeSessionForClient = (s, requestingToken = null) => {
       const score = tasteAvg * wt + moodAvg * wm + valueAvg * wv;
       return {
         ...opt,
+        tags: Array.from(opt.tags || []),   // 👈 FIX missing classification
         voters,
         tasteAvg,
         moodAvg,
@@ -364,20 +366,53 @@ const sanitizeSessionForClient = (s, requestingToken = null) => {
       const p = s.participants.get(token);
       if (!p || p.name !== s.host.name) return cb({ ok: false, error: 'Only host can update options' });
 
-      const cleaned = Array.isArray(options)
-        ? options
-            .map((o) => ({
-              id: undefined,
-              name: String(o.name || '').trim(),
-              restaurant: String(o.restaurant || '').trim(),
-              price: Number(o.price),
-              image: String(o.image || '').trim(),
-              tags: new Set(),
-            }))
-            .filter((o) => o.name && o.restaurant && o.price > 0)
-        : [];
-      if (cleaned.length === 0) return cb({ ok: false, error: 'Add at least one option' });
-      if (cleaned.length > 6) return cb({ ok: false, error: 'Max 6 options' });
+      // raw rows from client (name, tag, price)
+      const raw = Array.isArray(options) ? options : [];
+
+      // did the host type *anything* in any row?
+      const hasAnyRow = raw.some((o) => {
+        const name  = String(o.name || '').trim();
+        const tag   = String(o.tag  || '').trim();
+        const price = Number(o.price);
+        return name || tag || price > 0;
+      });
+
+      const cleaned = raw
+        .map((o) => {
+          const name  = String(o.name || '').trim();
+          const tag   = String(o.tag  || '').trim().toLowerCase();
+          const price = Number(o.price);
+          const restaurant = String(o.restaurant || '').trim(); // optional now
+          const image = String(o.image || '').trim();
+          const tags  = new Set(tag ? [tag] : []);
+
+          return {
+            id: undefined,
+            name,
+            restaurant,
+            price,
+            image,
+            tags,
+          };
+        })
+        // ✅ require name + classification(tag) + price>0
+        .filter((o) => o.name && o.price > 0 && o.tags.size > 0);
+
+      if (!hasAnyRow) {
+        return cb({ ok: false, error: 'Add at least one restaurant.' });
+      }
+
+      if (hasAnyRow && cleaned.length === 0) {
+        return cb({
+          ok: false,
+          error:
+            'Please complete name, classification, and price (₱) for at least one restaurant.',
+        });
+      }
+
+      if (cleaned.length > 6) {
+        return cb({ ok: false, error: 'Max 6 options' });
+      }
 
       cleaned.forEach((o, i) => (o.id = i + 1));
 

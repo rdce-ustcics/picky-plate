@@ -9,6 +9,31 @@
   box-sizing: border-box;
 }
 
+.barkada-modal .restaurant-card {
+  max-width: 360px;      /* old size */
+  margin: 0 auto;
+}
+.barkada-modal .restaurant-image {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+}
+/* Restore aligned star rows */
+.rating-section {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Disable OLD rating-row styling so it stops breaking alignment */
+.rating-row {
+  padding: 0;
+  border: none;
+  display: contents; /* prevents it from forcing flex spacing */
+}
+
+
 /* Page Container */
 .barkada-page {
   min-height: 100vh;
@@ -2353,50 +2378,10 @@
   .barkada-title {
     font-size: 2.75rem !important;
   }
-  
-  .barkada-title .highlight {
-    font-size: 3rem;
-  }
-  
-  .session-code-display {
-    font-size: 2.25rem;
-    letter-spacing: 0.4rem;
-  }
-  
-  .barkada-card {
-    padding: 28px 20px;
-    border-radius: 28px;
-  }
-  
-  .barkada-input {
-    padding: 18px 20px;
-  }
-  
-  .barkada-btn {
-    padding: 20px 28px;
-    font-size: 1.1rem;
-  }
-  
-  .restaurant-image,
-  .restaurant-image-placeholder {
-    height: 180px;
-  }
-  
-  .restaurant-info {
-    padding: 20px;
-  }
-  
-  .winner-banner {
-    padding: 40px 24px;
-  }
-  
-  .winner-banner-title {
-    font-size: 2rem;
-  }
-  
-  .feature-number {
-    width: 60px;
-    height: 60px;
-    font-size: 1.75rem;
+}
+
+@media (min-width: 641px) {
+  .menu-editor-row {
+    grid-template-columns: 3fr 3fr 2fr 3fr 1fr;
   }
 }

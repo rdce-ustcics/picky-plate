@@ -24,6 +24,64 @@ const SOCKET_URL =
   process.env.REACT_APP_SOCKET_URL ||
   `${window.location.protocol}//${window.location.hostname}:4000`;
 
+  // Classification tags for restaurants
+const CLASSIFICATION_OPTIONS = [
+  "filipino",
+  "american",
+  "italian",
+  "japanese",
+  "korean",
+  "chinese",
+  "thai",
+  "indian",
+  "ramen",
+  "pizza",
+  "burger",
+  "bbq",
+  "seafood",
+  "vegan",
+  "vegetarian",
+  "dessert",
+  "cafe",
+  "fastfood",
+];
+
+// Map each tag → image. (Create these image files in /public/images/tags/)
+const TAG_IMAGES = {
+  filipino: `${process.env.PUBLIC_URL || ""}/images/tags/filipino.jpg`,
+  american: `${process.env.PUBLIC_URL || ""}/images/tags/american.jpg`,
+  italian: `${process.env.PUBLIC_URL || ""}/images/tags/italian.jpg`,
+  japanese: `${process.env.PUBLIC_URL || ""}/images/tags/japanese.jpg`,
+  korean: `${process.env.PUBLIC_URL || ""}/images/tags/korean.jpg`,
+  chinese: `${process.env.PUBLIC_URL || ""}/images/tags/chinese.jpg`,
+  thai: `${process.env.PUBLIC_URL || ""}/images/tags/thai.jpg`,
+  indian: `${process.env.PUBLIC_URL || ""}/images/tags/indian.jpg`,
+  ramen: `${process.env.PUBLIC_URL || ""}/images/tags/ramen.jpg`,
+  pizza: `${process.env.PUBLIC_URL || ""}/images/tags/pizza.jpg`,
+  burger: `${process.env.PUBLIC_URL || ""}/images/tags/burger.jpg`,
+  bbq: `${process.env.PUBLIC_URL || ""}/images/tags/bbq.jpg`,
+  seafood: `${process.env.PUBLIC_URL || ""}/images/tags/seafood.jpg`,
+  vegan: `${process.env.PUBLIC_URL || ""}/images/tags/vegan.jpeg`,
+  vegetarian: `${process.env.PUBLIC_URL || ""}/images/tags/vegetarian.jpg`,
+  dessert: `${process.env.PUBLIC_URL || ""}/images/tags/dessert.jpg`,
+  cafe: `${process.env.PUBLIC_URL || ""}/images/tags/cafe.jpg`,
+  fastfood: `${process.env.PUBLIC_URL || ""}/images/tags/fastfood.jpg`,
+  default: `${process.env.PUBLIC_URL || ""}/images/tags/default.jpg`,
+};
+
+function getImageForTag(tag) {
+  const key = String(tag || "").toLowerCase();
+  return TAG_IMAGES[key] || TAG_IMAGES.default;
+}
+
+function formatTagLabel(tag) {
+  if (!tag) return "";
+  return tag
+    .split("-")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join(" ");
+}
+
 /* StarRating Component */
 function StarRating({
   value = 0,
@@ -194,7 +252,7 @@ export default function BarkadaVote() {
   const [ratings, setRatings] = useState({});
   const [menuDraft, setMenuDraft] = useState([]);
   const [myDraft, setMyDraft] = useState([
-    { name: "", restaurant: "", price: "", image: "" },
+    { name: "", tag: "", price: "" },
   ]);
 
   const [showSettings, setShowSettings] = useState(false);
@@ -324,14 +382,15 @@ export default function BarkadaVote() {
   const optionsKey = JSON.stringify(options);
   useEffect(() => {
     if (currentView === "lobby" && isHost && !isVotingOpen) {
-      setMenuDraft(
-        (options || []).map((o) => ({
-          name: o.name || "",
-          restaurant: o.restaurant || "",
-          price: o.price || "",
-          image: o.image || "",
-        }))
-      );
+    setMenuDraft(
+      (options || []).map((o) => ({
+        name: o.name || "",
+        tag:
+          o.tag ||
+          (Array.isArray(o.tags) && o.tags.length ? o.tags[0] : ""),
+        price: o.price || o.averagePrice || "",
+      }))
+    );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentView, isHost, isVotingOpen, optionsKey]);
@@ -471,15 +530,28 @@ export default function BarkadaVote() {
     if (!isHost || isVotingOpen) return;
     if (connState !== "connected") return alert("Not connected yet.");
 
+    const hasAnyRow = menuDraft.some(
+      (o) => (o.name || "").trim() || (o.tag || "").trim() || Number(o.price) > 0
+    );
+
     const cleaned = menuDraft
       .map((o) => ({
         name: String(o.name || "").trim(),
-        restaurant: String(o.restaurant || "").trim(),
+        tag: String(o.tag || "").trim(), // classification
         price: Number(o.price),
-        image: String(o.image || "").trim(),
       }))
-      .filter((o) => o.name && o.restaurant && o.price > 0);
-    if (cleaned.length === 0) return alert("Add at least one restaurant");
+      .filter((o) => o.name && o.tag && o.price > 0);
+
+    if (!hasAnyRow) {
+      return alert("Add at least one restaurant.");
+    }
+
+    if (hasAnyRow && cleaned.length === 0) {
+      return alert(
+        "Please complete name, classification, and price (₱) for at least one restaurant."
+      );
+    }
+
     if (cleaned.length > 6) return alert("Max 6 restaurants");
 
     socket.emit(
@@ -498,17 +570,29 @@ export default function BarkadaVote() {
     if (connState !== "connected") return alert("Not connected yet.");
     const limit = settings?.perUserLimit || 2;
 
+    const hasAnyRow = myDraft.some(
+      (o) => (o.name || "").trim() || (o.tag || "").trim() || Number(o.price) > 0
+    );
+
     const cleaned = myDraft
       .map((o) => ({
         name: String(o.name || "").trim(),
-        restaurant: String(o.restaurant || "").trim(),
+        tag: String(o.tag || "").trim(), // classification
         price: Number(o.price),
-        image: String(o.image || "").trim(),
       }))
-      .filter((o) => o.name && o.restaurant && o.price > 0)
+      .filter((o) => o.name && o.tag && o.price > 0)
       .slice(0, limit);
 
-    if (cleaned.length === 0) return alert("Add at least one restaurant");
+    if (!hasAnyRow) {
+      return alert("Add at least one restaurant.");
+    }
+
+    if (hasAnyRow && cleaned.length === 0) {
+      return alert(
+        "Please complete name, classification, and price (₱) for at least one restaurant."
+      );
+    }
+
     if (cleaned.length > limit)
       return alert(`Max ${limit} options per person`);
 
@@ -1127,30 +1211,31 @@ export default function BarkadaVote() {
                 Current Restaurants in the Vote
               </h3>
               <div className="grid-3">
-                {options.map((opt) => (
-                  <div key={opt.id} className="restaurant-card">
-                    {opt.image ? (
+                {options.map((opt) => {
+                  const tag =
+                    opt.tag ||
+                    (Array.isArray(opt.tags) && opt.tags.length ? opt.tags[0] : "");
+                  const imgSrc = getImageForTag(tag);
+
+                  return (
+                    <div key={opt.id} className="restaurant-card">
                       <img
-                        src={opt.image}
-                        alt={opt.name}
+                        src={imgSrc}
+                        alt={tag ? `${formatTagLabel(tag)} food` : opt.name}
                         className="restaurant-image"
                       />
-                    ) : (
-                      <div className="restaurant-image-placeholder">
-                        No image
-                      </div>
-                    )}
-                    <div className="restaurant-info">
-                      <div className="restaurant-name">{opt.name}</div>
-                      <div className="restaurant-location">
-                        {opt.restaurant}
-                      </div>
-                      <div className="restaurant-price">
-                        ₱{Number(opt.price).toFixed(2)} / person
+                      <div className="restaurant-info">
+                        <div className="restaurant-name">{opt.name}</div>
+                        <div className="restaurant-location">
+                          {opt.restaurant || formatTagLabel(tag)}
+                        </div>
+                        <div className="restaurant-price">
+                          ₱{Number(opt.price).toFixed(2)} / person
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1256,9 +1341,8 @@ export default function BarkadaVote() {
                               ...prev,
                               {
                                 name: "",
-                                restaurant: "",
+                                tag: "",
                                 price: "",
-                                image: "",
                               },
                             ]
                       )
@@ -1272,77 +1356,67 @@ export default function BarkadaVote() {
                 </div>
 
                 <div className="space-y">
-                  {menuDraft.map((o, i) => (
-                    <div key={i} className="menu-editor-row">
-                      <input
-                        placeholder="Restaurant name"
-                        value={o.name}
-                        onChange={(e) =>
-                          setMenuDraft((prev) =>
-                            prev.map((x, idx) =>
-                              idx === i ? { ...x, name: e.target.value } : x
-                            )
+                {menuDraft.map((o, i) => (
+                  <div key={i} className="menu-editor-row">
+                    <input
+                      placeholder="Restaurant name"
+                      value={o.name}
+                      onChange={(e) =>
+                        setMenuDraft((prev) =>
+                          prev.map((x, idx) =>
+                            idx === i ? { ...x, name: e.target.value } : x
                           )
-                        }
-                        className="barkada-input"
-                      />
-                      <input
-                        placeholder="Area / Branch (e.g. UST, BGC)"
-                        value={o.restaurant}
-                        onChange={(e) =>
-                          setMenuDraft((prev) =>
-                            prev.map((x, idx) =>
-                              idx === i
-                                ? { ...x, restaurant: e.target.value }
-                                : x
-                            )
+                        )
+                      }
+                      className="barkada-input"
+                    />
+
+                    {/* Classification dropdown (only one tag allowed) */}
+                    <select
+                      className="barkada-input"
+                      value={o.tag || ""}
+                      onChange={(e) =>
+                        setMenuDraft((prev) =>
+                          prev.map((x, idx) =>
+                            idx === i ? { ...x, tag: e.target.value } : x
                           )
-                        }
-                        className="barkada-input"
-                      />
-                      <input
-                        placeholder="Avg price (₱)"
-                        type="number"
-                        min="1"
-                        value={o.price}
-                        onChange={(e) =>
-                          setMenuDraft((prev) =>
-                            prev.map((x, idx) =>
-                              idx === i
-                                ? { ...x, price: e.target.value }
-                                : x
-                            )
+                        )
+                      }
+                    >
+                      <option value="">Select classification</option>
+                      {CLASSIFICATION_OPTIONS.map((tag) => (
+                        <option key={tag} value={tag}>
+                          {formatTagLabel(tag)}
+                        </option>
+                      ))}
+                    </select>
+
+                    <input
+                      placeholder="Avg price (₱)"
+                      type="number"
+                      min="1"
+                      value={o.price}
+                      onChange={(e) =>
+                        setMenuDraft((prev) =>
+                          prev.map((x, idx) =>
+                            idx === i ? { ...x, price: e.target.value } : x
                           )
-                        }
-                        className="barkada-input"
-                      />
-                      <input
-                        placeholder="Image URL"
-                        value={o.image}
-                        onChange={(e) =>
-                          setMenuDraft((prev) =>
-                            prev.map((x, idx) =>
-                              idx === i
-                                ? { ...x, image: e.target.value }
-                                : x
-                            )
-                          )
-                        }
-                        className="barkada-input"
-                      />
-                      <button
-                        onClick={() =>
-                          setMenuDraft((prev) =>
-                            prev.filter((_, idx) => idx !== i)
-                          )
-                        }
-                        className="barkada-btn-icon"
-                        aria-label="remove"
-                      >
-                        <Trash2 style={{ width: "1rem", height: "1rem" }} />
-                      </button>
-                    </div>
-                  ))}
+                        )
+                      }
+                      className="barkada-input"
+                    />
+
+                    <button
+                      onClick={() =>
+                        setMenuDraft((prev) => prev.filter((_, idx) => idx !== i))
+                      }
+                      className="barkada-btn-icon"
+                      aria-label="remove"
+                    >
+                      <Trash2 style={{ width: "1rem", height: "1rem" }} />
+                    </button>
+                  </div>
+                ))}
                 </div>
 
                 <div style={{ marginTop: "1rem" }}>
@@ -1375,9 +1449,8 @@ export default function BarkadaVote() {
                               ...prev,
                               {
                                 name: "",
-                                restaurant: "",
+                                tag: "",
                                 price: "",
-                                image: "",
                               },
                             ]
                       )
@@ -1614,6 +1687,7 @@ export default function BarkadaVote() {
                   </p>
                 </div>
 
+                {settingsDraft.engine === "ai" && (
                 <div className="settings-group">
                   <label className="settings-label">
                     Number of restaurants (for AI suggestions)
@@ -1635,6 +1709,8 @@ export default function BarkadaVote() {
                     AI will suggest up to this many restaurants (max 6).
                   </p>
                 </div>
+                )}
+
 
                 <div className="settings-group">
                   <label className="settings-label">
@@ -1962,68 +2038,59 @@ export default function BarkadaVote() {
 
         <div className="container" style={{ padding: "2rem 1rem" }}>
           <div className="grid-3">
-            {options.map((food) => {
-              const r = ratings[food.id] || {
-                taste: 0,
-                mood: 0,
-                value: 0,
-              };
-              return (
-                <div key={food.id} className="restaurant-card">
-                  {food.image ? (
-                    <img
-                      src={food.image}
-                      alt={food.name}
-                      className="restaurant-image"
-                    />
-                  ) : (
-                    <div className="restaurant-image-placeholder">
-                      No image
-                    </div>
-                  )}
-                  <div className="restaurant-info">
-                    <h3 className="restaurant-name">{food.name}</h3>
-                    <p className="restaurant-location">{food.restaurant}</p>
-                    <p className="restaurant-price">
-                      ₱{Number(food.price).toFixed(2)} avg / person
-                    </p>
+          {options.map((food) => {
+            const r = ratings[food.id] || { taste: 0, mood: 0, value: 0 };
+            const tag =
+              food.tag ||
+              (Array.isArray(food.tags) && food.tags.length ? food.tags[0] : "");
+            const imgSrc = getImageForTag(tag);
 
-                    <div style={{ marginTop: "1rem" }}>
-                      <div className="rating-row">
-                        <label className="rating-label">Taste</label>
-                        <StarRating
-                          value={r.taste}
-                          onChange={(v) =>
-                            setRatingField(food.id, "taste", v)
-                          }
-                        />
-                      </div>
-                      <div className="rating-row">
-                        <label className="rating-label">Mood</label>
-                        <StarRating
-                          value={r.mood}
-                          onChange={(v) => setRatingField(food.id, "mood", v)}
-                        />
-                      </div>
-                      <div className="rating-row">
-                        <label className="rating-label">Value</label>
-                        <StarRating
-                          value={r.value}
-                          onChange={(v) =>
-                            setRatingField(food.id, "value", v)
-                          }
-                        />
-                      </div>
-                      <p className="rating-weights">
-                        Weights: Taste {settings.weights.taste}% • Mood{" "}
-                        {settings.weights.mood}% • Value{" "}
-                        {settings.weights.value}%
-                      </p>
+            return (
+              <div key={food.id} className="restaurant-card">
+                <img
+                  src={imgSrc}
+                  alt={tag ? `${formatTagLabel(tag)} food` : food.name}
+                  className="restaurant-image"
+                />
+                <div className="restaurant-info">
+                  <h3 className="restaurant-name">{food.name}</h3>
+                  <p className="restaurant-location">
+                    {food.restaurant || formatTagLabel(tag)}
+                  </p>
+                  <p className="restaurant-price">
+                    ₱{Number(food.price).toFixed(2)} avg / person
+                  </p>
+
+                  {/* ⭐ Bring back the star ratings */}
+                  <div className="rating-section">
+                    <div className="rating-item">
+                      <span>Taste</span>
+                      <StarRating
+                        value={r.taste}
+                        onChange={(v) => setRatingField(food.id, "taste", v)}
+                      />
+                    </div>
+
+                    <div className="rating-item">
+                      <span>Mood</span>
+                      <StarRating
+                        value={r.mood}
+                        onChange={(v) => setRatingField(food.id, "mood", v)}
+                      />
+                    </div>
+
+                    <div className="rating-item">
+                      <span>Value</span>
+                      <StarRating
+                        value={r.value}
+                        onChange={(v) => setRatingField(food.id, "value", v)}
+                      />
                     </div>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            );
+          })}
           </div>
         </div>
 
@@ -2112,12 +2179,17 @@ export default function BarkadaVote() {
               Leaderboard
             </h3>
             <div>
-              {leaderboard.map((opt, i) => (
+            {leaderboard.map((opt, i) => {
+              const tag =
+                opt.tag ||
+                (Array.isArray(opt.tags) && opt.tags.length ? opt.tags[0] : "default");
+
+              const imgSrc = getImageForTag(tag);
+
+              return (
                 <div
                   key={opt.id}
-                  className={`leaderboard-item ${
-                    i === 0 ? "winner" : ""
-                  }`}
+                  className={`leaderboard-item ${i === 0 ? "winner" : ""}`}
                 >
                   <div
                     style={{
@@ -2127,15 +2199,11 @@ export default function BarkadaVote() {
                     }}
                   >
                     <div className="leaderboard-rank">{i + 1}</div>
-                    {opt.image ? (
-                      <img
-                        src={opt.image}
-                        alt={opt.name}
-                        className="leaderboard-image"
-                      />
-                    ) : (
-                      <div className="leaderboard-placeholder" />
-                    )}
+                    <img
+                      src={imgSrc}
+                      alt={tag ? `${formatTagLabel(tag)} food` : opt.name}
+                      className="leaderboard-image"
+                    />
                     <div>
                       <p
                         style={{
@@ -2151,7 +2219,7 @@ export default function BarkadaVote() {
                           color: "#92400e",
                         }}
                       >
-                        {opt.restaurant}
+                        {opt.restaurant || formatTagLabel(tag)}
                       </p>
                     </div>
                   </div>
@@ -2164,7 +2232,8 @@ export default function BarkadaVote() {
                     </p>
                   </div>
                 </div>
-              ))}
+              );
+            })}
             </div>
 
             <div className="flex-gap" style={{ marginTop: "1.5rem" }}>
