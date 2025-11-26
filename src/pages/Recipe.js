@@ -1,22 +1,21 @@
 // client/src/pages/CommunityRecipes.js
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import {
   Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle,
   Filter, Search, FileText, Download, Flag, Edit, Trash2, AlertCircle, Loader,
-  Heart, BookmarkPlus, Share2, Flame, Timer, UtensilsCrossed
+  Heart, BookmarkPlus, Share2, Flame, Timer, UtensilsCrossed, Copy, Check
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import LoadingModal from "../components/LoadingModal";
-import { useNavigate } from "react-router-dom";
 import "./CommunityRecipes.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
-// Batch size for progressive image loading
-const IMAGE_BATCH_SIZE = 4;
+// Batch size for progressive image loading (larger = faster loading)
+const IMAGE_BATCH_SIZE = 10;
 
 const TAG_OPTIONS = [
   "filipino","american","italian","japanese","korean","chinese","thai","indian",
@@ -51,6 +50,13 @@ const REPORT_REASONS = [
 
 export default function CommunityRecipes() {
   const { isAuthenticated, authHeaders, user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Get URL params for deep linking
+  const urlRecipeId = searchParams.get("id");
+  const urlSearchQuery = searchParams.get("q");
 
   const activeUserId = (() => {
     try { return localStorage.getItem("pap:activeUserId") || "global"; }
@@ -62,6 +68,7 @@ export default function CommunityRecipes() {
   const modalRef = useRef(null);
 
   const [selectedRecipe, setSelectedRecipe] = useState(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // list state
   const [items, setItems] = useState([]);
@@ -70,9 +77,9 @@ export default function CommunityRecipes() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // filters
-  const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState("");
+  // filters - initialize from URL params for deep linking from chatbot
+  const [search, setSearch] = useState(urlSearchQuery || "");
+  const [searchInput, setSearchInput] = useState(urlSearchQuery || "");
   const [selectedTags, setSelectedTags] = useState([]);
 
   const [excludeAllergens, setExcludeAllergens] = useState([]);
@@ -125,8 +132,6 @@ export default function CommunityRecipes() {
     }
   });
 
-  const navigate = useNavigate();
-
   // Active filters count
   const activeFiltersCount = useMemo(() => {
     let count = 0;
@@ -159,6 +164,85 @@ export default function CommunityRecipes() {
     localStorage.setItem("recipe_favorites", JSON.stringify(favorites));
   }, [favorites]);
 
+  // Sync search state with URL param ?q= (handles browser back/forward and external navigation)
+  useEffect(() => {
+    const urlQuery = urlSearchQuery || "";
+    if (urlQuery !== search) {
+      setSearch(urlQuery);
+      setSearchInput(urlQuery);
+    }
+  }, [urlSearchQuery]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Open recipe from URL param ?id= (deep linking)
+  useEffect(() => {
+    if (urlRecipeId && items.length > 0 && !selectedRecipe) {
+      // First check if recipe is in current items
+      const found = items.find(r => r._id === urlRecipeId);
+      if (found) {
+        setSelectedRecipe(found);
+      } else {
+        // Fetch recipe directly if not in current list
+        (async () => {
+          try {
+            const res = await fetch(`${API_BASE}/api/recipes/${urlRecipeId}`);
+            const data = await res.json();
+            if (res.ok && data.success && data.recipe) {
+              setSelectedRecipe(data.recipe);
+            }
+          } catch (e) {
+            console.error("Failed to load shared recipe:", e);
+          }
+        })();
+      }
+    }
+  }, [urlRecipeId, items]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Update URL when opening/closing recipe modal
+  const openRecipeModal = useCallback((recipe) => {
+    setSelectedRecipe(recipe);
+    // Update URL with recipe ID (preserves other params)
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("id", recipe._id);
+    setSearchParams(newParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const closeRecipeModal = useCallback(() => {
+    setSelectedRecipe(null);
+    setLinkCopied(false);
+    // Remove recipe ID from URL
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete("id");
+    setSearchParams(newParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  // Get shareable link for current recipe
+  const getShareableLink = useCallback((recipe) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("id", recipe._id);
+    url.searchParams.delete("q"); // Remove search from share link
+    return url.toString();
+  }, []);
+
+  // Copy link to clipboard
+  const copyShareLink = useCallback(async (recipe) => {
+    const link = getShareableLink(recipe);
+    try {
+      await navigator.clipboard.writeText(link);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    } catch (e) {
+      // Fallback for older browsers
+      const input = document.createElement("input");
+      input.value = link;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    }
+  }, [getShareableLink]);
+
   // Build query string
   const query = useMemo(() => {
     const q = new URLSearchParams();
@@ -186,11 +270,12 @@ export default function CommunityRecipes() {
     page
   ]);
 
-  // Progressive image loading
+  // Load images progressively by fetching individual recipes (like Cultural Recipes)
   const loadImagesProgressively = useCallback(async (recipes) => {
     for (let i = 0; i < recipes.length; i += IMAGE_BATCH_SIZE) {
       const batch = recipes.slice(i, i + IMAGE_BATCH_SIZE);
 
+      // Activate this batch (show loading state)
       setItems(prevItems =>
         prevItems.map(item => {
           const inBatch = batch.some(r => r._id === item._id);
@@ -198,48 +283,61 @@ export default function CommunityRecipes() {
         })
       );
 
+      // Fetch images for this batch in parallel
       await Promise.all(
-        batch.map(recipe =>
-          new Promise((resolve) => {
-            if (!recipe.image) {
-              setItems(prev =>
-                prev.map(item =>
-                  item._id === recipe._id ? { ...item, imageLoading: false } : item
-                )
-              );
-              resolve();
-              return;
-            }
+        batch.map(async (recipe) => {
+          try {
+            // Fetch the full recipe to get the image
+            const res = await fetch(`${API_BASE}/api/recipes/${recipe._id}`);
+            const data = await res.json();
 
-            const img = new Image();
-            img.onload = () => {
+            if (res.ok && data.success && data.recipe?.image) {
+              // Preload the image
+              const img = new Image();
+              img.onload = () => {
+                setItems(prev =>
+                  prev.map(item =>
+                    item._id === recipe._id
+                      ? { ...item, image: data.recipe.image, actualImage: data.recipe.image, imageLoading: false }
+                      : item
+                  )
+                );
+              };
+              img.onerror = () => {
+                setItems(prev =>
+                  prev.map(item =>
+                    item._id === recipe._id ? { ...item, imageLoading: false } : item
+                  )
+                );
+              };
+              img.src = data.recipe.image;
+            } else {
+              // No image or error - mark as done
               setItems(prev =>
                 prev.map(item =>
                   item._id === recipe._id ? { ...item, imageLoading: false } : item
                 )
               );
-              resolve();
-            };
-            img.onerror = () => {
-              setItems(prev =>
-                prev.map(item =>
-                  item._id === recipe._id ? { ...item, imageLoading: false } : item
-                )
-              );
-              resolve();
-            };
-            img.src = recipe.image;
-          })
-        )
+            }
+          } catch (e) {
+            // Error fetching - mark as done
+            setItems(prev =>
+              prev.map(item =>
+                item._id === recipe._id ? { ...item, imageLoading: false } : item
+              )
+            );
+          }
+        })
       );
 
+      // Small delay between batches
       if (i + IMAGE_BATCH_SIZE < recipes.length) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
     }
   }, []);
 
-  // Fetch recipes
+  // Fetch recipes (lite mode first for instant display, then load images)
   useEffect(() => {
     (async () => {
       setLoading(true);
@@ -247,19 +345,24 @@ export default function CommunityRecipes() {
         const headers = isAuthenticated ? authHeaders() : {};
         headers["x-user-id"] = activeUserId;
 
-        const res = await fetch(`${API_BASE}/api/recipes?${query}`, { headers });
+        // Fetch in lite mode (no images) for instant display
+        const res = await fetch(`${API_BASE}/api/recipes?${query}&lite=true`, { headers });
         const data = await res.json();
         if (res.ok) {
+          // Set recipes with placeholders immediately (instant display!)
           const recipesWithPlaceholders = (data.items || []).map(recipe => ({
             ...recipe,
             imageActivated: false,
             imageLoading: true,
-            actualImage: recipe.image
+            image: null, // Will be loaded progressively
+            actualImage: null
           }));
           setItems(recipesWithPlaceholders);
           setTotal(data.total || 0);
           setPages(data.pages || 1);
-          setLoading(false);
+          setLoading(false); // Hide loading modal immediately
+
+          // Then load images progressively in background
           loadImagesProgressively(recipesWithPlaceholders);
         } else {
           console.error("recipes_list_error:", data);
@@ -335,8 +438,18 @@ export default function CommunityRecipes() {
   };
 
   const handleSearchSubmit = () => {
-    setSearch(searchInput.trim());
+    const trimmedSearch = searchInput.trim();
+    setSearch(trimmedSearch);
     setPage(1);
+    // Update URL with search query
+    const newParams = new URLSearchParams(searchParams);
+    if (trimmedSearch) {
+      newParams.set("q", trimmedSearch);
+    } else {
+      newParams.delete("q");
+    }
+    newParams.delete("id"); // Remove recipe ID when searching
+    setSearchParams(newParams, { replace: true });
   };
 
   const handleSearchKeyDown = (e) => {
@@ -359,6 +472,8 @@ export default function CommunityRecipes() {
     setServingsFilter("");
     setShowMine(false);
     setPage(1);
+    // Clear URL params
+    setSearchParams({}, { replace: true });
   };
 
   // NEW: Favorites functions
@@ -373,25 +488,26 @@ export default function CommunityRecipes() {
 
   const isFavorite = (recipeId) => favorites.includes(recipeId);
 
-  // NEW: Share function
+  // Share function with unique shareable link
   const handleShare = async (recipe, e) => {
     e?.stopPropagation();
+    const shareableLink = getShareableLink(recipe);
     const shareData = {
       title: recipe.title,
       text: `Check out this recipe: ${recipe.title}`,
-      url: window.location.href
+      url: shareableLink
     };
-    
+
     if (navigator.share) {
       try {
         await navigator.share(shareData);
       } catch (err) {
-        console.log('Share cancelled');
+        // User cancelled or share failed, fallback to copy
+        copyShareLink(recipe);
       }
     } else {
       // Fallback: copy to clipboard
-      navigator.clipboard.writeText(window.location.href);
-      alert("Link copied to clipboard!");
+      copyShareLink(recipe);
     }
   };
 
@@ -532,14 +648,35 @@ export default function CommunityRecipes() {
 
   const isRecipeOwner = (recipe) => {
     if (!user || !recipe) return false;
-    const userId = String(user._id || user.id || "");
-    const recipeCreatorId = String(recipe.createdBy || "");
-    return userId === recipeCreatorId;
+
+    // Get user ID (frontend returns 'id', not '_id')
+    const userId = String(user.id || user._id || "").trim();
+
+    // Get recipe creator ID (handle ObjectId object or string)
+    let recipeCreatorId = "";
+    if (recipe.createdBy) {
+      // Handle both ObjectId object and string
+      recipeCreatorId = typeof recipe.createdBy === 'object'
+        ? String(recipe.createdBy._id || recipe.createdBy.$oid || recipe.createdBy)
+        : String(recipe.createdBy);
+    }
+    recipeCreatorId = recipeCreatorId.trim();
+
+    // Debug log (remove in production)
+    console.log("isRecipeOwner check:", { userId, recipeCreatorId, match: userId === recipeCreatorId });
+
+    return userId && recipeCreatorId && userId === recipeCreatorId;
+  };
+
+  // Check if user can modify recipe (owner OR admin)
+  const canModifyRecipe = (recipe) => {
+    if (!user || !recipe) return false;
+    return isRecipeOwner(recipe) || isAdmin;
   };
 
   function handleEditRecipe(recipe) {
-    if (!isRecipeOwner(recipe)) {
-      alert("You can only edit your own recipes");
+    if (!canModifyRecipe(recipe)) {
+      alert("You don't have permission to edit this recipe");
       return;
     }
 
@@ -776,12 +913,16 @@ export default function CommunityRecipes() {
   };
 
   async function handleDeleteRecipe(recipe) {
-    if (!isRecipeOwner(recipe)) {
-      alert("You can only delete your own recipes");
+    if (!canModifyRecipe(recipe)) {
+      alert("You don't have permission to delete this recipe");
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to delete "${recipe.title}"? This action cannot be undone.`)) {
+    const confirmMsg = isAdmin && !isRecipeOwner(recipe)
+      ? `Admin: Are you sure you want to delete "${recipe.title}" by ${recipe.author || "anonymous"}? This action cannot be undone.`
+      : `Are you sure you want to delete "${recipe.title}"? This action cannot be undone.`;
+
+    if (!window.confirm(confirmMsg)) {
       return;
     }
 
@@ -1093,7 +1234,7 @@ export default function CommunityRecipes() {
                   <div
                     key={recipe._id}
                     className="recipe-card"
-                    onClick={() => setSelectedRecipe(recipe)}
+                    onClick={() => openRecipeModal(recipe)}
                   >
                     <div className={`recipe-card-image-container ${!recipe.imageActivated || recipe.imageLoading ? 'image-skeleton' : ''}`}>
                       {!recipe.imageActivated ? (
@@ -1244,7 +1385,7 @@ export default function CommunityRecipes() {
 
       {/* Recipe Modal */}
       {selectedRecipe && (
-        <div className="cr-modal-overlay" onClick={() => setSelectedRecipe(null)}>
+        <div className="cr-modal-overlay" onClick={closeRecipeModal}>
           <div ref={modalRef} className="cr-modal" onClick={(e) => e.stopPropagation()}>
             <div className="cr-modal-image">
               <img
@@ -1253,7 +1394,7 @@ export default function CommunityRecipes() {
                 alt={selectedRecipe.title}
               />
               <div className="cr-modal-image-overlay" />
-              <button onClick={() => setSelectedRecipe(null)} className="cr-modal-close">
+              <button onClick={closeRecipeModal} className="cr-modal-close">
                 <X className="w-6 h-6 text-gray-700" />
               </button>
               <div className="cr-modal-title-section">
@@ -1354,10 +1495,13 @@ export default function CommunityRecipes() {
                   {isFavorite(selectedRecipe._id) ? 'Favorited' : 'Favorite'}
                 </button>
 
-                {/* Share Button */}
-                <button onClick={(e) => handleShare(selectedRecipe, e)} className="cr-modal-btn cr-modal-btn-secondary">
-                  <Share2 className="w-4 h-4" />
-                  Share
+                {/* Share Button with Copy Link */}
+                <button
+                  onClick={(e) => handleShare(selectedRecipe, e)}
+                  className={`cr-modal-btn ${linkCopied ? 'cr-modal-btn-primary' : 'cr-modal-btn-secondary'}`}
+                >
+                  {linkCopied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                  {linkCopied ? "Link Copied!" : "Share"}
                 </button>
 
                 <button onClick={previewRecipePdf} className="cr-modal-btn cr-modal-btn-secondary">
@@ -1370,20 +1514,20 @@ export default function CommunityRecipes() {
                   Download
                 </button>
 
-                {isRecipeOwner(selectedRecipe) && (
+                {canModifyRecipe(selectedRecipe) && (
                   <>
                     <button onClick={() => handleEditRecipe(selectedRecipe)} className="cr-modal-btn cr-modal-btn-primary">
                       <Edit className="w-4 h-4" />
-                      Edit
+                      {isAdmin && !isRecipeOwner(selectedRecipe) ? "Admin Edit" : "Edit"}
                     </button>
                     <button onClick={() => handleDeleteRecipe(selectedRecipe)} className="cr-modal-btn cr-modal-btn-danger">
                       <Trash2 className="w-4 h-4" />
-                      Delete
+                      {isAdmin && !isRecipeOwner(selectedRecipe) ? "Admin Delete" : "Delete"}
                     </button>
                   </>
                 )}
 
-                {!isRecipeOwner(selectedRecipe) && (
+                {!isRecipeOwner(selectedRecipe) && !isAdmin && (
                   <button
                     onClick={openReport}
                     disabled={!!selectedRecipe?.reportedByMe}

@@ -41,8 +41,9 @@ function escapeRegExp(str = "") {
  *  - tags: comma-separated list of tags (ANY)
  *  - exclude: comma-separated list (exclude allergens/tags/text matches)
  *  - prep, cook, diff, servings: exact string matches
- *  - authorId: show “my recipes” (matches createdBy if ObjectId OR author string)
+ *  - authorId: show "my recipes" (matches createdBy if ObjectId OR author string)
  *  - page, limit
+ *  - lite: if "true", exclude image field for faster initial load
  */
 router.get("/", async (req, res) => {
   try {
@@ -57,7 +58,10 @@ router.get("/", async (req, res) => {
       authorId = "",
       page = 1,
       limit = 20,
+      lite = "false",
     } = req.query;
+
+    const isLiteMode = lite === "true";
 
     const q = {
       state: { $ne: "forReview" }, // Exclude recipes that are marked as "forReview"
@@ -125,9 +129,10 @@ router.get("/", async (req, res) => {
     // Who is asking (to mark reportedByMe)
     const userHeaderId = (req.headers["x-user-id"] || "").toString();
 
-    // Query
+    // Query - exclude image in lite mode for faster initial load
+    const projection = isLiteMode ? { image: 0 } : {};
     const [rawItems, total] = await Promise.all([
-      Recipe.find(q).sort({ createdAt: -1 }).skip((p - 1) * l).limit(l).lean(),
+      Recipe.find(q, projection).sort({ createdAt: -1 }).skip((p - 1) * l).limit(l).lean(),
       Recipe.countDocuments(q),
     ]);
 
@@ -248,7 +253,7 @@ router.post("/", protect, async (req, res) => {
 
 /**
  * PUT /api/recipes/:id
- * Update a recipe - Only the creator can edit
+ * Update a recipe - Creator or Admin can edit
  */
 router.put("/:id", protect, async (req, res) => {
   try {
@@ -258,14 +263,18 @@ router.put("/:id", protect, async (req, res) => {
       return res.status(404).json({ success: false, error: "Recipe not found" });
     }
 
-    // Check if user is the creator
-    const userId = String(req.user?._id || req.user?.id || "");
-    const recipeCreatorId = String(recipe.createdBy || "");
+    // Check if user is the creator OR an admin
+    const userId = String(req.user?._id || req.user?.id || "").trim();
+    const recipeCreatorId = String(recipe.createdBy?._id || recipe.createdBy || "").trim();
+    const isAdmin = req.user?.role === "admin";
+    const isOwner = userId && recipeCreatorId && userId === recipeCreatorId;
 
-    if (userId !== recipeCreatorId) {
+    console.log("Edit permission check:", { userId, recipeCreatorId, isOwner, isAdmin });
+
+    if (!isOwner && !isAdmin) {
       return res.status(403).json({
         success: false,
-        error: "You can only edit your own recipes"
+        error: "You don't have permission to edit this recipe"
       });
     }
 
@@ -326,7 +335,7 @@ router.put("/:id", protect, async (req, res) => {
 
 /**
  * DELETE /api/recipes/:id
- * Delete a recipe - Only the creator can delete
+ * Delete a recipe - Creator or Admin can delete
  */
 router.delete("/:id", protect, async (req, res) => {
   try {
@@ -336,20 +345,28 @@ router.delete("/:id", protect, async (req, res) => {
       return res.status(404).json({ success: false, error: "Recipe not found" });
     }
 
-    // Check if user is the creator
-    const userId = String(req.user?._id || req.user?.id || "");
-    const recipeCreatorId = String(recipe.createdBy || "");
+    // Check if user is the creator OR an admin
+    const userId = String(req.user?._id || req.user?.id || "").trim();
+    const recipeCreatorId = String(recipe.createdBy?._id || recipe.createdBy || "").trim();
+    const isAdmin = req.user?.role === "admin";
+    const isOwner = userId && recipeCreatorId && userId === recipeCreatorId;
 
-    if (userId !== recipeCreatorId) {
+    console.log("Delete permission check:", { userId, recipeCreatorId, isOwner, isAdmin });
+
+    if (!isOwner && !isAdmin) {
       return res.status(403).json({
         success: false,
-        error: "You can only delete your own recipes"
+        error: "You don't have permission to delete this recipe"
       });
     }
 
     await Recipe.findByIdAndDelete(req.params.id);
 
-    res.json({ success: true, message: "Recipe deleted successfully" });
+    const message = isAdmin && !isOwner
+      ? "Recipe deleted by admin"
+      : "Recipe deleted successfully";
+
+    res.json({ success: true, message });
   } catch (e) {
     console.error("delete_recipe_error:", e);
     res.status(500).json({ success: false, error: "delete_failed" });
