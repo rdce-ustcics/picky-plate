@@ -42,7 +42,7 @@
 }
 
 .loading-spinner {
-  position: relative;          /* important for centering the logo absolutely */
+  position: relative;
   width: 120px;
   height: 120px;
   display: flex;
@@ -95,7 +95,7 @@
   padding: 6px;
   box-shadow: 0 0 0 3px rgba(255, 196, 45, 0.4);
   z-index: 1;
-  animation: pulse 1.5s ease-in-out infinite;
+  animation: logoPulse 1.5s ease-in-out infinite;
 }
 
 /* Text styling */
@@ -139,12 +139,13 @@
   }
 }
 
-@keyframes pulse {
+/* Logo pulse animation - maintains center position while scaling */
+@keyframes logoPulse {
   0%, 100% {
-    transform: scale(1);
+    transform: translate(-50%, -50%) scale(1);
   }
   50% {
-    transform: scale(1.08);
+    transform: translate(-50%, -50%) scale(1.08);
   }
 }
 

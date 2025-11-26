@@ -1,31 +1,42 @@
 .app-shell {
   display: flex;
-  min-height: 100vh;
-  background: #F6F6F7;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
 }
 
 .app-content {
   flex: 1;
-  padding: 24px;
   overflow-x: hidden;
+  overflow-y: auto;
   min-width: 0; /* Prevents overflow issues */
+  height: 100vh;
+  margin: 0;
+  padding: 0;
 }
 
 /* Mobile adjustments */
 @media (max-width: 900px) {
   .app-shell {
     flex-direction: column;
+    height: 100vh;
+    width: 100vw;
   }
 
   .app-content {
-    padding: 80px 16px 24px; /* Extra top padding for mobile menu button */
+    padding-top: 60px; /* Space for mobile menu button */
     width: 100%;
+    height: 100vh;
+    overflow-y: auto;
+    margin: 0;
   }
 }
 
 /* Small mobile */
 @media (max-width: 600px) {
   .app-content {
-    padding: 70px 12px 20px;
+    padding-top: 56px;
   }
 }

@@ -48,8 +48,8 @@ const API = process.env.REACT_APP_API_URL || "http://localhost:4000";
   // ---- Option sets (with new additions) ----
   const cuisineOptions   = ['filipino','japanese','italian','korean','chinese','american','thai','mexican','middle-eastern'];
   const dislikeOptions   = ['seafood','spicy','vegetables','meat','dairy','gluten','nuts','eggs'];
-  const allergenOptions  = ['peanuts','tree-nuts','eggs','dairy','gluten','soy','fish','shellfish','sesame','corn','sulfites','mustard'];
-  const dietOptions      = ['omnivore','vegetarian','vegan','pescetarian','keto','low-carb','halal','kosher','gluten-free'];
+  const allergenOptions  = ['peanuts','eggs','dairy','gluten','soy','fish','seafood','sesame','corn','sulfites','mustard'];
+  const dietOptions      = ['omnivore','vegetarian','pescetarian','keto','low-carb','halal','kosher','gluten-free'];
   const favoriteOptions  = ['steak','sushi','pizza','burger','pasta','ramen','tacos','desserts','milk tea', 'coffee', 'fries', 'chicken', 'salad', 'soup', 'donut', 'brunch'];
 
   // ---- Label maps WITHOUT emojis for formal look ----
@@ -74,6 +74,73 @@ const API = process.env.REACT_APP_API_URL || "http://localhost:4000";
     salad:'Salad', soup:'Soup', donut:'Donut', brunch:'Brunch'
   };
   const display = (id) => pretty[id] || id;
+
+  // ---- IMAGE MAP: option id -> /public/images/* ----
+  // Path matches images folder in /public/images/
+const imageBasePath = `${process.env.PUBLIC_URL}/images`;
+
+  const prefImageMap = {
+    // Cuisines - UPDATED TO MATCH YOUR FILES
+    filipino:       `${imageBasePath}/adobo.png`,
+    japanese:       `${imageBasePath}/sushi.jpg`,
+    italian:        `${imageBasePath}/pasta.jpg`,
+    korean:         `${imageBasePath}/korean.jpg`,
+    chinese:        `${imageBasePath}/chinese.jpg`,
+    american:       `${imageBasePath}/burger.jpg`,
+    thai:           `${imageBasePath}/thai.jpg`,
+    mexican:        `${imageBasePath}/mexican.jpg`,
+    'middle-eastern': `${imageBasePath}/middleeastern.jpg`,
+
+    // Dislikes
+    seafood:        `${imageBasePath}/seafood.jpg`,
+    spicy:          `${imageBasePath}/spicy.jpg`,
+    vegetables:     `${imageBasePath}/vegetables.jpg`,
+    meat:           `${imageBasePath}/meat.jpg`,
+    dairy:          `${imageBasePath}/dairy.jpg`,
+    gluten:         `${imageBasePath}/gluten.jpg`,
+    nuts:           `${imageBasePath}/nuts.jpg`,
+    eggs:           `${imageBasePath}/eggs.jpg`,
+
+    // Allergens
+    peanuts:        `${imageBasePath}/peanuts.jpg`,
+    soy:            `${imageBasePath}/soy.jpg`,
+    fish:           `${imageBasePath}/fish.jpg`,
+    sesame:         `${imageBasePath}/sesame.jpg`,
+    corn:           `${imageBasePath}/corn.jpg`,
+    sulfites:       `${imageBasePath}/sulfities.jpg`,
+    mustard:        `${imageBasePath}/mustard.jpg`,
+
+    // Diets
+    omnivore:       `${imageBasePath}/omnivore.jpg`,
+    vegetarian:     `${imageBasePath}/salad.jpg`,
+    pescetarian:    `${imageBasePath}/fish.jpg`,
+    keto:           `${imageBasePath}/keto.jpg`,
+    'low-carb':     `${imageBasePath}/lowcarb.jpg`,
+    halal:          `${imageBasePath}/halal.jpg`,
+    kosher:         `${imageBasePath}/kosher.jpg`,
+    'gluten-free':  `${imageBasePath}/gluten.jpg`,
+
+    // Favorites
+    steak:          `${imageBasePath}/meat.jpg`,
+    sushi:          `${imageBasePath}/sushi.jpg`,
+    pizza:          `${imageBasePath}/pizza.jpg`,
+    burger:         `${imageBasePath}/burger.jpg`,
+    pasta:          `${imageBasePath}/pasta.jpg`,
+    ramen:          `${imageBasePath}/ramen.jpg`,
+    tacos:          `${imageBasePath}/tacos.jpg`,
+    desserts:       `${imageBasePath}/desserts.jpg`,
+    'milk tea':     `${imageBasePath}/milktea.jpeg`,
+    coffee:         `${imageBasePath}/coffee.jpg`,
+    fries:          `${imageBasePath}/fries.jpg`,
+    chicken:        `${imageBasePath}/chicken.jpg`,
+    salad:          `${imageBasePath}/salad.jpg`,
+    soup:           `${imageBasePath}/soup.jpg`,
+    donut:          `${imageBasePath}/donut.jpg`,
+    brunch:         `${imageBasePath}/brunch.jpg`,
+  };
+
+  const getImageForPref = (id) =>
+    prefImageMap[id] || `${imageBasePath}/PickAPlate.png`;
 
   // ---- Server data ----
   const [likes, setLikes] = useState([]);
@@ -318,6 +385,25 @@ const API = process.env.REACT_APP_API_URL || "http://localhost:4000";
       setSavingKid(false);
     }
   };
+
+  // ---- Helper to render an image card in the prefs wizard ----
+  const renderOptionCard = (id, selected) => (
+    <button
+      key={id}
+      type="button"
+      onClick={() => togglePreference(id)}
+      className={`modal-option-btn modal-option-btn--with-image ${selected ? "selected" : ""}`}
+    >
+      <div className="modal-option-image-wrapper">
+        <img
+          src={getImageForPref(id)}
+          alt={display(id)}
+          className="modal-option-image"
+        />
+      </div>
+      <span className="modal-option-label">{display(id)}</span>
+    </button>
+  );
 
   return (
     <>
@@ -633,9 +719,9 @@ const API = process.env.REACT_APP_API_URL || "http://localhost:4000";
               </div>
             </div>
 
-            {/* Edit Preferences Wizard */}
+            {/* Edit Preferences Wizard (IMAGE MODAL) */}
             {showPrefsWizard && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-shifted">
                 <div className="modal-container">
                   {/* Header */}
                   <div className="modal-header">
@@ -658,80 +744,30 @@ const API = process.env.REACT_APP_API_URL || "http://localhost:4000";
                   {/* Body */}
                   <div className="modal-body">
                     <div className="modal-options-grid">
-                      {/* Cuisines */}
                       {prefsStep === 1 &&
-                        cuisineOptions.map((id) => (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={() => togglePreference(id)}
-                            className={`modal-option-btn ${
-                              likes.includes(id) ? "selected" : ""
-                            }`}
-                          >
-                            {display(id)}
-                          </button>
-                        ))}
+                        cuisineOptions.map((id) =>
+                          renderOptionCard(id, likes.includes(id))
+                        )}
 
-                      {/* Dislikes */}
                       {prefsStep === 2 &&
-                        dislikeOptions.map((id) => (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={() => togglePreference(id)}
-                            className={`modal-option-btn ${
-                              dislikes.includes(id) ? "selected" : ""
-                            }`}
-                          >
-                            {display(id)}
-                          </button>
-                        ))}
+                        dislikeOptions.map((id) =>
+                          renderOptionCard(id, dislikes.includes(id))
+                        )}
 
-                      {/* Diets */}
                       {prefsStep === 3 &&
-                        dietOptions.map((id) => (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={() => togglePreference(id)}
-                            className={`modal-option-btn ${
-                              diets.includes(id) ? "selected" : ""
-                            }`}
-                          >
-                            {display(id)}
-                          </button>
-                        ))}
+                        dietOptions.map((id) =>
+                          renderOptionCard(id, diets.includes(id))
+                        )}
 
-                      {/* Allergens */}
                       {prefsStep === 4 &&
-                        allergenOptions.map((id) => (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={() => togglePreference(id)}
-                            className={`modal-option-btn ${
-                              allergens.includes(id) ? "selected" : ""
-                            }`}
-                          >
-                            {display(id)}
-                          </button>
-                        ))}
+                        allergenOptions.map((id) =>
+                          renderOptionCard(id, allergens.includes(id))
+                        )}
 
-                      {/* Favorites */}
                       {prefsStep === 5 &&
-                        favoriteOptions.map((id) => (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={() => togglePreference(id)}
-                            className={`modal-option-btn ${
-                              favorites.includes(id) ? "selected" : ""
-                            }`}
-                          >
-                            {display(id)}
-                          </button>
-                        ))}
+                        favoriteOptions.map((id) =>
+                          renderOptionCard(id, favorites.includes(id))
+                        )}
                     </div>
                   </div>
 
@@ -761,7 +797,7 @@ const API = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
             {/* Kid Preferences Wizard - SIMPLIFIED VERSION */}
             {showKidWizard && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-shifted">
                 <div className="modal-container modal-kid">
                   {/* Header */}
                   <div className="modal-header">
@@ -924,11 +960,18 @@ const API = process.env.REACT_APP_API_URL || "http://localhost:4000";
                                 key={id}
                                 type="button"
                                 onClick={() => toggleKidAllergen(id)}
-                                className={`modal-option-btn allergen ${
+                                className={`modal-option-btn modal-option-btn--with-image allergen ${
                                   kidAllergens.includes(id) ? "selected" : ""
                                 }`}
                               >
-                                {display(id)}
+                                <div className="modal-option-image-wrapper">
+                                  <img
+                                    src={getImageForPref(id)}
+                                    alt={display(id)}
+                                    className="modal-option-image"
+                                  />
+                                </div>
+                                <span className="modal-option-label">{display(id)}</span>
                               </button>
                             ))}
                           </div>

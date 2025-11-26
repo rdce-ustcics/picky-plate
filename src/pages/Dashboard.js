@@ -336,7 +336,7 @@ const API = process.env.REACT_APP_API_URL || "http://localhost:4000";
     { title: "ChatBot", description: "Get instant food advice", icon: Bot },
     { title: "Recipes", description: "Smart recipe suggestions", icon: ChefHat },
     { title: "Calendar", description: "Plan your weekly meals", icon: Calendar },
-    { title: "Restaurant Locator", description: "Find places nearby", icon: MapPin }
+    { title: "Restaurants", description: "Find places nearby", icon: MapPin }
   ];
 
   return (

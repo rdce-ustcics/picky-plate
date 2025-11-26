@@ -12,6 +12,10 @@ import {
   Check,
   Settings,
   X,
+  Utensils,
+  Vote,
+  Sparkles,
+  ChefHat,
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import "./Barkadavote.css";
@@ -156,6 +160,10 @@ export default function BarkadaVote() {
   const socketRef = useRef(null);
   const [connState, setConnState] = useState("connecting");
   const [currentView, setCurrentView] = useState("home");
+
+  // New state for modal-based forms
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
 
   const [createName, setCreateName] = useState("");
   const [createPassword, setCreatePassword] = useState("");
@@ -395,6 +403,7 @@ export default function BarkadaVote() {
         if (st.createdAt) setCreatedAt(st.createdAt);
         if (st.expiresAt) setExpiresAt(st.expiresAt);
 
+        setShowCreateModal(false);
         setCurrentView("lobby");
         setShowSettings(true);
       }
@@ -442,6 +451,7 @@ export default function BarkadaVote() {
         if (st.createdAt) setCreatedAt(st.createdAt);
         if (st.expiresAt) setExpiresAt(st.expiresAt);
 
+        setShowJoinModal(false);
         setCurrentView("lobby");
       }
     );
@@ -705,219 +715,346 @@ export default function BarkadaVote() {
   };
 
   /* ========================================
-     ENHANCED HOME VIEW
+     REDESIGNED HOME VIEW - BUTTON BASED
      ======================================== */
   if (currentView === "home") {
     return (
-      <div className="barkada-page" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        {/* Hero Section */}
-        <div style={{ textAlign: 'center', padding: '3rem 1rem 2rem' }}>
-          <h1 className="barkada-title" style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>
-            Barkada <span className="highlight">Vote</span>
-          </h1>
-          <p style={{ fontSize: '1.125rem', color: '#92400e', maxWidth: '600px', margin: '0 auto', lineHeight: 1.6 }}>
-            Make group decisions easy. Vote together, eat together.
-          </p>
-        </div>
-
+      <div className="barkada-page home-page">
         {/* Connection Badge - Top right corner */}
-        <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem' }}>
+        <div className="home-conn-badge">
           {ConnBadge}
         </div>
 
-        {/* Main Cards Container */}
-        <div className="container-narrow" style={{ flex: 1, padding: '0 1rem 2rem' }}>
-          <div className="grid-2" style={{ marginBottom: '3rem' }}>
-            {/* CREATE */}
-            <div className="barkada-card">
-              <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "1rem", color: "#78350f" }}>
-                Create Session
-              </h2>
-              <div className="grid-2" style={{ marginBottom: "0.75rem" }}>
-                <input
-                  value={createName}
-                  onChange={(e) => setCreateName(e.target.value)}
-                  placeholder="Your Name"
-                  className="barkada-input"
-                />
-                <input
-                  type="password"
-                  value={createPassword}
-                  onChange={(e) => setCreatePassword(e.target.value)}
-                  placeholder="Session Password"
-                  className="barkada-input"
-                />
+        {/* Hero Section */}
+        <div className="home-hero">
+          <div className="home-hero-icon">
+            <Utensils className="hero-icon" />
+          </div>
+          <h1 className="home-hero-title">
+            Barkada<span className="highlight">Vote</span>
+          </h1>
+          <p className="home-hero-subtitle">
+            Can't decide where to eat? Let your barkada vote!
+          </p>
+        </div>
+
+        {/* Main Action Buttons - ONLY BUTTONS, NO FORMS */}
+        <div className="home-actions">
+          <button
+            onClick={() => setShowCreateModal(true)}
+            disabled={connState !== "connected"}
+            className="home-action-btn home-action-create"
+          >
+            <div className="action-btn-icon">
+              <Plus />
+            </div>
+            <div className="action-btn-text">
+              <span className="action-btn-title">Create Session</span>
+              <span className="action-btn-desc">Start a new voting lobby</span>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setShowJoinModal(true)}
+            disabled={connState !== "connected"}
+            className="home-action-btn home-action-join"
+          >
+            <div className="action-btn-icon">
+              <Users />
+            </div>
+            <div className="action-btn-text">
+              <span className="action-btn-title">Join Session</span>
+              <span className="action-btn-desc">Enter a 5-digit code</span>
+            </div>
+          </button>
+        </div>
+
+        {/* How It Works Section */}
+        <div className="home-section">
+          <h2 className="home-section-title">How It Works</h2>
+          <div className="steps-container">
+            <div className="step-card">
+              <div className="step-number">1</div>
+              <div className="step-icon">
+                <Plus />
               </div>
-              <p style={{ fontSize: "0.75rem", color: "#92400e", marginBottom: "1rem" }}>
-                You can choose Manual or AI mode and configure settings in the lobby.
-              </p>
-              <button
-                onClick={handleCreateSession}
-                disabled={connState !== "connected"}
-                className="barkada-btn barkada-btn-primary"
-                style={{ width: "100%" }}
-              >
-                Create Lobby
-              </button>
+              <h3 className="step-title">Create or Join</h3>
+              <p className="step-desc">Start a new session or join friends with a code</p>
             </div>
 
-            {/* JOIN */}
-            <div className="barkada-card">
-              <h2 style={{ fontSize: "1.25rem", fontWeight: 700, marginBottom: "1rem", color: "#78350f" }}>
-                Join Session
-              </h2>
-              <div className="grid-2" style={{ marginBottom: "0.75rem" }}>
-                <input
-                  value={joinName}
-                  onChange={(e) => setJoinName(e.target.value)}
-                  placeholder="Your Name"
-                  className="barkada-input"
-                />
-                <input
-                  value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, "").slice(0, 5))}
-                  placeholder="Code (5 digits)"
-                  maxLength={5}
-                  className="barkada-input code-input"
-                />
+            <div className="step-card">
+              <div className="step-number">2</div>
+              <div className="step-icon">
+                <ChefHat />
               </div>
-              <input
-                type="password"
-                value={joinPassword}
-                onChange={(e) => setJoinPassword(e.target.value)}
-                placeholder="Password"
-                className="barkada-input"
-                style={{ marginBottom: "1rem" }}
-              />
-              <button
-                onClick={handleJoinSession}
-                disabled={connState !== "connected"}
-                className="barkada-btn barkada-btn-blue"
-                style={{ width: "100%" }}
-              >
-                Join Lobby
-              </button>
+              <h3 className="step-title">Add Options</h3>
+              <p className="step-desc">Add restaurants manually or let AI suggest</p>
+            </div>
+
+            <div className="step-card">
+              <div className="step-number">3</div>
+              <div className="step-icon">
+                <Vote />
+              </div>
+              <h3 className="step-title">Vote Together</h3>
+              <p className="step-desc">Rate each option on taste, mood & value</p>
+            </div>
+
+            <div className="step-card">
+              <div className="step-number">4</div>
+              <div className="step-icon">
+                <Trophy />
+              </div>
+              <h3 className="step-title">Get Results</h3>
+              <p className="step-desc">See the winner with weighted scoring</p>
             </div>
           </div>
+        </div>
 
-          {/* Feature Highlights - How It Works */}
-          <div style={{ marginBottom: '3rem' }}>
-            <h3 style={{ textAlign: 'center', fontSize: '1.5rem', fontWeight: 700, color: '#78350f', marginBottom: '2rem' }}>
-              How It Works
-            </h3>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-              gap: '1.5rem',
-              maxWidth: '900px',
-              margin: '0 auto'
-            }}>
-              {/* Step 1 */}
-              <div className="feature-card">
-                <div className="feature-number">1</div>
-                <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#78350f', marginBottom: '0.5rem' }}>
-                  Create or Join
-                </h4>
-                <p style={{ fontSize: '0.875rem', color: '#92400e', lineHeight: 1.5 }}>
-                  Start a new session or join your friends with a 5-digit code
-                </p>
+        {/* Features Section */}
+        <div className="home-section home-features-section">
+          <h2 className="home-section-title">Why Barkada Vote?</h2>
+          <div className="features-container">
+            <div className="feature-item">
+              <div className="feature-item-icon">
+                <Users />
               </div>
-
-              {/* Step 2 */}
-              <div className="feature-card">
-                <div className="feature-number">2</div>
-                <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#78350f', marginBottom: '0.5rem' }}>
-                  Add Options
-                </h4>
-                <p style={{ fontSize: '0.875rem', color: '#92400e', lineHeight: 1.5 }}>
-                  Manually add restaurants or let AI suggest based on your preferences
-                </p>
-              </div>
-
-              {/* Step 3 */}
-              <div className="feature-card">
-                <div className="feature-number">3</div>
-                <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#78350f', marginBottom: '0.5rem' }}>
-                  Vote Together
-                </h4>
-                <p style={{ fontSize: '0.875rem', color: '#92400e', lineHeight: 1.5 }}>
-                  Everyone rates options on taste, mood, and value
-                </p>
-              </div>
-
-              {/* Step 4 */}
-              <div className="feature-card">
-                <div className="feature-number">4</div>
-                <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#78350f', marginBottom: '0.5rem' }}>
-                  See Results
-                </h4>
-                <p style={{ fontSize: '0.875rem', color: '#92400e', lineHeight: 1.5 }}>
-                  Get instant results with weighted scoring and a clear winner
-                </p>
+              <div className="feature-item-content">
+                <h4>Real-time Collaboration</h4>
+                <p>Vote simultaneously with friends</p>
               </div>
             </div>
-          </div>
 
-          {/* Key Features - Why Choose */}
-          <div style={{ 
-            background: 'rgba(255, 255, 255, 0.6)', 
-            borderRadius: '1.5rem', 
-            padding: '2rem',
-            border: '2px solid #fde68a',
-            marginBottom: '2rem'
-          }}>
-            <h3 style={{ textAlign: 'center', fontSize: '1.5rem', fontWeight: 700, color: '#78350f', marginBottom: '1.5rem' }}>
-              Why Choose Barkada Vote?
-            </h3>
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', 
-              gap: '1.5rem'
-            }}>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                <div className="feature-icon-box">
-                  <Users style={{ width: '1.25rem', height: '1.25rem', color: '#f59e0b' }} />
-                </div>
-                <div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#78350f', marginBottom: '0.25rem' }}>
-                    Real-time Collaboration
-                  </h4>
-                  <p style={{ fontSize: '0.875rem', color: '#92400e' }}>
-                    Vote simultaneously with your friends, no waiting around
-                  </p>
-                </div>
+            <div className="feature-item">
+              <div className="feature-item-icon">
+                <Sparkles />
               </div>
-
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                <div className="feature-icon-box">
-                  <Settings style={{ width: '1.25rem', height: '1.25rem', color: '#f59e0b' }} />
-                </div>
-                <div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#78350f', marginBottom: '0.25rem' }}>
-                    Flexible Options
-                  </h4>
-                  <p style={{ fontSize: '0.875rem', color: '#92400e' }}>
-                    Choose between manual selection or AI-powered recommendations
-                  </p>
-                </div>
+              <div className="feature-item-content">
+                <h4>AI Recommendations</h4>
+                <p>Get smart restaurant suggestions</p>
               </div>
+            </div>
 
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                <div className="feature-icon-box">
-                  <Trophy style={{ width: '1.25rem', height: '1.25rem', color: '#f59e0b' }} />
-                </div>
-                <div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#78350f', marginBottom: '0.25rem' }}>
-                    Fair & Transparent
-                  </h4>
-                  <p style={{ fontSize: '0.875rem', color: '#92400e' }}>
-                    Weighted voting ensures everyone's preferences matter
-                  </p>
-                </div>
+            <div className="feature-item">
+              <div className="feature-item-icon">
+                <Trophy />
+              </div>
+              <div className="feature-item-content">
+                <h4>Fair & Transparent</h4>
+                <p>Weighted scoring for accurate results</p>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Create Session Modal - Opens when Create button is clicked */}
+        {showCreateModal && (
+          <div className="barkada-modal-overlay" onClick={() => setShowCreateModal(false)}>
+            <div className="barkada-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="barkada-modal-header">
+                <h3 className="barkada-modal-title">Create Session</h3>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="barkada-btn-icon"
+                >
+                  <X style={{ width: "1.25rem", height: "1.25rem" }} />
+                </button>
+              </div>
+
+              <div className="barkada-modal-body">
+                <div className="form-group">
+                  <label className="form-label">Your Name</label>
+                  <input
+                    value={createName}
+                    onChange={(e) => setCreateName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="barkada-input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Session Password</label>
+                  <input
+                    type="password"
+                    value={createPassword}
+                    onChange={(e) => setCreatePassword(e.target.value)}
+                    placeholder="Create a password for the lobby"
+                    className="barkada-input"
+                  />
+                  <p className="form-hint">
+                    Share this password with friends so they can join
+                  </p>
+                </div>
+              </div>
+
+              <div className="barkada-modal-footer">
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="barkada-btn barkada-btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateSession}
+                  disabled={connState !== "connected" || !createName || !createPassword}
+                  className="barkada-btn barkada-btn-primary"
+                >
+                  Create Lobby
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Join Session Modal - Opens when Join button is clicked */}
+        {showJoinModal && (
+          <div className="barkada-modal-overlay" onClick={() => setShowJoinModal(false)}>
+            <div className="barkada-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="barkada-modal-header">
+                <h3 className="barkada-modal-title">Join Session</h3>
+                <button
+                  onClick={() => setShowJoinModal(false)}
+                  className="barkada-btn-icon"
+                >
+                  <X style={{ width: "1.25rem", height: "1.25rem" }} />
+                </button>
+              </div>
+
+              <div className="barkada-modal-body">
+                <div className="form-group">
+                  <label className="form-label">Session Code</label>
+                  <input
+                    value={joinCode}
+                    onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                    placeholder="Enter 5-digit code"
+                    maxLength={5}
+                    className="barkada-input code-input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Your Name</label>
+                  <input
+                    value={joinName}
+                    onChange={(e) => setJoinName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="barkada-input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Password</label>
+                  <input
+                    type="password"
+                    value={joinPassword}
+                    onChange={(e) => setJoinPassword(e.target.value)}
+                    placeholder="Enter session password"
+                    className="barkada-input"
+                  />
+                </div>
+              </div>
+
+              <div className="barkada-modal-footer">
+                <button
+                  onClick={() => setShowJoinModal(false)}
+                  className="barkada-btn barkada-btn-secondary"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleJoinSession}
+                  disabled={connState !== "connected" || !joinName || !joinCode || !joinPassword}
+                  className="barkada-btn barkada-btn-blue"
+                >
+                  Join Lobby
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* GUEST PREFERENCES MODAL */}
+        {showGuestPrefs && (
+          <div className="barkada-modal-overlay">
+            <div className="barkada-modal">
+              <div className="barkada-modal-header">
+                <h3 className="barkada-modal-title">
+                  Your Dietary Preferences
+                </h3>
+                <button
+                  onClick={() => setShowGuestPrefs(false)}
+                  className="barkada-btn-icon"
+                >
+                  <X style={{ width: "1.25rem", height: "1.25rem" }} />
+                </button>
+              </div>
+
+              <div className="barkada-modal-body">
+                <p style={{ fontSize: "0.875rem", color: "#92400e", marginBottom: "1rem" }}>
+                  Help us accommodate your needs (optional but recommended):
+                </p>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Allergens / Must-avoid ingredients
+                  </label>
+                  <textarea
+                    className="barkada-textarea"
+                    placeholder="e.g. peanuts, shellfish, dairy…"
+                    value={guestRestrictions.allergens}
+                    onChange={(e) =>
+                      setGuestRestrictions((p) => ({
+                        ...p,
+                        allergens: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Dietary restrictions
+                  </label>
+                  <input
+                    className="barkada-input"
+                    placeholder="e.g. vegetarian, vegan, halal…"
+                    value={guestRestrictions.diet}
+                    onChange={(e) =>
+                      setGuestRestrictions((p) => ({
+                        ...p,
+                        diet: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="barkada-modal-footer">
+                <button
+                  onClick={() => {
+                    setShowGuestPrefs(false);
+                    doJoin(null);
+                  }}
+                  className="barkada-btn barkada-btn-secondary"
+                >
+                  Skip
+                </button>
+                <button
+                  onClick={() => {
+                    setShowGuestPrefs(false);
+                    doJoin({
+                      allergens: guestRestrictions.allergens.trim(),
+                      diet: guestRestrictions.diet.trim(),
+                    });
+                  }}
+                  className="barkada-btn barkada-btn-primary"
+                >
+                  Save & Join
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1782,91 +1919,6 @@ export default function BarkadaVote() {
                   style={{ flex: 1 }}
                 >
                   Save & Generate
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* GUEST PREFERENCES MODAL */}
-        {showGuestPrefs && (
-          <div className="barkada-modal-overlay">
-            <div className="barkada-modal">
-              <div className="barkada-modal-header">
-                <h3 className="barkada-modal-title">
-                  Your Dietary Preferences
-                </h3>
-                <button
-                  onClick={() => setShowGuestPrefs(false)}
-                  className="barkada-btn-icon"
-                >
-                  <X style={{ width: "1.25rem", height: "1.25rem" }} />
-                </button>
-              </div>
-
-              <div className="barkada-modal-body">
-                <p style={{ fontSize: "0.875rem", color: "#92400e", marginBottom: "1rem" }}>
-                  Help us accommodate your needs (optional but recommended):
-                </p>
-
-                <div className="settings-group">
-                  <label className="settings-label">
-                    Allergens / Must-avoid ingredients
-                  </label>
-                  <textarea
-                    className="barkada-textarea"
-                    placeholder="e.g. peanuts, shellfish, dairy…"
-                    value={guestRestrictions.allergens}
-                    onChange={(e) =>
-                      setGuestRestrictions((p) => ({
-                        ...p,
-                        allergens: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div className="settings-group">
-                  <label className="settings-label">
-                    Dietary restrictions
-                  </label>
-                  <input
-                    className="barkada-input"
-                    placeholder="e.g. vegetarian, vegan, halal…"
-                    value={guestRestrictions.diet}
-                    onChange={(e) =>
-                      setGuestRestrictions((p) => ({
-                        ...p,
-                        diet: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="barkada-modal-footer">
-                <button
-                  onClick={() => {
-                    setShowGuestPrefs(false);
-                    doJoin(null);
-                  }}
-                  className="barkada-btn barkada-btn-secondary"
-                  style={{ flex: 1 }}
-                >
-                  Skip
-                </button>
-                <button
-                  onClick={() => {
-                    setShowGuestPrefs(false);
-                    doJoin({
-                      allergens: guestRestrictions.allergens.trim(),
-                      diet: guestRestrictions.diet.trim(),
-                    });
-                  }}
-                  className="barkada-btn barkada-btn-primary"
-                  style={{ flex: 1 }}
-                >
-                  Save & Join
                 </button>
               </div>
             </div>

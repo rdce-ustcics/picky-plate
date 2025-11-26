@@ -671,10 +671,10 @@
 }
 
 /* ========================================
-   MODAL STYLES - CLEAN DESIGN
+   MODAL STYLES - CLEAN DESIGN WITH RIGHT OFFSET
    ======================================== */
 
-/* Modal Container */
+/* Modal Container - SHIFTED TO THE RIGHT */
 .modal-container {
   background: #fffbeb;
   border-radius: 1.5rem;
@@ -686,6 +686,7 @@
   display: flex;
   flex-direction: column;
   border: 3px solid #fbbf24;
+  margin-left: 150px; /* SHIFT RIGHT TO AVOID SIDEBAR */
 }
 
 .modal-container.modal-kid {
@@ -921,6 +922,35 @@
   color: #991b1b;
 }
 
+/* Image handling in modal options */
+.modal-option-btn--with-image {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.modal-option-image-wrapper {
+  width: 100%;
+  height: 80px;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.modal-option-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.modal-option-label {
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
 /* Modal Footer */
 .modal-footer {
   background: #fffbeb;
@@ -1005,9 +1035,11 @@
 
 /* Responsive Modal Design */
 @media (max-width: 768px) {
-  .modal-container {
+  .modal-container,
+  .modal-container.modal-kid {
     max-width: 95vw;
     max-height: 95vh;
+    margin-left: 0; /* Remove offset on mobile */
   }
 
   .modal-header {
