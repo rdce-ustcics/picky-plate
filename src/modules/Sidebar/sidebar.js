@@ -1,7 +1,7 @@
 // src/modules/Sidebar/sidebar.js
 import { useState, useEffect } from "react";
 import { NavLink, Link } from "react-router-dom";
-import { FiGrid, FiUser, FiUsers, FiGlobe, FiSettings, FiMessageCircle, FiMenu, FiX, FiBookOpen, FiMapPin, FiChevronRight } from "react-icons/fi";
+import { FiGrid, FiUser, FiUsers, FiGlobe, FiSettings, FiMessageCircle, FiMenu, FiX, FiBookOpen, FiMapPin, FiChevronRight, FiCalendar } from "react-icons/fi";
 import { useAuth } from "../../auth/AuthContext";
 import "./sidebar.css";
 
@@ -27,21 +27,27 @@ const Sidebar = () => {
   // NEW: Toggle desktop sidebar
   const toggleSidebar = () => setIsExpanded(!isExpanded);
 
-  // Items array with conditional admin button
-  const items = [
+  // Public items - visible to everyone (no login required)
+  const publicItems = [
     { to: "/", label: "Dashboard", icon: <FiGrid /> },
     { to: "/chatbot", label: "AI ChatBot", icon: <FiMessageCircle /> },
     { to: "/recipes", label: "Community Recipes", icon: <FiBookOpen /> },
-    { to: "/profile", label: "Profile", icon: <FiUser /> },
     { to: "/barkada-vote", label: "Barkada Vote", icon: <FiUsers /> },
     { to: "/explorer", label: "Cultural Food Explorer", icon: <FiGlobe /> },
     { to: "/restaurants", label: "Restaurant Locator", icon: <FiMapPin /> },
     // Conditionally add the Admin button ONLY if user is admin
     ...(user?.role === 'admin' ? [{ to: "/admin", label: "Admin Dashboard", icon: <FiSettings /> }] : [])
   ];
+
+  // Authenticated items - only visible when logged in (Calendar beside Profile, Profile at bottom)
+  const authItems = [
+    { to: "/calendar", label: "Meal Calendar", icon: <FiCalendar /> },
+    { to: "/profile", label: "Profile", icon: <FiUser /> },
+  ];
   
-  console.log('📋 Items array:', items);
-  console.log('📋 Items count:', items.length);
+  console.log('📋 Public Items:', publicItems);
+  console.log('📋 Auth Items:', authItems);
+  console.log('📋 Is Authenticated:', isAuthenticated);
   
   return (
     <>
@@ -85,7 +91,8 @@ const Sidebar = () => {
         </Link>
 
         <nav className="pap-nav">
-          {items.map(it => (
+          {/* Public items - visible to everyone */}
+          {publicItems.map(it => (
             <NavLink
               key={it.to}
               to={it.to}
@@ -97,6 +104,24 @@ const Sidebar = () => {
               <span className="pap-label">{it.label}</span>
             </NavLink>
           ))}
+
+          {/* Authenticated items - only visible when logged in (Calendar & Profile at bottom) */}
+          {isAuthenticated && (
+            <div className="pap-nav-auth-section">
+              {authItems.map(it => (
+                <NavLink
+                  key={it.to}
+                  to={it.to}
+                  end
+                  className={({ isActive }) => "pap-nav-item" + (isActive ? " is-active" : "")}
+                  onClick={closeMobileMenu}
+                >
+                  <span className="pap-icon">{it.icon}</span>
+                  <span className="pap-label">{it.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
         </nav>
 
         <div className="pap-login-card">

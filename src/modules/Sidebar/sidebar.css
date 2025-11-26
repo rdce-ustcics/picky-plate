@@ -284,6 +284,20 @@
   transform: scale(1.15);
 }
 
+/* Auth section - Calendar & Profile (only visible when logged in) */
+.pap-nav-auth-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 2px solid rgba(255, 196, 45, 0.2);
+}
+
+.pap-sidebar.is-expanded .pap-nav-auth-section {
+  border-top: 2px dashed rgba(255, 138, 61, 0.3);
+}
+
 /* Label visibility based on is-expanded class */
 .pap-label{
   opacity: 0;

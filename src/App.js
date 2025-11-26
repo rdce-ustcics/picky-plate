@@ -29,6 +29,9 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/chatbot" element={<ChatBot />} />
             <Route path="/recipes" element={<CommunityRecipes />} />
+            <Route path="/barkada-vote" element={<BarkadaVote />} />
+            <Route path="/explorer" element={<Explorer />} />
+            <Route path="/restaurants" element={<RestaurantLocator />} />
             <Route path="/verify-otp" element={<VerifyOtp />} /> {/* ✅ OTP page */}
 
             {/* 🔒 PROTECTED ROUTES - Login required */}
@@ -42,37 +45,10 @@ export default function App() {
             />
 
             <Route
-              path="/barkada-vote"
-              element={
-                <RoleRoute allow={["user", "admin"]}>
-                  <BarkadaVote />
-                </RoleRoute>
-              }
-            />
-
-            <Route
               path="/calendar"
               element={
                 <RoleRoute allow={["user", "admin"]}>
                   <Calendar />
-                </RoleRoute>
-              }
-            />
-
-            <Route
-              path="/explorer"
-              element={
-                <RoleRoute allow={["user", "admin"]}>
-                  <Explorer />
-                </RoleRoute>
-              }
-            />
-
-            <Route
-              path="/restaurants"
-              element={
-                <RoleRoute allow={["user", "admin"]}>
-                  <RestaurantLocator />
                 </RoleRoute>
               }
             />
