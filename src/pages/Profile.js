@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import LoadingModal from '../components/LoadingModal';
 import { useAuth } from '../auth/AuthContext';
+import { getCached, setCache, CACHE_KEYS, CACHE_TTL } from '../utils/cache';
 import './Profile.css';
 
 export default function Profile() {
@@ -186,12 +187,26 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
   // Combine all preferences for display
   const allSelectedPreferences = [...likes, ...dislikes, ...favorites, ...allergens, ...diets];
 
-  // ---- Load preferences on mount ----
+  // ---- Load preferences on mount (with caching) ----
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
       setError('');
+
+      // Check cache first
+      const cached = getCached(CACHE_KEYS.USER_PREFERENCES);
+      if (cached) {
+        setLikes(Array.isArray(cached.likes) ? cached.likes : []);
+        setDislikes(Array.isArray(cached.dislikes) ? cached.dislikes : []);
+        setFavorites(Array.isArray(cached.favorites) ? cached.favorites : []);
+        setAllergens(Array.isArray(cached.allergens) ? cached.allergens : []);
+        setDiets(Array.isArray(cached.diets) ? cached.diets : []);
+        setKiddieMeal(cached.kiddieMeal === true);
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch(`${API}/api/preferences/me`, {
           headers: {
@@ -209,6 +224,9 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
         setDiets(Array.isArray(data.diets) ? data.diets : []);
         setKiddieMeal(data.kiddieMeal === true);
 
+        // Cache the preferences
+        setCache(CACHE_KEYS.USER_PREFERENCES, data, CACHE_TTL.USER_PREFERENCES);
+
       } catch (e) {
         if (!cancelled) setError(e.message || 'Load error');
       } finally {
@@ -218,12 +236,21 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
     return () => { cancelled = true; };
   }, [activeUserId, API, authHeaders]);
 
-  // ---- Load kids preferences ----
+  // ---- Load kids preferences (with caching) ----
   useEffect(() => {
     let cancelled = false;
 
     const loadKids = async () => {
       setLoadingKids(true);
+
+      // Check cache first
+      const cached = getCached(CACHE_KEYS.KIDS_PREFERENCES);
+      if (cached) {
+        setKids(Array.isArray(cached) ? cached : []);
+        setLoadingKids(false);
+        return;
+      }
+
       try {
         const res = await fetch(`${API}/api/preferences/kids`, {
           headers: {
@@ -235,7 +262,10 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
         const data = await res.json();
 
         if (!cancelled && data.success) {
-          setKids(Array.isArray(data.kids) ? data.kids : []);
+          const kidsData = Array.isArray(data.kids) ? data.kids : [];
+          setKids(kidsData);
+          // Cache the kids preferences
+          setCache(CACHE_KEYS.KIDS_PREFERENCES, kidsData, CACHE_TTL.KIDS_PREFERENCES);
         }
       } catch (err) {
         // console.error('Error loading kids', err);
@@ -303,6 +333,11 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
         localStorage.setItem('pap:activeUserName', name || nameFromEmail(activeUserId));
         localStorage.setItem('pap:profile:phone', phone || '+63');
       } catch {}
+
+      // 3) Update the preferences cache with new values
+      setCache(CACHE_KEYS.USER_PREFERENCES, {
+        likes, dislikes, diets, allergens, favorites, kiddieMeal
+      }, CACHE_TTL.USER_PREFERENCES);
 
       alert('Profile saved successfully!');
     } catch (e) {
@@ -372,10 +407,13 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
         throw new Error(data.message || 'Failed to save kid');
       }
 
-      // Update kids list locally
+      // Update kids list locally and cache
       setKids((prev) => {
         const without = prev.filter((k) => k.kidId !== data.kid.kidId);
-        return [...without, data.kid];
+        const updatedKids = [...without, data.kid];
+        // Update the cache
+        setCache(CACHE_KEYS.KIDS_PREFERENCES, updatedKids, CACHE_TTL.KIDS_PREFERENCES);
+        return updatedKids;
       });
 
       setShowKidWizard(false);

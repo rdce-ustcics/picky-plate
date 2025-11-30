@@ -3,6 +3,7 @@ import { Plus, Edit, Trash2, X, Download, Camera } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import jsPDF from "jspdf";
 import LoadingModal from "../components/LoadingModal";
+import { getCached, setCache, clearCache, CACHE_KEYS, CACHE_TTL } from "../utils/cache";
 import "./Explorer.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
@@ -31,8 +32,21 @@ export default function Explorer() {
   });
   const [imagePreview, setImagePreview] = useState(null);
 
-  // Fetch cultural recipes from database
-  const fetchRecipes = async () => {
+  // Fetch cultural recipes from database (with caching)
+  const fetchRecipes = async (forceRefresh = false) => {
+    const cacheKey = CACHE_KEYS.CULTURAL_RECIPES_REGION(region);
+
+    // Check cache first (unless forcing refresh)
+    if (!forceRefresh) {
+      const cached = getCached(cacheKey);
+      if (cached) {
+        setDishes(cached);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -63,7 +77,7 @@ export default function Explorer() {
         setLoading(false);
 
         // Step 2: Load images one by one
-        loadImagesOneByOne(recipesWithPlaceholders);
+        loadImagesOneByOne(recipesWithPlaceholders, cacheKey);
       } else {
         setError("Failed to load recipes");
         setDishes([]);
@@ -78,8 +92,9 @@ export default function Explorer() {
   };
 
   // Load images in parallel batches for faster progressive loading
-  const loadImagesOneByOne = async (recipes) => {
+  const loadImagesOneByOne = async (recipes, cacheKey) => {
     const BATCH_SIZE = 10; // Load 10 images at once for speed
+    const updatedRecipes = [...recipes];
 
     for (let i = 0; i < recipes.length; i += BATCH_SIZE) {
       const batch = recipes.slice(i, i + BATCH_SIZE);
@@ -87,27 +102,29 @@ export default function Explorer() {
       // Load this batch in parallel
       await Promise.all(
         batch.map(async (recipe) => {
+          const recipeIndex = updatedRecipes.findIndex(r => r.id === recipe.id);
           try {
             const res = await fetch(`${API_BASE}/api/cultural-recipes/${recipe.id}`);
             const data = await res.json();
 
             if (res.ok && data.success) {
+              const updatedRecipe = {
+                ...recipe,
+                img: data.recipe.img || "/images/default-dish.png",
+                imageLoading: false
+              };
+              updatedRecipes[recipeIndex] = updatedRecipe;
+
               // Update this specific recipe with its image
               setDishes(prevDishes =>
                 prevDishes.map(dish =>
-                  dish.id === recipe.id
-                    ? {
-                        ...dish,
-                        img: data.recipe.img || "/images/default-dish.png",
-                        imageLoading: false
-                      }
-                    : dish
+                  dish.id === recipe.id ? updatedRecipe : dish
                 )
               );
             }
           } catch (e) {
-            // console.error(`Failed to load image for ${recipe.name}:`, e);
             // Mark as done loading even if failed
+            updatedRecipes[recipeIndex] = { ...recipe, imageLoading: false };
             setDishes(prevDishes =>
               prevDishes.map(dish =>
                 dish.id === recipe.id
@@ -119,6 +136,9 @@ export default function Explorer() {
         })
       );
     }
+
+    // Cache the fully loaded recipes (with images)
+    setCache(cacheKey, updatedRecipes, CACHE_TTL.CULTURAL_RECIPES);
   };
 
   useEffect(() => {
@@ -473,7 +493,12 @@ export default function Explorer() {
       if (res.ok && data.success) {
         alert("Recipe saved successfully!");
         closeEditForm();
-        await fetchRecipes();
+        // Clear all region caches to show new recipe
+        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("All"));
+        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("Luzon"));
+        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("Visayas"));
+        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("Mindanao"));
+        await fetchRecipes(true); // Force refresh
       } else {
         // console.error("❌ Failed to save recipe:", data);
         alert(data.error || "Failed to save recipe");
@@ -500,7 +525,12 @@ export default function Explorer() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        await fetchRecipes();
+        // Clear all region caches
+        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("All"));
+        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("Luzon"));
+        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("Visayas"));
+        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("Mindanao"));
+        await fetchRecipes(true); // Force refresh
         setModalDish(null);
       } else {
         alert(data.error || "Failed to delete recipe");

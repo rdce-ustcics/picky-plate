@@ -10,7 +10,7 @@ import { useAuth } from "../auth/AuthContext";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import LoadingModal from "../components/LoadingModal";
-import "./CommunityRecipes.css";
+import "./Recipe.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
@@ -66,6 +66,10 @@ export default function CommunityRecipes() {
   const tagMenuRef = useRef(null);
   const allergenMenuRef = useRef(null);
   const modalRef = useRef(null);
+  
+  // NEW: Refs for dropdown buttons to calculate position
+  const tagButtonRef = useRef(null);
+  const allergenButtonRef = useRef(null);
 
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -95,6 +99,10 @@ export default function CommunityRecipes() {
   const [showAllergenMenu, setShowAllergenMenu] = useState(false);
   const [showMine, setShowMine] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
+  // NEW: State for dropdown positions
+  const [tagMenuPosition, setTagMenuPosition] = useState({ top: 0, left: 0 });
+  const [allergenMenuPosition, setAllergenMenuPosition] = useState({ top: 0, left: 0 });
 
   // Report modal state
   const [showReportModal, setShowReportModal] = useState(false);
@@ -145,6 +153,48 @@ export default function CommunityRecipes() {
     return count;
   }, [selectedTags, excludeAllergens, excludeTerms, prepFilter, cookFilter, difficultyFilter, servingsFilter]);
 
+  // NEW: Function to calculate dropdown position
+  const calculateDropdownPosition = useCallback((buttonRef) => {
+    if (!buttonRef.current) return { top: 0, left: 0 };
+    const rect = buttonRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    
+    // Calculate left position, ensuring dropdown doesn't go off-screen
+    let left = rect.left;
+    const dropdownWidth = Math.min(380, viewportWidth - 32); // max width or viewport - padding
+    
+    // If dropdown would go off right edge, adjust
+    if (left + dropdownWidth > viewportWidth - 16) {
+      left = viewportWidth - dropdownWidth - 16;
+    }
+    
+    // Ensure it doesn't go off left edge
+    if (left < 16) {
+      left = 16;
+    }
+    
+    return {
+      top: rect.bottom + 8, // 8px gap below button
+      left: left,
+    };
+  }, []);
+
+  // NEW: Handle tag menu toggle with position calculation
+  const handleTagMenuToggle = useCallback(() => {
+    if (!showTagMenu) {
+      setTagMenuPosition(calculateDropdownPosition(tagButtonRef));
+    }
+    setShowTagMenu((s) => !s);
+  }, [showTagMenu, calculateDropdownPosition]);
+
+  // NEW: Handle allergen menu toggle with position calculation
+  const handleAllergenMenuToggle = useCallback(() => {
+    if (!showAllergenMenu) {
+      setAllergenMenuPosition(calculateDropdownPosition(allergenButtonRef));
+    }
+    setShowAllergenMenu((s) => !s);
+  }, [showAllergenMenu, calculateDropdownPosition]);
+
   // Close menus on outside click
   useEffect(() => {
     function onDocClick(e) {
@@ -158,6 +208,26 @@ export default function CommunityRecipes() {
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [showTagMenu, showAllergenMenu]);
+
+  // NEW: Update dropdown position on scroll/resize
+  useEffect(() => {
+    const updatePositions = () => {
+      if (showTagMenu && tagButtonRef.current) {
+        setTagMenuPosition(calculateDropdownPosition(tagButtonRef));
+      }
+      if (showAllergenMenu && allergenButtonRef.current) {
+        setAllergenMenuPosition(calculateDropdownPosition(allergenButtonRef));
+      }
+    };
+
+    window.addEventListener('scroll', updatePositions, true);
+    window.addEventListener('resize', updatePositions);
+    
+    return () => {
+      window.removeEventListener('scroll', updatePositions, true);
+      window.removeEventListener('resize', updatePositions);
+    };
+  }, [showTagMenu, showAllergenMenu, calculateDropdownPosition]);
 
   // Save favorites to localStorage
   useEffect(() => {
@@ -1008,17 +1078,24 @@ export default function CommunityRecipes() {
 
             {/* Quick Filters */}
             <div className="cr-quick-filters">
-              {/* Tag Dropdown */}
+              {/* Tag Dropdown - FIXED with position calculation */}
               <div className="cr-dropdown" ref={tagMenuRef}>
                 <button
-                  onClick={() => setShowTagMenu((s) => !s)}
+                  ref={tagButtonRef}
+                  onClick={handleTagMenuToggle}
                   className={`cr-filter-btn ${selectedTags.length > 0 ? 'active' : ''}`}
                 >
                   <span>{selectedTags.length > 0 ? `Tags (${selectedTags.length})` : "Filter by Tags"}</span>
                   <ChevronDown className={`w-4 h-4 transition ${showTagMenu ? 'rotate-180' : ''}`} />
                 </button>
                 {showTagMenu && (
-                  <div className="cr-dropdown-menu">
+                  <div 
+                    className="cr-dropdown-menu"
+                    style={{
+                      top: `${tagMenuPosition.top}px`,
+                      left: `${tagMenuPosition.left}px`,
+                    }}
+                  >
                     <div className="cr-dropdown-grid">
                       {TAG_OPTIONS.map((tag) => (
                         <button
@@ -1106,10 +1183,11 @@ export default function CommunityRecipes() {
                   </select>
                 </div>
 
-                {/* Allergen Exclusions */}
+                {/* Allergen Exclusions - FIXED with position calculation */}
                 <div className="cr-dropdown cr-allergen-dropdown" ref={allergenMenuRef}>
                   <button
-                    onClick={() => setShowAllergenMenu((s) => !s)}
+                    ref={allergenButtonRef}
+                    onClick={handleAllergenMenuToggle}
                     className="cr-dropdown-btn"
                   >
                     <span>
@@ -1121,7 +1199,13 @@ export default function CommunityRecipes() {
                     <ChevronDown className={`w-4 h-4 transition ${showAllergenMenu ? 'rotate-180' : ''}`} />
                   </button>
                   {showAllergenMenu && (
-                    <div className="cr-dropdown-menu">
+                    <div 
+                      className="cr-dropdown-menu"
+                      style={{
+                        top: `${allergenMenuPosition.top}px`,
+                        left: `${allergenMenuPosition.left}px`,
+                      }}
+                    >
                       <div className="cr-dropdown-grid">
                         {ALLERGENS.map((a) => (
                           <button

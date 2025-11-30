@@ -4,6 +4,7 @@ import { Heart, RefreshCw, Users, MessageSquare, Bot, ChefHat, Calendar, MapPin,
 import { useNavigate } from "react-router-dom";
 import LoadingModal from '../components/LoadingModal';
 import { useAuth } from "../auth/AuthContext";
+import { getCached, setCache, CACHE_KEYS, CACHE_TTL } from '../utils/cache';
 import './Dashboard.css';
 
 
@@ -310,11 +311,20 @@ export default function Dashboard() {
   };
 
   const fetchSurpriseRecipes = useCallback(async () => {
+    // Check cache first for faster initial load
+    const cached = getCached(CACHE_KEYS.SURPRISE_RECIPES);
+    if (cached && cached.length > 0) {
+      setFoodItems(cached);
+      return;
+    }
+
     try {
       const res = await fetch(`${API}/api/surprise?limit=20`);
       const data = await res.json();
       if (res.ok && data.success && data.recipes.length > 0) {
         setFoodItems(data.recipes);
+        // Cache for quick subsequent loads (short TTL for freshness)
+        setCache(CACHE_KEYS.SURPRISE_RECIPES, data.recipes, CACHE_TTL.SURPRISE_RECIPES);
       } else {
         setFoodItems([]);
       }

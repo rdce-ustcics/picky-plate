@@ -4,6 +4,7 @@ import {
   ChevronLeft, ChevronRight, Plus, Sparkles, DollarSign, X, CheckCircle2, BadgeCheck,
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
+import { getCached, setCache, CACHE_KEYS, CACHE_TTL } from "../utils/cache";
 import BotPng from "../assets/bot.png";
 import "./Calendar.css";
 
@@ -138,12 +139,21 @@ export default function Calendar(){
     }
   },[currentDate]); // eslint-disable-line
 
-  // ---------- Fetch month data ----------
+  // ---------- Fetch month data (with caching) ----------
   useEffect(()=>{
     if(!isAuthenticated) return;
     const y=currentDate.getFullYear(), m0=currentDate.getMonth();
     const start=ymdFromParts(y, m0+1, 1);
     const end=ymdFromParts(y, m0+1, daysInMonth);
+    const cacheKey = CACHE_KEYS.MEAL_PLANS(start, end);
+
+    // Check cache first
+    const cached = getCached(cacheKey);
+    if (cached) {
+      setMealData(cached);
+      return;
+    }
+
     (async ()=>{
       try{
         const res=await fetch(`${API_BASE}/api/mealplans?start=${start}&end=${end}`,{ headers: authHeaders() });
@@ -157,6 +167,8 @@ export default function Calendar(){
             map[it.date]={ dishes: sorted };
           });
           setMealData(map);
+          // Cache the meal plans
+          setCache(cacheKey, map, CACHE_TTL.MEAL_PLANS);
         }
       }catch(e){ /* console.error(e); */ }
     })();
@@ -195,7 +207,13 @@ export default function Calendar(){
         const sorted=(data.plan.dishes||[])
           .map(d=> ({ ...d, name: toTitle(d.name||"") }))
           .sort((a,b)=> (SLOT_ORDER[a.slot]??999)-(SLOT_ORDER[b.slot]??999));
-        setMealData(prev=> ({ ...prev, [modalDateKey]: { dishes: sorted } }));
+        const newMealData = { ...mealData, [modalDateKey]: { dishes: sorted } };
+        setMealData(newMealData);
+        // Update cache with new data
+        const y=currentDate.getFullYear(), m0=currentDate.getMonth();
+        const start=ymdFromParts(y, m0+1, 1);
+        const end=ymdFromParts(y, m0+1, daysInMonth);
+        setCache(CACHE_KEYS.MEAL_PLANS(start, end), newMealData, CACHE_TTL.MEAL_PLANS);
         closeModal();
       } else alert("Failed to save.");
     } catch(e){ /* console.error(e); */ alert("Error saving plan."); }
@@ -349,7 +367,15 @@ export default function Calendar(){
       const sorted=(data.plan.dishes||[])
         .map(d=> ({ ...d, name: toTitle(d.name||"") }))
         .sort((a,b)=> (SLOT_ORDER[a.slot]??999)-(SLOT_ORDER[b.slot]??999));
-      setMealData(prev=> ({ ...prev, [dateKey]: { dishes: sorted } }));
+      setMealData(prev=> {
+        const newData = { ...prev, [dateKey]: { dishes: sorted } };
+        // Update cache with new data
+        const y=currentDate.getFullYear(), m0=currentDate.getMonth();
+        const start=ymdFromParts(y, m0+1, 1);
+        const end=ymdFromParts(y, m0+1, daysInMonth);
+        setCache(CACHE_KEYS.MEAL_PLANS(start, end), newData, CACHE_TTL.MEAL_PLANS);
+        return newData;
+      });
     } else throw new Error("save failed");
   };
 
