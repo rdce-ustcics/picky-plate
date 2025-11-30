@@ -107,7 +107,7 @@ router.get("/_ping", protect, async (req, res) => {
     const raw = (r?.output_text || "").trim();
     return res.json({ success:true, ms: Date.now()-t0, raw });
   } catch (e) {
-    console.error("AI _ping error:", e?.status || "", e?.message || "", e?.response?.data || e);
+    // console.error("AI _ping error:", e?.status || "", e?.message || "", e?.response?.data || e);
     return res.status(500).json({ success:false, error:"cannot_contact_openai" });
   }
 });
@@ -229,7 +229,7 @@ Rules:
     let plan;
     try {
       const traceId = Math.random().toString(36).slice(2,8);
-      console.log(`[AI ${traceId}] calling OpenAI… ${ymdFromDate(start)}..${ymdFromDate(end)} user=${req.user.id}`);
+      // console.log(`[AI ${traceId}] calling OpenAI… ${ymdFromDate(start)}..${ymdFromDate(end)} user=${req.user.id}`);
       const t0 = Date.now();
       const r = await openai.responses.create({
         model: "gpt-4o-mini",
@@ -241,7 +241,7 @@ Rules:
         temperature: 0.9,
       });
       const raw = (r?.output_text || "").trim();
-      console.log(`[AI ${traceId}] done in ${Date.now()-t0}ms model=${r?.model} bytes=${Buffer.byteLength(raw,"utf8")} usage=${JSON.stringify(r?.usage||null)}`);
+      // console.log(`[AI ${traceId}] done in ${Date.now()-t0}ms model=${r?.model} bytes=${Buffer.byteLength(raw,"utf8")} usage=${JSON.stringify(r?.usage||null)}`);
 
       if (!raw) plan = [];
       else {
@@ -259,7 +259,7 @@ Rules:
              : [];
       }
     } catch (err) {
-      console.error("OpenAI error:", err?.status || "", err?.message || "", err?.response?.data || err);
+      // console.error("OpenAI error:", err?.status || "", err?.message || "", err?.response?.data || err);
       plan = []; // AI down (or failed)
     }
 
@@ -316,7 +316,7 @@ Rules:
     return res.json({ success:true, plan: normalized });
 
   } catch (e) {
-    console.error("ai_suggest_week_error:", e?.status || "", e?.message || "", e?.response?.data || e);
+    // console.error("ai_suggest_week_error:", e?.status || "", e?.message || "", e?.response?.data || e);
     return res.status(500).json({
       success:false,
       error:"ai_down",

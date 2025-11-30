@@ -50,7 +50,7 @@ exports.signup = async (req, res) => {
       user: { id: user._id, name: user.name, email: user.email, role: user.role, verified: user.verified },
     });
   } catch (error) {
-    console.error('Signup error:', error);
+    // console.error('Signup error:', error);
     return res.status(500).json({ success: false, message: error.message || 'Error creating account' });
   }
 };
@@ -93,7 +93,7 @@ exports.login = async (req, res) => {
       user: { id: user._id, name: user.name, email: user.email, role: user.role, verified: user.verified },
     });
   } catch (error) {
-    console.error('Login error:', error);
+    // console.error('Login error:', error);
     return res.status(500).json({ success: false, message: 'Error logging in' });
   }
 };

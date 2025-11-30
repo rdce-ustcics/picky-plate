@@ -77,11 +77,11 @@ Return ONLY a valid JSON array as described, with no extra commentary or markdow
       try {
         parsed = JSON.parse(raw.slice(start, end + 1));
       } catch (e2) {
-        console.error('Failed to parse AI JSON (slice):', raw);
+        // console.error('Failed to parse AI JSON (slice):', raw);
         throw new Error('AI did not return valid JSON.');
       }
     } else {
-      console.error('Failed to parse AI JSON:', raw);
+      // console.error('Failed to parse AI JSON:', raw);
       throw new Error('AI did not return valid JSON.');
     }
   }

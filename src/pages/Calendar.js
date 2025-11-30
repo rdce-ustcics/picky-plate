@@ -158,7 +158,7 @@ export default function Calendar(){
           });
           setMealData(map);
         }
-      }catch(e){ console.error(e); }
+      }catch(e){ /* console.error(e); */ }
     })();
   },[currentDate,isAuthenticated,authHeaders,daysInMonth]);
 
@@ -198,7 +198,7 @@ export default function Calendar(){
         setMealData(prev=> ({ ...prev, [modalDateKey]: { dishes: sorted } }));
         closeModal();
       } else alert("Failed to save.");
-    } catch(e){ console.error(e); alert("Error saving plan."); }
+    } catch(e){ /* console.error(e); */ alert("Error saving plan."); }
   };
 
   // ---------- Week total ----------
@@ -307,7 +307,7 @@ export default function Calendar(){
         setShowAiModal(false);
       }
     } catch(e){
-      console.error(e);
+      // console.error(e);
       alert("Network error.");
       setShowAiModal(false);
     } finally {
@@ -364,7 +364,7 @@ export default function Calendar(){
       setShowAiModal(false);
       setAiSuggestions([]); // reset after save
     }catch(e){
-      console.error(e); setAiSaving(false);
+      /* console.error(e); */ setAiSaving(false);
       alert("Failed to save some suggestions.");
     }
   };
@@ -377,7 +377,7 @@ export default function Calendar(){
       setAiSaving(false);
       setAiSuggestions(prev=> prev.map((d,i)=> i===idx ? ({ ...d, _saved:true }) : d));
     }catch(e){
-      console.error(e); setAiSaving(false);
+      /* console.error(e); */ setAiSaving(false);
       alert("Failed to save this day.");
     }
   };

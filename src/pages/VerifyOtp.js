@@ -45,7 +45,7 @@ export default function VerifyOtp() {
         const url = `${API_BASE}/api/auth/invalidate-otp?email=${encodeURIComponent(email)}&purpose=verify`;
         navigator.sendBeacon(url);
       } catch (err) {
-        console.error("Failed to send OTP invalidate beacon:", err);
+        // console.error("Failed to send OTP invalidate beacon:", err);
       }
     };
 
@@ -170,7 +170,7 @@ export default function VerifyOtp() {
           credentials: "include",
         });
       } catch (err) {
-        console.error("Failed to invalidate OTP before going back:", err);
+        // console.error("Failed to invalidate OTP before going back:", err);
       }
     }
     navigate("/login");

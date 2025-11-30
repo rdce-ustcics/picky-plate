@@ -553,7 +553,7 @@ export default function ChatBot() {
         setChats([]);
         setActiveChatId(null);
       } catch (e) {
-        console.error("Failed to load chats:", e);
+        // console.error("Failed to load chats:", e);
 
         if (canUseLocal) {
           const cached = loadChatsFromLocal();
@@ -727,7 +727,7 @@ export default function ChatBot() {
         )
       );
     } catch (e) {
-      console.error(e);
+      // console.error(e);
 
       if (e.status === 403 && e.data?.error === "guest_limit_reached") {
         setGuestLimitReached(true);
@@ -814,7 +814,7 @@ export default function ChatBot() {
           )
         );
       } catch (e) {
-        console.error("Failed to load chat messages:", e);
+        // console.error("Failed to load chat messages:", e);
       }
     }
   }
@@ -849,7 +849,7 @@ export default function ChatBot() {
         });
         if (!res.ok) {
           const t = await res.text();
-          console.error("Delete failed ->", res.status, t);
+          // console.error("Delete failed ->", res.status, t);
           alert("Failed to delete chat on server.");
           return;
         }
@@ -868,7 +868,7 @@ export default function ChatBot() {
         if (String(last) === String(chat.id)) saveActiveChatId(null);
       }
     } catch (e) {
-      console.error("Failed to delete chat:", e);
+      // console.error("Failed to delete chat:", e);
       alert("Failed to delete chat. Please try again.");
     } finally {
       setConfirmDeleteOpen(false);
@@ -937,7 +937,7 @@ function handleChooseRecommendation(text, msgIndex) {
         }),
       });
     } catch (e) {
-      console.error("history_save_error:", e);
+      // console.error("history_save_error:", e);
     }
 
     setChosenRecommendation(titleOnly);
@@ -1006,7 +1006,7 @@ async function goToRecipePage() {
       )
     );
   } catch (e) {
-    console.error("recipe_flow_error:", e);
+    // console.error("recipe_flow_error:", e);
   } finally {
     setIsTyping(false);
   }
@@ -1046,7 +1046,7 @@ async function goToRecipePage() {
         )
       );
     } catch (e) {
-      console.error("restaurant_flow_error:", e);
+      // console.error("restaurant_flow_error:", e);
       setChats((prev) =>
         prev.map((c) =>
           c.id === activeChatId

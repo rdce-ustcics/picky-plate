@@ -11,7 +11,7 @@ async function listReportedRecipes(req, res) {
       .lean();
     return res.json({ success: true, reports });
   } catch (e) {
-    console.error('Error fetching reported recipes:', e);
+    // console.error('Error fetching reported recipes:', e);
     return res.status(500).json({ success: false, error: 'Failed to fetch reports' });
   }
 }
@@ -24,7 +24,7 @@ async function softDeleteRecipe(req, res) {
     if (!recipe) return res.status(404).json({ success: false, error: 'Recipe not found' });
     return res.json({ success: true, message: 'Recipe soft-deleted' });
   } catch (e) {
-    console.error('Error soft deleting recipe:', e);
+    // console.error('Error soft deleting recipe:', e);
     return res.status(500).json({ success: false, error: 'Failed to delete recipe' });
   }
 }
@@ -37,7 +37,7 @@ async function reinstateRecipe(req, res) {
     if (!recipe) return res.status(404).json({ success: false, error: 'Recipe not found' });
     return res.json({ success: true, message: 'Recipe reinstated' });
   } catch (e) {
-    console.error('Error reinstating recipe:', e);
+    // console.error('Error reinstating recipe:', e);
     return res.status(500).json({ success: false, error: 'Failed to reinstate recipe' });
   }
 }
@@ -48,7 +48,7 @@ async function getCulturalExplorer(req, res) {
     const culturalData = {};  // Your logic to fetch cultural explorer data goes here
     return res.json({ success: true, data: culturalData });
   } catch (e) {
-    console.error('Error fetching cultural explorer data:', e);
+    // console.error('Error fetching cultural explorer data:', e);
     return res.status(500).json({ success: false, error: 'Failed to fetch cultural data' });
   }
 }
@@ -59,7 +59,7 @@ async function updateCulturalExplorer(req, res) {
     const { data } = req.body;  // Your logic to update cultural explorer data goes here
     return res.json({ success: true, message: 'Cultural explorer data updated' });
   } catch (e) {
-    console.error('Error updating cultural explorer data:', e);
+    // console.error('Error updating cultural explorer data:', e);
     return res.status(500).json({ success: false, error: 'Failed to update cultural data' });
   }
 }

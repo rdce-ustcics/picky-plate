@@ -40,9 +40,9 @@ async function sendOtpEmail({ to, code, subject = 'Your PickAPlate verification 
 
   try {
     await transporter.sendMail(mailOptions);
-    console.log(`✅ OTP email sent to ${to}`);
+    // console.log(`✅ OTP email sent to ${to}`);
   } catch (error) {
-    console.error('❌ Email error:', error.message);
+    // console.error('❌ Email error:', error.message);
     throw new Error('Failed to send email');
   }
 }

@@ -1,0 +1,809 @@
+/* ============================================
+   COMMUNITY RECIPES STYLES
+   ============================================ */
+
+/* Add your existing CommunityRecipes.css styles here */
+/* This file should contain all the CSS classes used in the component */
+
+/* ============================================
+   EDIT MODAL STYLES (Extracted from inline styles)
+   ============================================ */
+
+/* Edit Modal Container */
+.cr-edit-modal {
+  max-width: 48rem;
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Edit Modal Header */
+.cr-edit-modal-header {
+  padding: 1.5rem;
+  border-bottom: 2px solid #fde68a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cr-edit-modal-header-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.cr-edit-modal-icon-box {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cr-edit-modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #78350f;
+}
+
+.cr-edit-modal-close {
+  position: relative;
+  top: 0;
+  right: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s;
+}
+
+.cr-edit-modal-close:hover {
+  background-color: #fef3c7;
+}
+
+/* Edit Modal Body */
+.cr-edit-modal-body {
+  padding: 1.5rem;
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+}
+
+/* Form Groups */
+.cr-form-group {
+  margin-bottom: 1.25rem;
+}
+
+.cr-form-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #78350f;
+  margin-bottom: 0.5rem;
+}
+
+/* Image Preview */
+.cr-image-preview-container {
+  border-radius: 1rem;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+  border: 3px solid #fbbf24;
+}
+
+.cr-image-preview {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+/* File Input */
+.cr-file-input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 2px solid #fde68a;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* Text Input */
+.cr-text-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #fde68a;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: border-color 0.2s;
+}
+
+.cr-text-input:focus {
+  outline: none;
+  border-color: #fbbf24;
+}
+
+.cr-text-input.error {
+  border-color: #dc2626;
+}
+
+/* Textarea Input */
+.cr-textarea-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #fde68a;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  resize: vertical;
+  transition: border-color 0.2s;
+  min-height: auto;
+}
+
+.cr-textarea-input:focus {
+  outline: none;
+  border-color: #fbbf24;
+}
+
+.cr-textarea-input.error {
+  border-color: #dc2626;
+}
+
+/* Error Text */
+.cr-error-text {
+  font-size: 0.8rem;
+  color: #dc2626;
+  margin-top: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.cr-error-text-small {
+  font-size: 0.8rem;
+  color: #dc2626;
+  margin-top: 0.375rem;
+}
+
+/* Ingredient List */
+.cr-ingredient-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cr-ingredient-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cr-ingredient-row input {
+  flex: 1;
+}
+
+/* Instruction List */
+.cr-instruction-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cr-instruction-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.cr-instruction-number {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 0.5rem;
+}
+
+.cr-instruction-row textarea {
+  flex: 1;
+}
+
+/* Remove Button */
+.cr-remove-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+}
+
+.cr-remove-btn:hover {
+  background: #fecaca;
+}
+
+/* Add Button */
+.cr-add-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background: #fef3c7;
+  color: #78350f;
+  border: 2px solid #fde68a;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.cr-add-btn:hover {
+  background: #fde68a;
+  border-color: #fbbf24;
+}
+
+/* Edit Modal Footer */
+.cr-edit-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 2px solid #fde68a;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+/* Recipe Card Favorite Button */
+.recipe-card-favorite-btn {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.recipe-card-favorite-btn:hover {
+  transform: scale(1.1);
+}
+
+/* ============================================
+   FILTER DROPDOWN STYLES
+   ============================================ */
+
+/* Dropdown Container */
+.cr-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.cr-allergen-dropdown {
+  margin-top: 0.75rem;
+}
+
+/* Dropdown Menu */
+.cr-dropdown-menu {
+  position: relative;
+  width: 100%;
+  background: white;
+  border: 2px solid #fde68a;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.05);
+  padding: 1rem;
+  margin-top: 0.5rem;
+  animation: dropdownSlideDown 0.3s ease-out;
+}
+
+@keyframes dropdownSlideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    margin-top: 0.5rem;
+  }
+}
+
+/* Dropdown Grid */
+.cr-dropdown-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.5rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Dropdown Items */
+.cr-dropdown-item {
+  padding: 0.5rem 0.75rem;
+  background: #fef3c7;
+  border: 2px solid #fde68a;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #78350f;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.cr-dropdown-item:hover {
+  background: #fde68a;
+  border-color: #fbbf24;
+  transform: translateY(-2px);
+}
+
+.cr-dropdown-item.selected {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border-color: #f59e0b;
+  color: white;
+}
+
+.cr-dropdown-item.allergen {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.cr-dropdown-item.allergen:hover {
+  background: #fecaca;
+  border-color: #fca5a5;
+}
+
+.cr-dropdown-item.allergen.selected {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border-color: #dc2626;
+  color: white;
+}
+
+/* Dropdown Button */
+.cr-dropdown-btn {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: white;
+  border: 2px solid #fde68a;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #78350f;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cr-dropdown-btn:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+}
+
+/* Filter Button */
+.cr-filter-btn {
+  padding: 0.75rem 1rem;
+  background: white;
+  border: 2px solid #fde68a;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #78350f;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.cr-filter-btn:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+  transform: translateY(-2px);
+}
+
+.cr-filter-btn.active {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border-color: #f59e0b;
+  color: white;
+}
+
+/* Filter Badge */
+.cr-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  background: #dc2626;
+  color: white;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.cr-filter-btn.active .cr-filter-badge {
+  background: white;
+  color: #f59e0b;
+}
+
+/* Quick Filters Container */
+.cr-quick-filters {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+/* Make dropdown take full width when open */
+.cr-quick-filters .cr-dropdown {
+  flex: 1 1 100%;
+  order: 10;
+}
+
+/* Keep filter buttons inline */
+.cr-filter-btn,
+.cr-clear-btn {
+  flex: 0 0 auto;
+}
+
+/* Clear Button */
+.cr-clear-btn {
+  padding: 0.75rem 1rem;
+  background: #fee2e2;
+  border: 2px solid #fecaca;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #991b1b;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.cr-clear-btn:hover {
+  background: #fecaca;
+  border-color: #fca5a5;
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   ACTIVE FILTER CHIPS
+   ============================================ */
+
+/* Active Chips Container */
+.cr-active-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Base Chip Style */
+.cr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+/* Search Chip */
+.cr-chip-search {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: 2px solid #2563eb;
+}
+
+/* Tag Chip */
+.cr-chip-tag {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  border: 2px solid #f59e0b;
+}
+
+/* Allergen Chip */
+.cr-chip-allergen {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: 2px solid #dc2626;
+}
+
+/* Exclude Chip */
+.cr-chip-exclude {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  color: white;
+  border: 2px solid #4b5563;
+}
+
+/* Chip Remove Button */
+.cr-chip-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.cr-chip-remove:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+/* ============================================
+   ADVANCED FILTERS PANEL
+   ============================================ */
+
+/* Advanced Panel Container */
+.cr-advanced-panel {
+  background: white;
+  border: 2px solid #fde68a;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  margin-top: 1rem;
+  animation: panelSlideDown 0.3s ease-out;
+}
+
+@keyframes panelSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Advanced Title */
+.cr-advanced-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #78350f;
+  margin-bottom: 1rem;
+}
+
+/* Advanced Grid */
+.cr-advanced-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+/* Select Dropdown */
+.cr-select {
+  padding: 0.75rem;
+  background: white;
+  border: 2px solid #fde68a;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #78350f;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cr-select:hover {
+  border-color: #fbbf24;
+}
+
+.cr-select:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+}
+
+/* Exclude Section */
+.cr-exclude-section {
+  margin-top: 1rem;
+}
+
+.cr-exclude-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #78350f;
+  margin-bottom: 0.5rem;
+}
+
+.cr-exclude-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cr-exclude-input {
+  flex: 1;
+  padding: 0.75rem;
+  background: white;
+  border: 2px solid #fde68a;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.cr-exclude-input:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+}
+
+.cr-exclude-add-btn {
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.cr-exclude-add-btn:hover {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border-color: #d97706;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   RESPONSIVE STYLES
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Dropdown Menu Mobile */
+  .cr-dropdown-menu {
+    padding: 0.75rem;
+  }
+
+  .cr-dropdown-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 0.375rem;
+  }
+
+  .cr-dropdown-item {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .cr-quick-filters {
+    gap: 0.5rem;
+  }
+
+  .cr-filter-btn,
+  .cr-clear-btn {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.8rem;
+  }
+
+  /* Advanced Filters Mobile */
+  .cr-advanced-panel {
+    padding: 1rem;
+  }
+
+  .cr-advanced-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .cr-exclude-input-row {
+    flex-direction: column;
+  }
+
+  .cr-exclude-add-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Edit Modal Mobile */
+  .cr-edit-modal {
+    max-width: 95%;
+    margin: 0.5rem;
+  }
+
+  .cr-edit-modal-header {
+    padding: 1rem;
+  }
+
+  .cr-edit-modal-icon-box {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .cr-edit-modal-title {
+    font-size: 1.125rem;
+  }
+
+  .cr-edit-modal-body {
+    padding: 1rem;
+    max-height: calc(100vh - 200px);
+  }
+
+  .cr-instruction-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .cr-instruction-number {
+    margin-top: 0;
+  }
+
+  .cr-remove-btn {
+    width: 100%;
+    height: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .cr-dropdown-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .cr-quick-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .cr-filter-btn,
+  .cr-clear-btn,
+  .cr-dropdown-btn {
+    width: 100%;
+  }
+
+  .cr-advanced-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cr-active-chips {
+    gap: 0.375rem;
+  }
+
+  .cr-chip {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.625rem;
+  }
+}

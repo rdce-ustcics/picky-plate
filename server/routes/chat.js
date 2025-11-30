@@ -27,9 +27,9 @@ try {
       const [mood, food] = r.split(",");
       return { mood: mood?.trim(), food: food?.trim() };
     });
-  console.log("Loaded mood CSV rows:", moodCSV.length);
+  // console.log("Loaded mood CSV rows:", moodCSV.length);
 } catch (e) {
-  console.error("CSV failed to load:", e.message || e);
+  // console.error("CSV failed to load:", e.message || e);
 }
 
 // Static fallbacks per preference type
@@ -665,7 +665,7 @@ async function extractAndSavePreferences({ owner, conversation }) {
     });
     extractionReply = (r?.output_text || "").trim();
   } catch (e) {
-    console.error("pref_extraction_openai_error:", e);
+    // console.error("pref_extraction_openai_error:", e);
     return;
   }
 
@@ -673,7 +673,7 @@ async function extractAndSavePreferences({ owner, conversation }) {
   try {
     extracted = JSON.parse(extractionReply || "{}");
   } catch (e) {
-    console.error("pref_extraction_parse_error:", e, extractionReply);
+    // console.error("pref_extraction_parse_error:", e, extractionReply);
     return;
   }
 
@@ -778,7 +778,7 @@ async function extractAndSavePreferences({ owner, conversation }) {
 
     await prefs.save();
   } catch (e) {
-    console.error("pref_extraction_save_error:", e);
+    // console.error("pref_extraction_save_error:", e);
   }
 }
 
@@ -853,7 +853,7 @@ router.post("/chat", async (req, res) => {
       try {
         kidPrefsForPrompt = await KidPreferences.find({ userId: owner.userId }).lean();
       } catch (e) {
-        console.error("kid_prefs_fetch_error:", e);
+        // console.error("kid_prefs_fetch_error:", e);
       }
     }
 
@@ -871,7 +871,7 @@ router.post("/chat", async (req, res) => {
           };
         }
       } catch (e) {
-        console.error("chat_preferences_fetch_error:", e);
+        // console.error("chat_preferences_fetch_error:", e);
         // fail-soft
       }
     }
@@ -898,7 +898,7 @@ router.post("/chat", async (req, res) => {
           .lean();
       }
     } catch (e) {
-      console.error("food_history_fetch_error:", e);
+      // console.error("food_history_fetch_error:", e);
       // fail-soft
     }
 
@@ -1016,7 +1016,7 @@ router.post("/chat", async (req, res) => {
       });
       reply = (r?.output_text || "").trim();
     } catch (err) {
-      console.error("OpenAI DOWN → using fallback mode", err);
+      // console.error("OpenAI DOWN → using fallback mode", err);
       openaiFailed = true;
     }
 
@@ -1115,7 +1115,7 @@ router.post("/chat", async (req, res) => {
         }
       }
     } catch (e) {
-      console.error("pref_extraction_wrapper_error:", e);
+      // console.error("pref_extraction_wrapper_error:", e);
     }
 
 
@@ -1125,7 +1125,7 @@ router.post("/chat", async (req, res) => {
       learned: learnedSomething,  // 👈 tell the client, don't change the text
     });
   } catch (err) {
-    console.error("chat_error:", err?.message || err);
+    // console.error("chat_error:", err?.message || err);
     if (String(err?.message || "").includes("429")) {
       return res.status(429).json({ error: "quota_or_rate_limit" });
     }
@@ -1203,13 +1203,13 @@ router.post("/history", async (req, res) => {
           }
         );
       } catch (err) {
-        console.error("history_chat_update_error:", err);
+        // console.error("history_chat_update_error:", err);
       }
     }
 
     return res.json({ success: true, historyId: doc._id.toString() });
   } catch (e) {
-    console.error("save_history_error:", e);
+    // console.error("save_history_error:", e);
     return res.status(500).json({ error: "history_save_failed" });
   }
 });
@@ -1233,7 +1233,7 @@ router.get("/chats", async (req, res) => {
 
     res.json(list);
   } catch (e) {
-    console.error("list_chats_error:", e);
+    // console.error("list_chats_error:", e);
     res.status(500).json({ error: "list_failed" });
   }
 });
@@ -1261,7 +1261,7 @@ router.get("/chats/:id", async (req, res) => {
     if (!chat) return res.status(404).json({ error: "not_found" });
     res.json(chat);
   } catch (e) {
-    console.error("get_chat_error:", e);
+    // console.error("get_chat_error:", e);
     res.status(500).json({ error: "get_failed" });
   }
 });
@@ -1294,7 +1294,7 @@ router.delete("/chats/:id", async (req, res) => {
 
     res.json({ success: true });
   } catch (e) {
-    console.error("delete_chat_error:", e);
+    // console.error("delete_chat_error:", e);
     res.status(500).json({ error: "delete_failed" });
   }
 });

@@ -129,8 +129,8 @@ const fetchOSMData = () => {
     const query = buildOverpassQuery();
     const url = 'https://overpass-api.de/api/interpreter';
 
-    console.log('Fetching restaurant data from OpenStreetMap...');
-    console.log('This may take 1-3 minutes for Metro Manila...\n');
+    // console.log('Fetching restaurant data from OpenStreetMap...');
+    // console.log('This may take 1-3 minutes for Metro Manila...\n');
 
     const postData = query;
     const options = {
@@ -150,7 +150,7 @@ const fetchOSMData = () => {
       });
 
       res.on('end', () => {
-        console.log('\n\nData received! Processing...\n');
+        // console.log('\n\nData received! Processing...\n');
         try {
           const json = JSON.parse(data);
           resolve(json);
@@ -175,12 +175,12 @@ async function main() {
     // Fetch OSM data
     const osmData = await fetchOSMData();
 
-    console.log(`Received ${osmData.elements.length} OSM elements`);
+    // console.log(`Received ${osmData.elements.length} OSM elements`);
 
     // Convert to our format
     const restaurants = convertOSMToFormat(osmData);
 
-    console.log(`Converted to ${restaurants.length} restaurants\n`);
+    // console.log(`Converted to ${restaurants.length} restaurants\n`);
 
     // Statistics
     const stats = {
@@ -201,27 +201,27 @@ async function main() {
       stats.byCity[city] = (stats.byCity[city] || 0) + 1;
     });
 
-    console.log('--- OSM Data Statistics ---');
-    console.log(`Total restaurants: ${stats.total}`);
-    console.log(`With phone numbers: ${stats.withPhone}`);
-    console.log(`With websites: ${stats.withWebsite}`);
-    console.log(`With opening hours: ${stats.withHours}\n`);
+    // console.log('--- OSM Data Statistics ---');
+    // console.log(`Total restaurants: ${stats.total}`);
+    // console.log(`With phone numbers: ${stats.withPhone}`);
+    // console.log(`With websites: ${stats.withWebsite}`);
+    // console.log(`With opening hours: ${stats.withHours}\n`);
 
-    console.log('By Type:');
-    Object.entries(stats.byType)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .forEach(([type, count]) => {
-        console.log(`  ${type}: ${count}`);
-      });
+    // console.log('By Type:');
+    // Object.entries(stats.byType)
+    //   .sort((a, b) => b[1] - a[1])
+    //   .slice(0, 10)
+    //   .forEach(([type, count]) => {
+    //     console.log(`  ${type}: ${count}`);
+    //   });
 
-    console.log('\nTop Cities:');
-    Object.entries(stats.byCity)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-      .forEach(([city, count]) => {
-        console.log(`  ${city}: ${count}`);
-      });
+    // console.log('\nTop Cities:');
+    // Object.entries(stats.byCity)
+    //   .sort((a, b) => b[1] - a[1])
+    //   .slice(0, 10)
+    //   .forEach(([city, count]) => {
+    //     console.log(`  ${city}: ${count}`);
+    //   });
 
     // Save to file
     const output = {
@@ -240,11 +240,11 @@ async function main() {
     fs.mkdirSync(path.dirname(outPath), { recursive: true });
     fs.writeFileSync(outPath, JSON.stringify(output, null, 2), 'utf8');
 
-    console.log(`\n✓ Data saved to ${outPath}`);
-    console.log('\nNext step: Run merge-all-sources.js to combine with Zomato data');
+    // console.log(`\n✓ Data saved to ${outPath}`);
+    // console.log('\nNext step: Run merge-all-sources.js to combine with Zomato data');
 
   } catch (error) {
-    console.error('Error:', error.message);
+    // console.error('Error:', error.message);
     process.exit(1);
   }
 }

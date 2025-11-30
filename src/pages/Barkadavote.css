@@ -9,6 +9,180 @@
   box-sizing: border-box;
 }
 
+/* ================================================================
+   THEMED ALERT COMPONENT
+   Custom styled alerts matching BarkadaVote theme
+   ================================================================ */
+
+.themed-alert-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 9999;
+  animation: alertFadeIn 0.25s ease;
+}
+
+@keyframes alertFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.themed-alert {
+  background: white;
+  border-radius: 1.5rem;
+  padding: 2rem;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.2);
+  animation: alertSlideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes alertSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Top accent bar */
+.themed-alert::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+}
+
+.themed-alert-success::before {
+  background: linear-gradient(90deg, #fbbf24, #fcd34d, #fbbf24);
+}
+
+.themed-alert-error::before {
+  background: linear-gradient(90deg, #ef4444, #f87171, #ef4444);
+}
+
+.themed-alert-warning::before {
+  background: linear-gradient(90deg, #fbbf24, #fcd34d, #fbbf24);
+}
+
+.themed-alert-info::before {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24, #f59e0b);
+}
+
+.themed-alert-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+}
+
+.themed-alert-success .themed-alert-icon {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #d97706;
+}
+
+.themed-alert-error .themed-alert-icon {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #dc2626;
+}
+
+.themed-alert-warning .themed-alert-icon {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #d97706;
+}
+
+.themed-alert-info .themed-alert-icon {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #f59e0b;
+}
+
+.themed-alert-message {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #374151;
+  line-height: 1.5;
+  margin: 0 0 1.5rem;
+}
+
+.themed-alert-btn {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  border: none;
+  border-radius: 1rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.themed-alert-success .themed-alert-btn {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.35);
+}
+
+.themed-alert-success .themed-alert-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.45);
+}
+
+.themed-alert-error .themed-alert-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
+}
+
+.themed-alert-error .themed-alert-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.45);
+}
+
+.themed-alert-warning .themed-alert-btn {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.35);
+}
+
+.themed-alert-warning .themed-alert-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.45);
+}
+
+.themed-alert-info .themed-alert-btn {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.35);
+}
+
+.themed-alert-info .themed-alert-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.45);
+}
+
+.themed-alert-btn:active {
+  transform: scale(0.97);
+}
+
 .barkada-modal .restaurant-card {
   max-width: 360px;      /* old size */
   margin: 0 auto;
@@ -234,13 +408,18 @@
   border-color: #f59e0b;
 }
 
+/* End Voting Button - Changed from dark to orange/amber theme */
 .barkada-btn-danger {
-  background: #1f2937;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   color: white;
+  border: 2px solid #b45309;
+  box-shadow: 0 4px 15px rgba(217, 119, 6, 0.3);
 }
 
 .barkada-btn-danger:hover:not(:disabled) {
-  background: #111827;
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(217, 119, 6, 0.4);
 }
 
 .barkada-btn-blue {
@@ -275,6 +454,29 @@
 .barkada-btn-icon:hover {
   background: #fef3c7;
   border-color: #fbbf24;
+}
+
+/* Delete button specific styling */
+.barkada-btn-delete {
+  padding: 0.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  min-width: 2.5rem;
+  border-radius: 0.5rem;
+  background: transparent;
+  border: 2px solid #fde68a;
+  color: #92400e;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.barkada-btn-delete:hover {
+  background: #fee2e2;
+  border-color: #ef4444;
+  color: #dc2626;
 }
 
 .barkada-btn-copy {
@@ -774,7 +976,12 @@
 /* Desktop Grid for Menu Editor */
 @media (min-width: 641px) {
   .menu-editor-row {
-    grid-template-columns: 3fr 3fr 2fr 3fr 1fr;
+    grid-template-columns: 3fr 3fr 2fr auto;
+  }
+  
+  .barkada-btn-delete {
+    width: 2.5rem;
+    height: 2.5rem;
   }
 }
 
@@ -1099,6 +1306,51 @@
 
 @media (max-width: 640px) {
   
+  /* ========================================
+     📱 MOBILE: THEMED ALERT
+     ======================================== */
+  
+  .themed-alert-overlay {
+    padding: 1rem;
+    align-items: center;
+  }
+  
+  .themed-alert {
+    padding: 2rem 1.5rem;
+    border-radius: 1.75rem;
+    max-width: 100%;
+  }
+  
+  .themed-alert-icon {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 1.5rem;
+  }
+  
+  .themed-alert-icon svg {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .themed-alert-message {
+    font-size: 1.1rem;
+    margin-bottom: 1.75rem;
+  }
+  
+  .themed-alert-btn {
+    padding: 1.15rem 1.5rem;
+    font-size: 1.05rem;
+    border-radius: 1.25rem;
+  }
+  
+  .themed-alert-btn:hover {
+    transform: none !important;
+  }
+  
+  .themed-alert-btn:active {
+    transform: scale(0.96) !important;
+  }
+
   /* ========================================
      📱 MOBILE: BASE STRUCTURE
      Full screen app with gradient background
@@ -1624,10 +1876,18 @@
     transform: scale(0.97);
   }
   
+  /* End Voting Button - Mobile */
   .barkada-btn-danger {
-    background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 50%, #b45309 100%);
     color: white;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    border: none;
+    box-shadow: 0 8px 32px rgba(217, 119, 6, 0.45),
+                0 4px 12px rgba(217, 119, 6, 0.3);
+  }
+  
+  .barkada-btn-danger:active {
+    transform: scale(0.97);
+    box-shadow: 0 4px 16px rgba(217, 119, 6, 0.4);
   }
   
   .barkada-btn-sm {
@@ -1656,6 +1916,27 @@
     transform: scale(0.92);
   }
   
+  /* Delete button - Mobile */
+  .barkada-btn-delete {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    padding: 0;
+    border-radius: 12px;
+    background: white;
+    border: 2px solid #e5e7eb;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .barkada-btn-delete:active {
+    background: #fee2e2;
+    border-color: #ef4444;
+    color: #dc2626;
+  }
+  
   /* ========================================
      📱 MOBILE: GRIDS - Vertical stack
      ======================================== */
@@ -1664,7 +1945,17 @@
   .grid-3 {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
+  }
+  
+  .voting-restaurant-grid {
+    gap: 10px;
+  }
+  
+  .lobby-restaurant-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
   
   /* ========================================
@@ -1779,84 +2070,206 @@
   
   /* ========================================
      📱 MOBILE: RESTAURANT CARDS
-     Full-width cards with large images
+     Compact horizontal cards for voting
      ======================================== */
   
   .restaurant-card {
-    border-radius: 28px;
+    border-radius: 16px;
     border: none;
     overflow: hidden;
     background: white;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-    margin-bottom: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    margin-bottom: 12px;
   }
   
   .restaurant-card:active {
     transform: scale(0.98);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Lobby view - vertical cards with square images */
+  .lobby-restaurant-grid .restaurant-card {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  .lobby-restaurant-grid .restaurant-image,
+  .lobby-restaurant-grid .restaurant-image-placeholder {
+    width: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    height: auto !important;
+    min-height: 150px;
+    object-fit: cover !important;
+  }
+  
+  .lobby-restaurant-grid .restaurant-info {
+    padding: 12px;
+  }
+  
+  .lobby-restaurant-grid .restaurant-name {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  
+  .lobby-restaurant-grid .restaurant-location {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 8px;
+  }
+  
+  .lobby-restaurant-grid .restaurant-price {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #f59e0b;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 8px;
+  }
+  
+  /* Voting view - horizontal compact cards */
+  .voting-restaurant-grid .restaurant-card {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+  }
+  
+  .voting-restaurant-grid .restaurant-image,
+  .voting-restaurant-grid .restaurant-image-placeholder {
+    width: 90px;
+    height: auto;
+    min-height: 90px;
+    min-width: 90px;
+    object-fit: cover;
+    background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  }
+  
+  .voting-restaurant-grid .restaurant-info {
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .voting-restaurant-grid .restaurant-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 2px;
+    color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .voting-restaurant-grid .restaurant-location {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .voting-restaurant-grid .restaurant-price {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #f59e0b;
+    background: transparent;
+    padding: 0;
+    margin-bottom: 4px;
   }
   
   .restaurant-image,
   .restaurant-image-placeholder {
-    height: 220px;
     background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
   }
   
   .restaurant-info {
-    padding: 24px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+    min-width: 0;
   }
   
   .restaurant-name {
-    font-size: 1.35rem;
-    font-weight: 800;
-    margin-bottom: 8px;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 2px;
     color: #1f2937;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .restaurant-location {
-    font-size: 1rem;
+    font-size: 0.8rem;
     color: #6b7280;
-    margin-bottom: 12px;
+    margin-bottom: 4px;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .restaurant-price {
-    font-size: 1.3rem;
-    font-weight: 900;
+    font-size: 0.85rem;
+    font-weight: 700;
     color: #f59e0b;
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    display: inline-block;
-    padding: 10px 20px;
-    border-radius: 14px;
   }
   
   /* ========================================
      📱 MOBILE: RATING SECTION
-     Clean option selection
+     Compact inline ratings
      ======================================== */
   
-  .rating-row {
-    padding: 18px 0;
-    border-color: #f3f4f6;
+  .rating-section {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: row;
     gap: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .rating-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  
+  .rating-item span {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+  }
+  
+  .rating-row {
+    padding: 12px 0;
+    border-color: #f3f4f6;
+    gap: 8px;
   }
   
   .rating-label {
-    font-size: 1.05rem;
-    font-weight: 700;
+    font-size: 0.9rem;
+    font-weight: 600;
     color: #374151;
   }
   
   .rating-weights {
-    font-size: 0.9rem;
-    padding: 16px 20px;
-    border-radius: 16px;
+    font-size: 0.8rem;
+    padding: 12px 16px;
+    border-radius: 12px;
     background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
     border: none;
     text-align: center;
-    margin-top: 20px;
+    margin-top: 12px;
     color: #6b7280;
     font-weight: 600;
   }
@@ -1874,21 +2287,33 @@
     gap: 14px;
     background: white;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    display: flex;
+    flex-direction: column;
   }
   
   .menu-editor-row .barkada-input {
     margin-bottom: 0;
   }
   
-  .menu-editor-row .barkada-btn-icon {
+  .menu-editor-row .barkada-btn-delete {
     width: 100%;
-    height: 56px;
+    height: 48px;
     margin-top: 8px;
-    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-    border: 2px solid #fecaca;
+    background: white;
+    border: 2px solid #e5e7eb;
+    color: #6b7280;
+    border-radius: 12px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  
+  .menu-editor-row .barkada-btn-delete:active {
+    background: #fee2e2;
+    border-color: #ef4444;
     color: #dc2626;
-    border-radius: 16px;
-    font-weight: 700;
   }
   
   /* ========================================
@@ -2194,18 +2619,21 @@
      ======================================== */
   
   .fixed-bottom-bar {
-    padding: 16px 20px;
-    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     background: white;
     border-top: none;
-    flex-direction: column;
-    gap: 12px;
-    box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.1);
-    border-radius: 24px 24px 0 0;
+    flex-direction: row;
+    gap: 10px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    border-radius: 20px 20px 0 0;
   }
   
   .fixed-bottom-bar .barkada-btn {
-    width: 100%;
+    width: auto;
+    flex: 1;
+    padding: 14px 20px;
+    font-size: 0.95rem;
   }
   
   /* ========================================
@@ -2292,6 +2720,7 @@
   .barkada-btn-blue:hover:not(:disabled),
   .barkada-btn-danger:hover:not(:disabled),
   .barkada-btn-icon:hover,
+  .barkada-btn-delete:hover,
   .restaurant-card:hover,
   .feature-card:hover,
   .participant-card:hover,
@@ -2310,6 +2739,7 @@
   button,
   .barkada-btn,
   .barkada-btn-icon,
+  .barkada-btn-delete,
   .restaurant-card,
   .feature-card,
   .participant-card,
@@ -2336,6 +2766,97 @@
   .barkada-modal-body {
     scrollbar-width: thin;
     scrollbar-color: #d1d5db transparent;
+  }
+  
+  /* ========================================
+     📱 MOBILE: LOBBY & VOTING GRID OVERRIDES
+     These must be at the end to take priority
+     ======================================== */
+  
+  /* Lobby - 2 column grid with square images */
+  .lobby-restaurant-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+  
+  .lobby-restaurant-grid .restaurant-card {
+    display: flex !important;
+    flex-direction: column !important;
+    margin-bottom: 0 !important;
+  }
+  
+  .lobby-restaurant-grid .restaurant-image {
+    width: 100% !important;
+    aspect-ratio: 1 / 1 !important;
+    object-fit: cover !important;
+  }
+  
+  .lobby-restaurant-grid .restaurant-info {
+    padding: 10px 12px !important;
+  }
+  
+  .lobby-restaurant-grid .restaurant-name {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 2px !important;
+  }
+  
+  .lobby-restaurant-grid .restaurant-location {
+    font-size: 0.75rem !important;
+    margin-bottom: 6px !important;
+  }
+  
+  .lobby-restaurant-grid .restaurant-price {
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    color: #f59e0b !important;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+    padding: 5px 10px !important;
+    border-radius: 6px !important;
+    display: inline-block !important;
+  }
+  
+  /* Voting - compact horizontal cards */
+  .voting-restaurant-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+  
+  .voting-restaurant-grid .restaurant-card {
+    display: flex !important;
+    flex-direction: row !important;
+    margin-bottom: 0 !important;
+  }
+  
+  .voting-restaurant-grid .restaurant-image {
+    width: 85px !important;
+    height: 85px !important;
+    min-width: 85px !important;
+    padding-bottom: 0 !important;
+    object-fit: cover !important;
+  }
+  
+  .voting-restaurant-grid .restaurant-info {
+    padding: 8px 12px !important;
+    justify-content: center !important;
+  }
+  
+  .voting-restaurant-grid .restaurant-name {
+    font-size: 0.9rem !important;
+    margin-bottom: 2px !important;
+  }
+  
+  .voting-restaurant-grid .restaurant-location {
+    font-size: 0.7rem !important;
+    margin-bottom: 2px !important;
+  }
+  
+  .voting-restaurant-grid .restaurant-price {
+    font-size: 0.75rem !important;
+    background: transparent !important;
+    padding: 0 !important;
   }
 }
 
@@ -2382,6 +2903,11 @@
 
 @media (min-width: 641px) {
   .menu-editor-row {
-    grid-template-columns: 3fr 3fr 2fr 3fr 1fr;
+    grid-template-columns: 3fr 3fr 2fr auto;
+  }
+  
+  .barkada-btn-delete {
+    width: 2.5rem;
+    height: 2.5rem;
   }
 }

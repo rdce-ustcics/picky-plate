@@ -46,7 +46,7 @@ export default function Admin() {
       });
       setReviewRecipes(data.recipes || []);
     } catch (e) {
-      console.error("review fetch error:", e);
+      // console.error("review fetch error:", e);
       setError(e.message || "Failed to fetch recipes for review");
     } finally {
       setLoading(false);

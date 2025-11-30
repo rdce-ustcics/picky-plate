@@ -82,6 +82,53 @@ function formatTagLabel(tag) {
     .join(" ");
 }
 
+/* Custom Themed Alert Component */
+function ThemedAlert({ message, type = "info", onClose }) {
+  if (!message) return null;
+
+  const icons = {
+    success: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
+      </svg>
+    ),
+    error: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="15" y1="9" x2="9" y2="15" />
+        <line x1="9" y1="9" x2="15" y2="15" />
+      </svg>
+    ),
+    warning: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </svg>
+    ),
+    info: (
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="16" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12.01" y2="8" />
+      </svg>
+    ),
+  };
+
+  return (
+    <div className="themed-alert-overlay" onClick={onClose}>
+      <div className={`themed-alert themed-alert-${type}`} onClick={(e) => e.stopPropagation()}>
+        <div className="themed-alert-icon">{icons[type]}</div>
+        <p className="themed-alert-message">{message}</p>
+        <button className="themed-alert-btn" onClick={onClose}>
+          Got it!
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* StarRating Component */
 function StarRating({
   value = 0,
@@ -276,6 +323,17 @@ export default function BarkadaVote() {
   const [showGuestPrefs, setShowGuestPrefs] = useState(false);
   const pendingJoinRef = useRef(null);
 
+  // Custom alert state
+  const [alertState, setAlertState] = useState({ message: "", type: "info" });
+  
+  const showAlert = (message, type = "info") => {
+    setAlertState({ message, type });
+  };
+  
+  const closeAlert = () => {
+    setAlertState({ message: "", type: "info" });
+  };
+
   const { user: authUser } = useAuth();
 
   /* Socket setup */
@@ -312,7 +370,7 @@ export default function BarkadaVote() {
     });
 
     s.on("session:expired", () => {
-      alert("This lobby has expired due to inactivity.");
+      showAlert("This lobby has expired due to inactivity.", "warning");
       setCurrentView("home");
       setParticipants([]);
       setOptions([]);
@@ -428,9 +486,9 @@ export default function BarkadaVote() {
   /* Actions */
   const handleCreateSession = () => {
     const socket = socketRef.current;
-    if (!socket) return alert("Not connected yet.");
-    if (connState !== "connected") return alert("Not connected yet.");
-    if (!createName || !createPassword) return alert("Enter name & password");
+    if (!socket) return showAlert("Not connected yet.", "error");
+    if (connState !== "connected") return showAlert("Not connected yet.", "error");
+    if (!createName || !createPassword) return showAlert("Please enter your name and password", "warning");
 
     socket.emit(
       "session:create",
@@ -441,7 +499,7 @@ export default function BarkadaVote() {
         isRegistered: false,
       },
       (res) => {
-        if (!res?.ok) return alert(res?.error || "Create failed");
+        if (!res?.ok) return showAlert(res?.error || "Create failed", "error");
         setSessionCode(res.code);
         setIsHost(true);
         setParticipantToken(res.participantToken);
@@ -471,10 +529,10 @@ export default function BarkadaVote() {
 
   const doJoin = (restrictionsOverride = null) => {
     const socket = socketRef.current;
-    if (!socket) return alert("Not connected yet.");
-    if (connState !== "connected") return alert("Not connected yet.");
+    if (!socket) return showAlert("Not connected yet.", "error");
+    if (connState !== "connected") return showAlert("Not connected yet.", "error");
     if (!joinName || !joinCode || !joinPassword)
-      return alert("Fill all fields");
+      return showAlert("Please fill in all fields", "warning");
 
     socket.emit(
       "session:join",
@@ -488,7 +546,7 @@ export default function BarkadaVote() {
         restrictions: restrictionsOverride,
       },
       (res) => {
-        if (!res?.ok) return alert(res?.error || "Join failed");
+        if (!res?.ok) return showAlert(res?.error || "Join failed", "error");
 
         setSessionCode(joinCode);
         setIsHost(false);
@@ -526,9 +584,9 @@ export default function BarkadaVote() {
 
   const saveMenuToServer = () => {
     const socket = socketRef.current;
-    if (!socket) return alert("Not connected yet.");
+    if (!socket) return showAlert("Not connected yet.", "error");
     if (!isHost || isVotingOpen) return;
-    if (connState !== "connected") return alert("Not connected yet.");
+    if (connState !== "connected") return showAlert("Not connected yet.", "error");
 
     const hasAnyRow = menuDraft.some(
       (o) => (o.name || "").trim() || (o.tag || "").trim() || Number(o.price) > 0
@@ -543,31 +601,32 @@ export default function BarkadaVote() {
       .filter((o) => o.name && o.tag && o.price > 0);
 
     if (!hasAnyRow) {
-      return alert("Add at least one restaurant.");
+      return showAlert("Please add at least one restaurant", "warning");
     }
 
     if (hasAnyRow && cleaned.length === 0) {
-      return alert(
-        "Please complete name, classification, and price (₱) for at least one restaurant."
+      return showAlert(
+        "Please complete name, classification, and price (₱) for at least one restaurant.",
+        "warning"
       );
     }
 
-    if (cleaned.length > 6) return alert("Max 6 restaurants");
+    if (cleaned.length > 6) return showAlert("Maximum 6 restaurants allowed", "warning");
 
     socket.emit(
       "session:updateOptions",
       { code: sessionCode, token: participantToken, options: cleaned },
       (res) => {
-        if (!res?.ok) return alert(res?.error || "Save failed");
-        alert("Menu saved! ✅");
+        if (!res?.ok) return showAlert(res?.error || "Save failed", "error");
+        showAlert("Menu saved!", "success");
       }
     );
   };
 
   const pushMyOptions = () => {
     const socket = socketRef.current;
-    if (!socket) return alert("Not connected yet.");
-    if (connState !== "connected") return alert("Not connected yet.");
+    if (!socket) return showAlert("Not connected yet.", "error");
+    if (connState !== "connected") return showAlert("Not connected yet.", "error");
     const limit = settings?.perUserLimit || 2;
 
     const hasAnyRow = myDraft.some(
@@ -584,38 +643,40 @@ export default function BarkadaVote() {
       .slice(0, limit);
 
     if (!hasAnyRow) {
-      return alert("Add at least one restaurant.");
+      return showAlert("Please add at least one restaurant", "warning");
     }
 
     if (hasAnyRow && cleaned.length === 0) {
-      return alert(
-        "Please complete name, classification, and price (₱) for at least one restaurant."
+      return showAlert(
+        "Please complete name, classification, and price (₱) for at least one restaurant.",
+        "warning"
       );
     }
 
     if (cleaned.length > limit)
-      return alert(`Max ${limit} options per person`);
+      return showAlert(`Maximum ${limit} options per person`, "warning");
 
     socket.emit(
       "session:addUserOptions",
       { code: sessionCode, token: participantToken, options: cleaned },
       (res) => {
         if (!res?.ok)
-          return alert(res?.error || "Failed to submit options");
-        alert("Your options have been submitted! ✅");
+          return showAlert(res?.error || "Failed to submit options", "error");
+        showAlert("Your options have been submitted!", "success");
       }
     );
   };
 
   const startVoting = () => {
     const socket = socketRef.current;
-    if (!socket) return alert("Not connected yet.");
-    if (connState !== "connected") return alert("Not connected yet.");
+    if (!socket) return showAlert("Not connected yet.", "error");
+    if (connState !== "connected") return showAlert("Not connected yet.", "error");
     if (participants.length < 2)
-      return alert("Need at least 2 participants to start.");
+      return showAlert("Need at least 2 participants to start", "warning");
     if (!options || options.length === 0)
-      return alert(
-        "Please add at least one restaurant before starting the vote."
+      return showAlert(
+        "Please add at least one restaurant before starting the vote.",
+        "warning"
       );
 
     socket.emit(
@@ -627,7 +688,7 @@ export default function BarkadaVote() {
         weights: settings.weights,
       },
       (res) => {
-        if (!res?.ok) return alert(res?.error || "Start failed");
+        if (!res?.ok) return showAlert(res?.error || "Start failed", "error");
         if (res.votingEndsAt) setVotingEndsAt(res.votingEndsAt);
         setCurrentView("voting");
       }
@@ -636,8 +697,8 @@ export default function BarkadaVote() {
 
   const submitRatings = () => {
     const socket = socketRef.current;
-    if (!socket) return alert("Not connected yet.");
-    if (connState !== "connected") return alert("Not connected yet.");
+    if (!socket) return showAlert("Not connected yet.", "error");
+    if (connState !== "connected") return showAlert("Not connected yet.", "error");
 
     const cleaned = {};
     Object.entries(ratings).forEach(([id, r]) => {
@@ -649,27 +710,27 @@ export default function BarkadaVote() {
       }
     });
     if (!Object.keys(cleaned).length)
-      return alert("Rate at least one option");
+      return showAlert("Please rate at least one option", "warning");
 
     socket.emit(
       "session:submitRatings",
       { code: sessionCode, token: participantToken, ratings: cleaned },
       (res) => {
-        if (!res?.ok) return alert(res?.error || "Submit failed");
-        alert("Ratings submitted! 👍");
+        if (!res?.ok) return showAlert(res?.error || "Submit failed", "error");
+        showAlert("Ratings submitted!", "success");
       }
     );
   };
 
   const endVoting = () => {
     const socket = socketRef.current;
-    if (!socket) return alert("Not connected yet.");
-    if (connState !== "connected") return alert("Not connected yet.");
+    if (!socket) return showAlert("Not connected yet.", "error");
+    if (connState !== "connected") return showAlert("Not connected yet.", "error");
     socket.emit(
       "session:end",
       { code: sessionCode, token: participantToken },
       (res) => {
-        if (!res?.ok) return alert(res?.error || "End failed");
+        if (!res?.ok) return showAlert(res?.error || "End failed", "error");
         window.__barkadaResults = {
           leaderboard: res.leaderboard,
           winner: res.winner,
@@ -681,29 +742,29 @@ export default function BarkadaVote() {
 
   const saveSettings = () => {
     const socket = socketRef.current;
-    if (!socket) return alert("Not connected yet.");
+    if (!socket) return showAlert("Not connected yet.", "error");
 
     const draft = settingsDraft || defaultSettings;
     const engine = draft.engine === "ai" ? "ai" : "manual";
     const w = draft.weights || { taste: 0, mood: 0, value: 0 };
     const sum = Number(w.taste) + Number(w.mood) + Number(w.value);
-    if (sum !== 100) return alert("Weights must add up to 100%.");
+    if (sum !== 100) return showAlert("Weights must add up to 100%", "warning");
 
     const votingSeconds = Number(draft.votingSeconds);
     if (votingSeconds < 30 || votingSeconds > 300)
-      return alert("Voting duration must be between 30 and 300 seconds.");
+      return showAlert("Voting duration must be between 30 and 300 seconds", "warning");
 
     const inactivityMinutes = Number(draft.inactivityMinutes || 5);
     if (inactivityMinutes < 1 || inactivityMinutes > 60)
-      return alert("Inactivity timeout must be between 1 and 60 minutes.");
+      return showAlert("Inactivity timeout must be between 1 and 60 minutes", "warning");
 
     const maxParticipants = Number(draft.maxParticipants || 10);
     if (maxParticipants < 2 || maxParticipants > 20)
-      return alert("Max participants must be between 2 and 20.");
+      return showAlert("Max participants must be between 2 and 20", "warning");
 
     const numOptions = Number(draft.numOptions || 4);
     if (numOptions < 1 || numOptions > 6)
-      return alert("Number of restaurants must be between 1 and 6.");
+      return showAlert("Number of restaurants must be between 1 and 6", "warning");
 
     let mode = draft.mode;
     let perUserLimit = Number(draft.perUserLimit || 2);
@@ -711,7 +772,7 @@ export default function BarkadaVote() {
     if (engine === "manual") {
       if (!["host_only", "per_user"].includes(mode)) mode = "host_only";
       if (mode === "per_user" && ![1, 2, 3].includes(perUserLimit)) {
-        return alert("Per-user limit must be 1, 2, or 3.");
+        return showAlert("Per-user limit must be 1, 2, or 3", "warning");
       }
     } else {
       mode = "host_only";
@@ -740,7 +801,7 @@ export default function BarkadaVote() {
       },
       (res) => {
         if (!res?.ok)
-          return alert(res?.error || "Failed to save settings");
+          return showAlert(res?.error || "Failed to save settings", "error");
         if (res.state?.settings) {
           setSettings(res.state.settings);
           setSettingsDraft(res.state.settings);
@@ -752,10 +813,10 @@ export default function BarkadaVote() {
 
   const handleGenerateAIOptions = () => {
     const socket = socketRef.current;
-    if (!socket) return alert("Not connected yet.");
+    if (!socket) return showAlert("Not connected yet.", "error");
     if (!isHost)
-      return alert("Only the host can generate AI recommendations.");
-    if (!sessionCode) return alert("No session code.");
+      return showAlert("Only the host can generate AI recommendations", "warning");
+    if (!sessionCode) return showAlert("No session code", "error");
 
     if (
       !authUser &&
@@ -780,8 +841,9 @@ export default function BarkadaVote() {
       (res) => {
         setAiLoading(false);
         if (!res?.ok)
-          return alert(
-            res?.error || "Failed to generate AI recommendations"
+          return showAlert(
+            res?.error || "Failed to generate AI recommendations",
+            "error"
           );
 
         const st = res.state;
@@ -793,7 +855,7 @@ export default function BarkadaVote() {
         if (st.expiresAt) setExpiresAt(st.expiresAt);
         if (st.lastActivityAt) setLastActivityAt(st.lastActivityAt);
 
-        alert("AI restaurant recommendations updated! 🍽️");
+        showAlert("AI restaurant recommendations updated!", "success");
       }
     );
   };
@@ -804,6 +866,13 @@ export default function BarkadaVote() {
   if (currentView === "home") {
     return (
       <div className="barkada-page home-page">
+        {/* Themed Alert */}
+        <ThemedAlert 
+          message={alertState.message} 
+          type={alertState.type} 
+          onClose={closeAlert} 
+        />
+        
         {/* Connection Badge - Top right corner */}
         <div className="home-conn-badge">
           {ConnBadge}
@@ -1151,6 +1220,13 @@ export default function BarkadaVote() {
 
     return (
       <div className="barkada-page">
+        {/* Themed Alert */}
+        <ThemedAlert 
+          message={alertState.message} 
+          type={alertState.type} 
+          onClose={closeAlert} 
+        />
+        
         <header className="barkada-header">
           <div className="flex-gap" style={{ alignItems: "center" }}>
             <div className="barkada-logo">P</div>
@@ -1210,7 +1286,7 @@ export default function BarkadaVote() {
               <h3 style={{ fontWeight: 700, marginBottom: "1rem", color: "#78350f" }}>
                 Current Restaurants in the Vote
               </h3>
-              <div className="grid-3">
+              <div className="grid-3 lobby-restaurant-grid">
                 {options.map((opt) => {
                   const tag =
                     opt.tag ||
@@ -1410,7 +1486,7 @@ export default function BarkadaVote() {
                       onClick={() =>
                         setMenuDraft((prev) => prev.filter((_, idx) => idx !== i))
                       }
-                      className="barkada-btn-icon"
+                      className="barkada-btn-delete"
                       aria-label="remove"
                     >
                       <Trash2 style={{ width: "1rem", height: "1rem" }} />
@@ -1528,7 +1604,7 @@ export default function BarkadaVote() {
                             prev.filter((_, idx) => idx !== i)
                           )
                         }
-                        className="barkada-btn-icon"
+                        className="barkada-btn-delete"
                         aria-label="remove"
                       >
                         <Trash2 style={{ width: "1rem", height: "1rem" }} />
@@ -2010,6 +2086,13 @@ export default function BarkadaVote() {
   if (currentView === "voting") {
     return (
       <div className="barkada-page" style={{ paddingBottom: "6rem" }}>
+        {/* Themed Alert */}
+        <ThemedAlert 
+          message={alertState.message} 
+          type={alertState.type} 
+          onClose={closeAlert} 
+        />
+        
         <header className="barkada-header">
           <button
             onClick={() => setCurrentView("lobby")}
@@ -2036,8 +2119,8 @@ export default function BarkadaVote() {
           </div>
         </header>
 
-        <div className="container" style={{ padding: "2rem 1rem" }}>
-          <div className="grid-3">
+        <div className="container" style={{ padding: "1rem" }}>
+          <div className="grid-3 voting-restaurant-grid">
           {options.map((food) => {
             const r = ratings[food.id] || { taste: 0, mood: 0, value: 0 };
             const tag =
@@ -2061,13 +2144,15 @@ export default function BarkadaVote() {
                     ₱{Number(food.price).toFixed(2)} avg / person
                   </p>
 
-                  {/* ⭐ Bring back the star ratings */}
+                  {/* ⭐ Compact star ratings */}
                   <div className="rating-section">
                     <div className="rating-item">
                       <span>Taste</span>
                       <StarRating
                         value={r.taste}
                         onChange={(v) => setRatingField(food.id, "taste", v)}
+                        size={20}
+                        showValue={false}
                       />
                     </div>
 
@@ -2076,6 +2161,8 @@ export default function BarkadaVote() {
                       <StarRating
                         value={r.mood}
                         onChange={(v) => setRatingField(food.id, "mood", v)}
+                        size={20}
+                        showValue={false}
                       />
                     </div>
 
@@ -2084,6 +2171,8 @@ export default function BarkadaVote() {
                       <StarRating
                         value={r.value}
                         onChange={(v) => setRatingField(food.id, "value", v)}
+                        size={20}
+                        showValue={false}
                       />
                     </div>
                   </div>
@@ -2107,7 +2196,7 @@ export default function BarkadaVote() {
             <button
               onClick={endVoting}
               disabled={connState !== "connected"}
-              className="barkada-btn barkada-btn-blue"
+              className="barkada-btn barkada-btn-danger"
               style={{ padding: "1rem" }}
             >
               End Voting
@@ -2126,6 +2215,13 @@ export default function BarkadaVote() {
       window.__barkadaResults || {};
     return (
       <div className="barkada-page">
+        {/* Themed Alert */}
+        <ThemedAlert 
+          message={alertState.message} 
+          type={alertState.type} 
+          onClose={closeAlert} 
+        />
+        
         <header className="barkada-header">
           <div className="flex-gap" style={{ alignItems: "center" }}>
             <Trophy

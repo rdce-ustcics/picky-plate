@@ -281,7 +281,12 @@ body {
   background: linear-gradient(135deg, var(--primary-gold) 0%, var(--secondary-gold) 100%);
   color: white;
   border-color: transparent;
-  box-shadow: 0 4px 12px rgba(245, 184, 61, 0.4);
+  box-shadow: 0 6px 16px rgba(245, 184, 61, 0.5), 0 0 0 3px rgba(245, 184, 61, 0.2);
+  transform: scale(1.05);
+}
+
+.quick-filter.active .filter-icon {
+  transform: scale(1.15);
 }
 
 /* Filter Actions */
@@ -423,6 +428,165 @@ body {
   position: relative;
   background: var(--warm-cream);
   min-height: 400px;
+}
+
+/* Map Placeholder - Improves LCP by lazy loading Google Maps */
+.map-placeholder {
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  position: relative;
+}
+
+.map-placeholder-bg {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.map-placeholder-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.7);
+}
+
+.map-placeholder-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(245, 184, 61, 0.3) 0%, rgba(232, 168, 40, 0.4) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-placeholder-content {
+  text-align: center;
+  color: white;
+  padding: var(--spacing-xl);
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(8px);
+}
+
+.map-placeholder-icon {
+  font-size: 3rem;
+  margin-bottom: var(--spacing-md);
+}
+
+.map-placeholder-content h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-sm);
+}
+
+.map-placeholder-content p {
+  font-size: 1rem;
+  opacity: 0.9;
+  margin-bottom: var(--spacing-lg);
+}
+
+.map-load-btn {
+  background: var(--primary-gold);
+  color: var(--text-primary);
+  border: none;
+  padding: var(--spacing-md) var(--spacing-xl);
+  border-radius: var(--radius-full);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-md);
+}
+
+.map-load-btn:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-lg);
+  background: var(--secondary-gold);
+}
+
+.map-loading {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--warm-cream);
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+}
+
+/* User Location Marker */
+.user-location-marker {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.user-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: #4285F4;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+}
+
+.pulse-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background: rgba(66, 133, 244, 0.3);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Cluster Markers - SuperCluster */
+.cluster-marker {
+  transition: transform 0.2s ease;
+  will-change: transform;
+}
+
+.cluster-marker:hover {
+  transform: scale(1.1);
+}
+
+.restaurant-marker {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  will-change: transform;
+}
+
+.restaurant-marker:hover {
+  transform: scale(1.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* GPU acceleration for smooth animations */
+.cluster-marker,
+.restaurant-marker,
+.user-location-marker {
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .locate-me-btn {
@@ -1086,6 +1250,8 @@ body {
   .quick-filter.active {
     background: linear-gradient(135deg, var(--primary-gold) 0%, var(--secondary-gold) 100%);
     color: white;
+    box-shadow: 0 4px 12px rgba(245, 184, 61, 0.5), 0 0 0 2px rgba(245, 184, 61, 0.3);
+    transform: scale(1.05);
   }
 
   /* Filter Actions - Floating Pills */
@@ -1666,8 +1832,165 @@ button,
   ::-webkit-scrollbar {
     display: none;
   }
-  
+
   * {
     scrollbar-width: none;
+  }
+}
+
+/* ========================================
+   COMPACT LOADING INDICATOR (Yellow Badge)
+   ======================================== */
+
+.loading-indicator {
+  position: fixed;
+  bottom: 100px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--primary-gold) 0%, var(--secondary-gold) 100%);
+  padding: 8px 12px;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px rgba(245, 184, 61, 0.4), 0 2px 8px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease-out;
+  min-width: 120px;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Icon container */
+.loading-indicator-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  color: white;
+}
+
+/* Spinning loader for initial/background phases */
+.loading-indicator.initial .loading-indicator-icon::before,
+.loading-indicator.background .loading-indicator-icon::before {
+  content: '';
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+/* Checkmark for complete */
+.loading-indicator.complete .loading-indicator-icon {
+  color: white;
+  font-size: 16px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Content area */
+.loading-indicator-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+/* Mini progress bar */
+.loading-indicator-progress {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.loading-indicator-fill {
+  height: 100%;
+  background: white;
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease-out;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+}
+
+/* Shimmer animation during loading */
+.loading-indicator.initial .loading-indicator-fill,
+.loading-indicator.background .loading-indicator-fill {
+  animation: shimmerWhite 1.5s infinite linear;
+  background: linear-gradient(90deg, white 0%, rgba(255,255,255,0.7) 50%, white 100%);
+  background-size: 200% 100%;
+}
+
+@keyframes shimmerWhite {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Complete state - stays yellow with checkmark */
+.loading-indicator.complete {
+  background: linear-gradient(135deg, var(--primary-gold) 0%, var(--secondary-gold) 100%);
+}
+
+.loading-indicator.complete .loading-indicator-fill {
+  background: white;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.8);
+}
+
+/* Text label */
+.loading-indicator-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .loading-indicator {
+    bottom: 80px;
+    right: 12px;
+    padding: 6px 10px;
+    min-width: 100px;
+    border-radius: var(--radius-md);
+  }
+
+  .loading-indicator-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .loading-indicator.initial .loading-indicator-icon::before,
+  .loading-indicator.background .loading-indicator-icon::before {
+    width: 14px;
+    height: 14px;
+    border-width: 2px;
+  }
+
+  .loading-indicator-progress {
+    height: 3px;
+    min-width: 50px;
+  }
+
+  .loading-indicator-text {
+    font-size: 10px;
   }
 }

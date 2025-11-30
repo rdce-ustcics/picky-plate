@@ -1,16 +1,157 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import { GoogleMap, LoadScript, Marker, InfoWindow, MarkerClusterer } from "@react-google-maps/api";
+import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from "@vis.gl/react-google-maps";
+import useSupercluster from "use-supercluster";
 import LoadingModal from "../components/LoadingModal";
 import "./RestaurantLocator.css";
 
-const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+// SuperCluster-based Markers component - FAST clustering for 18k+ points
+function ClusteredMarkers({ restaurants, onMarkerClick, getMarkerColor, bounds, zoom }) {
+  // Convert restaurants to GeoJSON points for SuperCluster
+  const points = useMemo(() => {
+    return restaurants
+      .filter(r => r.lat && r.lng && !isNaN(r.lat) && !isNaN(r.lng))
+      .map(restaurant => ({
+        type: "Feature",
+        properties: {
+          cluster: false,
+          restaurantId: restaurant.id,
+          restaurant: restaurant
+        },
+        geometry: {
+          type: "Point",
+          coordinates: [restaurant.lng, restaurant.lat]
+        }
+      }));
+  }, [restaurants]);
 
-// Debug: Check if API key is loaded
-if (!GOOGLE_MAPS_API_KEY) {
-  console.error('❌ Google Maps API key is not defined! Check your .env file.');
-} else {
-  console.log('✅ Google Maps API key loaded:', GOOGLE_MAPS_API_KEY.substring(0, 10) + '...');
+  // Use SuperCluster for fast clustering
+  const { clusters, supercluster } = useSupercluster({
+    points,
+    bounds: bounds || [-180, -85, 180, 85],
+    zoom: zoom || 11,
+    options: {
+      radius: 75,
+      maxZoom: 16,
+      minZoom: 0
+    }
+  });
+
+  return (
+    <>
+      {clusters.map(cluster => {
+        const [lng, lat] = cluster.geometry.coordinates;
+        const { cluster: isCluster, point_count: pointCount, restaurant } = cluster.properties;
+
+        if (isCluster) {
+          // Render cluster marker
+          const size = Math.min(50, 20 + (pointCount / restaurants.length) * 100);
+          return (
+            <AdvancedMarker
+              key={`cluster-${cluster.id}`}
+              position={{ lat, lng }}
+              onClick={() => {
+                // Zoom into cluster
+                const expansionZoom = Math.min(
+                  supercluster.getClusterExpansionZoom(cluster.id),
+                  16
+                );
+                // The map will auto-zoom when we update zoom state
+              }}
+            >
+              <div
+                className="cluster-marker"
+                style={{
+                  width: `${size}px`,
+                  height: `${size}px`,
+                  background: `linear-gradient(135deg, #ff6b6b, #ee5a5a)`,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: size > 35 ? '14px' : '12px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                  border: '3px solid white',
+                  cursor: 'pointer'
+                }}
+              >
+                {pointCount}
+              </div>
+            </AdvancedMarker>
+          );
+        }
+
+        // Render individual restaurant marker
+        return (
+          <AdvancedMarker
+            key={`restaurant-${restaurant?.id || cluster.id}`}
+            position={{ lat, lng }}
+            onClick={() => onMarkerClick(restaurant)}
+          >
+            <div
+              className="restaurant-marker"
+              style={{
+                width: '24px',
+                height: '24px',
+                background: getMarkerColor(restaurant?.priceLevelNum),
+                borderRadius: '50%',
+                border: '3px solid white',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                cursor: 'pointer'
+              }}
+            />
+          </AdvancedMarker>
+        );
+      })}
+    </>
+  );
 }
+
+// Map bounds tracker component
+function MapBoundsTracker({ onBoundsChange }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+
+    const handleBoundsChanged = () => {
+      const bounds = map.getBounds();
+      if (bounds) {
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+        onBoundsChange([sw.lng(), sw.lat(), ne.lng(), ne.lat()], map.getZoom());
+      }
+    };
+
+    // Initial bounds
+    handleBoundsChanged();
+
+    // Listen for changes
+    const listener = map.addListener('idle', handleBoundsChanged);
+    return () => {
+      if (listener) window.google.maps.event.removeListener(listener);
+    };
+  }, [map, onBoundsChange]);
+
+  return null;
+}
+
+// Move calculateDistance outside component to avoid recreation
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+};
+
+const GOOGLE_MAPS_API_KEY = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
 // Google Maps container style
 const mapContainerStyle = {
@@ -18,28 +159,19 @@ const mapContainerStyle = {
   height: "100%"
 };
 
-// Default center (Metro Manila)
+// Default center (Metro Manila - centered on NCR bounds)
 const defaultCenter = {
-  lat: 14.5995,
-  lng: 120.9842
+  lat: 14.565,   // Center of NCR (14.35 to 14.78)
+  lng: 121.025   // Center of NCR (120.90 to 121.15)
 };
 
-// Google Maps options
-const mapOptions = {
-  disableDefaultUI: false,
-  zoomControl: true,
-  mapTypeControl: true,
-  scaleControl: true,
-  streetViewControl: true,
-  rotateControl: false,
-  fullscreenControl: true
-};
+// Google Maps Map ID (required for AdvancedMarker)
+const MAP_ID = process.env.REACT_APP_GOOGLE_MAP_ID || "DEMO_MAP_ID";
 
 export default function RestaurantLocator() {
   const mapInstanceRef = useRef(null);
 
   const [restaurants, setRestaurants] = useState([]);
-  const [filteredRestaurants, setFilteredRestaurants] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [mapError, setMapError] = useState(null);
   const [selectedPriceLevel, setSelectedPriceLevel] = useState("all");
@@ -57,13 +189,32 @@ export default function RestaurantLocator() {
   const [availableCuisines, setAvailableCuisines] = useState([]);
   const [activeView, setActiveView] = useState("map"); // map or list
   const [showFilterModal, setShowFilterModal] = useState(false); // Filter modal state
-  const [activeQuickFilter, setActiveQuickFilter] = useState(null);
   const [mapCenter, setMapCenter] = useState(defaultCenter);
   const [mapZoom, setMapZoom] = useState(11);
+  const [mapBounds, setMapBounds] = useState(null); // For SuperCluster
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [cacheStatus, setCacheStatus] = useState('checking');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [totalFromApi, setTotalFromApi] = useState(0);
+  const [useApiMode, setUseApiMode] = useState(true); // Use API by default
+
+  // Progress tracking for loading bar
+  const [loadingProgress, setLoadingProgress] = useState({
+    loaded: 0,
+    total: 0,
+    phase: 'idle', // 'idle' | 'initial' | 'background' | 'complete'
+    message: ''
+  });
+
+  // Debounce search query to prevent filtering on every keystroke
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const METRO_MANILA_CITIES = [
     "Manila", "Quezon City", "Caloocan", "Las Piñas", "Makati", "Makati City",
@@ -81,12 +232,12 @@ export default function RestaurantLocator() {
     "Dasmariñas Village", "San Lorenzo Village", "Urdaneta Village", "Magallanes Village"
   ];
 
-  // NCR Bounding Box (approximate coordinates for Metro Manila)
+  // NCR Bounding Box (Metro Manila bounds - matches API filter)
   const NCR_BOUNDS = {
-    north: 14.7642, // Northern edge (Caloocan/Valenzuela)
-    south: 14.3990, // Southern edge (Muntinlupa)
-    east: 121.1500,  // Eastern edge (Rizal border)
-    west: 120.9200   // Western edge (Manila Bay)
+    north: 14.78,   // Northern edge (Caloocan/Valenzuela)
+    south: 14.35,   // Southern edge (Muntinlupa/Las Piñas)
+    east: 121.15,   // Eastern edge (Marikina/Rizal border)
+    west: 120.90    // Western edge (Manila Bay)
   };
 
   // Check if coordinates are within NCR bounds
@@ -181,12 +332,23 @@ export default function RestaurantLocator() {
     return "https://img.icons8.com/color/200/restaurant.png";
   };
 
-  // FIXED: Quick filters with proper toggle functionality
+  // Quick filters with proper toggle functionality - checks actual state for toggling
   const handleQuickFilter = (filterId) => {
-    // If clicking the same filter, deactivate it
-    if (activeQuickFilter === filterId) {
-      setActiveQuickFilter(null);
-      // Reset the associated filter
+    // Check actual filter state to determine if we should toggle on or off
+    const isCurrentlyActive = (() => {
+      switch(filterId) {
+        case 'popular': return minRating >= 4;
+        case 'healthy': return selectedCuisine === 'vegan';
+        case 'nearme': return showNearbyOnly;
+        case 'cheap': return selectedPriceLevel === "1";
+        case 'delivery': return deliveryFilter === 'delivery';
+        case 'open': return openNowFilter;
+        default: return false;
+      }
+    })();
+
+    if (isCurrentlyActive) {
+      // Deactivate the filter
       switch(filterId) {
         case 'popular':
           setMinRating(0);
@@ -210,10 +372,7 @@ export default function RestaurantLocator() {
           break;
       }
     } else {
-      // Activate the new filter
-      setActiveQuickFilter(filterId);
-      
-      // Execute the filter action
+      // Activate the filter
       switch(filterId) {
         case 'popular':
           setMinRating(4);
@@ -249,6 +408,19 @@ export default function RestaurantLocator() {
     { id: 'open', label: 'Open Now', icon: '🟢' },
   ];
 
+  // Check if a quick filter is active based on actual filter state
+  const isQuickFilterActive = (filterId) => {
+    switch(filterId) {
+      case 'popular': return minRating >= 4;
+      case 'healthy': return selectedCuisine === 'vegan';
+      case 'nearme': return showNearbyOnly;
+      case 'cheap': return selectedPriceLevel === "1";
+      case 'delivery': return deliveryFilter === 'delivery';
+      case 'open': return openNowFilter;
+      default: return false;
+    }
+  };
+
   const getPriceLevelNum = (priceLevel) => {
     if (!priceLevel) return null;
     const mapping = {
@@ -258,18 +430,6 @@ export default function RestaurantLocator() {
       'PRICE_LEVEL_VERY_EXPENSIVE': 4
     };
     return mapping[priceLevel] || null;
-  };
-
-  const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a =
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
   };
 
   const isOpenNow = (openingHours) => {
@@ -311,63 +471,24 @@ export default function RestaurantLocator() {
     setOpenNowFilter(false);
     setShowNearbyOnly(false);
     setSearchRadius(5);
-    setActiveQuickFilter(null); // Reset active quick filter
   };
 
-  // Map load callback
-  const onMapLoad = useCallback((map) => {
-    mapInstanceRef.current = map;
-    setIsMapLoaded(true);
-    setTimeout(() => {
-      getUserLocation();
-    }, 500);
+  // Get marker color based on price level (used by ClusteredMarkers)
+  const getMarkerColor = useCallback((priceLevelNum) => {
+    const colors = {
+      1: '#65a30d',  // Green - budget friendly
+      2: '#e2a044',  // Yellow - moderate
+      3: '#dc7928',  // Orange - expensive
+      4: '#dc2626'   // Red - very expensive
+    };
+    return colors[priceLevelNum] || '#9ca3af';
   }, []);
 
-  // Limit markers for performance
-  const displayedRestaurants = useMemo(() => {
-    const hasActiveFilters =
-      searchQuery !== "" ||
-      selectedPriceLevel !== "all" ||
-      minRating > 0 ||
-      selectedCuisine !== "all" ||
-      deliveryFilter !== "all" ||
-      openNowFilter ||
-      showNearbyOnly;
-
-    const maxMarkers = hasActiveFilters ? 500 : 200;
-    return filteredRestaurants.slice(0, maxMarkers);
-  }, [filteredRestaurants, searchQuery, selectedPriceLevel, minRating,
-      selectedCuisine, deliveryFilter, openNowFilter, showNearbyOnly]);
-
-  // Pagination calculations for list view
-  const paginatedRestaurants = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredRestaurants.slice(startIndex, endIndex);
-  }, [filteredRestaurants, currentPage, itemsPerPage]);
-
-  const totalPages = Math.ceil(filteredRestaurants.length / itemsPerPage);
-
-  // Get marker icon based on price level
-  const getMarkerIcon = (priceLevelNum) => {
-    const colors = {
-      1: '#65a30d',
-      2: '#e2a044',
-      3: '#dc7928',
-      4: '#dc2626'
-    };
-
-    const color = colors[priceLevelNum] || '#9ca3af';
-
-    return {
-      path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
-      fillColor: color,
-      fillOpacity: 0.9,
-      strokeColor: '#fff',
-      strokeWeight: 2,
-      scale: 8
-    };
-  };
+  // Handle map bounds change for SuperCluster
+  const handleBoundsChange = useCallback((bounds, zoom) => {
+    setMapBounds(bounds);
+    setMapZoom(zoom);
+  }, []);
 
   // Get user's current location
   const getUserLocation = () => {
@@ -388,6 +509,7 @@ export default function RestaurantLocator() {
         setLocationLoading(false);
         setMapCenter({ lat: latitude, lng: longitude });
         setMapZoom(14);
+        // Auto-enable nearby mode to reduce initial load and improve performance
         setShowNearbyOnly(true);
       },
       (error) => {
@@ -406,10 +528,10 @@ export default function RestaurantLocator() {
             errorMessage = `Location error: ${error.message}`;
         }
 
-        console.error('❌ Geolocation error:', {
-          code: error.code,
-          message: error.message
-        });
+        // console.error('❌ Geolocation error:', {
+        //   code: error.code,
+        //   message: error.message
+        // });
 
         setLocationError(errorMessage);
         setLocationLoading(false);
@@ -423,218 +545,280 @@ export default function RestaurantLocator() {
   };
 
 
+  // Fetch restaurants from API based on location and filters
+  // NOTE: This loads ALL restaurants for client-side pagination - do NOT include currentPage as dependency
+  const fetchRestaurantsFromApi = useCallback(async (lat, lng, options = {}) => {
+    const {
+      radius = searchRadius * 1000, // Convert km to meters
+      cuisine = selectedCuisine !== "all" ? selectedCuisine : undefined,
+      minRatingFilter = minRating > 0 ? minRating : undefined,
+      priceLevel = selectedPriceLevel !== "all" ? selectedPriceLevel : undefined,
+      search = debouncedSearchQuery || undefined,
+      limit = 100
+    } = options;
+
+    const params = new URLSearchParams({
+      lat: lat.toString(),
+      lng: lng.toString(),
+      radius: radius.toString(),
+      limit: limit.toString()
+    });
+
+    if (cuisine) params.append('cuisine', cuisine.toLowerCase());
+    if (minRatingFilter) params.append('minRating', minRatingFilter.toString());
+    if (priceLevel) params.append('priceLevel', priceLevel);
+    if (search) params.append('search', search);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/places/nearby?${params}`);
+      if (!response.ok) throw new Error('API request failed');
+
+      const data = await response.json();
+      return {
+        restaurants: data.restaurants.map(item => ({
+          ...item,
+          id: item.id || `${item.name}_${item.lat}_${item.lng}`,
+          priceLevelNum: item.priceLevelNum || getPriceLevelNum(item.priceLevel),
+          image: getRestaurantImage(item.name)
+        })),
+        total: data.pagination.total,
+        hasMore: data.pagination.hasMore
+      };
+    } catch (error) {
+      throw error;
+    }
+  }, [searchRadius, selectedCuisine, minRating, selectedPriceLevel, debouncedSearchQuery]);
+
+  // Load cuisines list from API
   useEffect(() => {
-    const loadAllRestaurants = async () => {
-      const CACHE_KEY = 'pickplate_restaurants_cache';
-      const CACHE_EXPIRY_KEY = 'pickplate_restaurants_cache_expiry';
-      const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-
-      // Check if we have cached data that's still valid
+    const loadCuisines = async () => {
       try {
-        const cachedData = localStorage.getItem(CACHE_KEY);
-        const cacheExpiry = localStorage.getItem(CACHE_EXPIRY_KEY);
-        const now = Date.now();
+        const response = await fetch(`${API_BASE_URL}/api/places/cuisines`);
+        if (response.ok) {
+          const data = await response.json();
+          const formatted = data.cuisines
+            .filter(c => c && c.length > 1)
+            .map(c => c.charAt(0).toUpperCase() + c.slice(1).toLowerCase().replace(/_/g, ' '))
+            .sort();
+          setAvailableCuisines([...new Set(formatted)]);
+        }
+      } catch (error) {
+        // Fallback cuisines if API fails
+        setAvailableCuisines(['Filipino', 'Japanese', 'Korean', 'Chinese', 'Italian', 'American', 'Thai', 'Indian', 'Mexican', 'Fast Food', 'Cafe', 'Seafood', 'Pizza', 'Burger', 'Ramen']);
+      }
+    };
+    loadCuisines();
+  }, []);
 
-        if (cachedData && cacheExpiry && now < parseInt(cacheExpiry)) {
-          console.log('✅ Loading restaurants from cache...');
-          setCacheStatus('cached');
-          const parsedData = JSON.parse(cachedData);
+  // Main data loading effect - uses API with location (OPTIMIZED for speed)
+  useEffect(() => {
+    let isCancelled = false; // Prevent stale updates
 
-          // Extract cuisines
-          const cuisineSet = new Set();
-          parsedData.forEach(item => {
-            if (item.cuisine) {
-              const cuisines = item.cuisine.split(',').map(c => c.trim());
-              cuisines.forEach(c => {
-                if (c && c.length > 0) {
-                  const formatted = c.charAt(0).toUpperCase() + c.slice(1).toLowerCase();
-                  cuisineSet.add(formatted);
-                }
-              });
-            }
-            if (item.types && item.types.length > 0) {
-              item.types.forEach(type => {
-                if (type && type !== 'restaurant' && type.length > 0) {
-                  const formatted = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase().replace(/_/g, ' ');
-                  cuisineSet.add(formatted);
-                }
-              });
-            }
+    const loadRestaurants = async () => {
+      setLoading(true);
+      setCacheStatus('loading');
+      setLoadingProgress({ loaded: 0, total: 0, phase: 'initial', message: 'Connecting to database...' });
+
+      // Determine location to use
+      const locationToUse = userLocation || defaultCenter;
+
+      if (useApiMode) {
+        try {
+          // FAST INITIAL LOAD: Show ALL nearby restaurants, or 3000 for all mode
+          // SuperCluster handles clustering efficiently
+          const initialLimit = showNearbyOnly ? 5000 : 3000; // 5000 for nearby = show all within radius
+
+          setLoadingProgress({ loaded: 0, total: 0, phase: 'initial', message: 'Fetching restaurants...' });
+
+          const result = await fetchRestaurantsFromApi(
+            locationToUse.lat,
+            locationToUse.lng,
+            { radius: showNearbyOnly ? searchRadius * 1000 : 0, limit: initialLimit }
+          );
+
+          if (isCancelled) return; // Don't update if effect was cleaned up
+
+          console.log(`⚡ Fast load: ${result.restaurants.length} restaurants (nearby: ${showNearbyOnly})`);
+
+          setRestaurants(result.restaurants);
+          setTotalFromApi(result.total);
+          setCacheStatus('api');
+          setLoading(false);
+
+          // Update progress - initial load complete
+          setLoadingProgress({
+            loaded: result.restaurants.length,
+            total: result.total,
+            phase: result.total > initialLimit && !showNearbyOnly ? 'background' : 'complete',
+            message: result.total > initialLimit && !showNearbyOnly
+              ? `Loaded ${result.restaurants.length.toLocaleString()} of ${result.total.toLocaleString()} restaurants...`
+              : 'All restaurants loaded!'
           });
 
-          const sortedCuisines = Array.from(cuisineSet).sort();
-          setAvailableCuisines(sortedCuisines);
-          setRestaurants(parsedData);
-          setFilteredRestaurants(parsedData);
-          setLoading(false);
-          console.log(`✅ Loaded ${parsedData.length} restaurants from cache (instant load!)`);
+          // BACKGROUND LOAD: Only when NOT in nearby mode and there are more restaurants
+          if (!showNearbyOnly && result.total > initialLimit) {
+            // Load remaining data in background (non-blocking)
+            setTimeout(async () => {
+              if (isCancelled) return; // Check again before background load
+
+              try {
+                setLoadingProgress(prev => ({
+                  ...prev,
+                  phase: 'background',
+                  message: `Loading remaining ${(prev.total - prev.loaded).toLocaleString()} restaurants...`
+                }));
+
+                const fullResult = await fetchRestaurantsFromApi(
+                  locationToUse.lat,
+                  locationToUse.lng,
+                  { radius: 0, limit: 20000 }
+                );
+
+                if (isCancelled) return; // Check again after async call
+
+                console.log(`📊 Background load complete: ${fullResult.restaurants.length} restaurants`);
+                setRestaurants(fullResult.restaurants);
+                setTotalFromApi(fullResult.total);
+
+                // Mark loading as complete
+                setLoadingProgress({
+                  loaded: fullResult.restaurants.length,
+                  total: fullResult.total,
+                  phase: 'complete',
+                  message: `All ${fullResult.restaurants.length.toLocaleString()} restaurants loaded!`
+                });
+
+                // Hide progress bar after 2 seconds
+                setTimeout(() => {
+                  if (!isCancelled) {
+                    setLoadingProgress(prev => ({ ...prev, phase: 'idle' }));
+                  }
+                }, 2000);
+              } catch (err) {
+                console.log('Background load skipped:', err.message);
+                setLoadingProgress(prev => ({ ...prev, phase: 'idle' }));
+              }
+            }, 100);
+          } else {
+            // No background load needed - hide after 2 seconds
+            setTimeout(() => {
+              if (!isCancelled) {
+                setLoadingProgress(prev => ({ ...prev, phase: 'idle' }));
+              }
+            }, 2000);
+          }
           return;
+        } catch (apiError) {
+          if (isCancelled) return;
+          console.error('❌ API failed, falling back to JSON:', apiError.message);
+          setUseApiMode(false);
+          setLoadingProgress({ loaded: 0, total: 0, phase: 'initial', message: 'Switching to offline mode...' });
         }
-      } catch (cacheError) {
-        console.warn('⚠️ Cache read error, loading fresh data:', cacheError);
       }
 
-      // If no valid cache, fetch fresh data
-      console.log('📡 Fetching fresh restaurant data...');
-      setCacheStatus('loading');
-      const startTime = performance.now();
-
+      // Fallback: Load from static JSON files (legacy mode)
+      console.log('⚠️ Using fallback JSON mode (API disabled or failed)');
+      setLoadingProgress({ loaded: 0, total: 0, phase: 'initial', message: 'Loading from local data...' });
       try {
-        const [ncrResponse, osmResponse] = await Promise.all([
-          fetch("/data/ncr_food_places2.json"),
-          fetch("/data/osm_restaurants.json")
-        ]);
-        const [ncrData, osmData] = await Promise.all([
-          ncrResponse.json(),
-          osmResponse.json()
-        ]);
-        console.log("NCR restaurants:", ncrData.items.length);
-        console.log("OSM restaurants:", osmData.items.length);
-        const allItems = [...ncrData.items, ...osmData.items];
-        console.log("Total restaurants before filtering:", allItems.length);
+        const response = await fetch("/data/ncr_food_places2.json");
+        const data = await response.json();
 
-// Filter for valid data - show ALL valid restaurants
-const validData = allItems.filter(item => {
-  // Check basic validity
-  if (!item || !item.name) return false;
-  
-  // ✅ STRICT coordinate validation
-  if (typeof item.lat !== 'number' || 
-      typeof item.lng !== 'number' ||
-      item.lat === 0 || 
-      item.lng === 0 ||
-      isNaN(item.lat) || 
-      isNaN(item.lng) ||
-      item.lat < -90 || item.lat > 90 ||
-      item.lng < -180 || item.lng > 180) {
-    return false;
-  }
+        if (isCancelled) return;
 
-  return true;
-});
-        console.log("Valid restaurants after filtering:", validData.length);
-
-        // Process and deduplicate restaurants
+        const validData = data.items.filter(item =>
+          item && item.name && typeof item.lat === 'number' && typeof item.lng === 'number'
+        );
         const processedData = validData.map(item => ({
           ...item,
           id: item.id || `${item.name}_${item.lat}_${item.lng}`,
-          name: String(item.name || 'Unknown'),
-          address: String(item.address || ''),
-          types: Array.isArray(item.types) ? item.types : [],
           priceLevelNum: getPriceLevelNum(item.priceLevel),
-          cuisine: item.cuisine || '',
-          openingHours: item.openingHours || '',
-          hasOnlineDelivery: item.hasOnlineDelivery || false,
-          hasTableBooking: item.hasTableBooking || false,
-          isDeliveringNow: item.isDeliveringNow || false,
-          takeaway: item.takeaway || false,
-          source: item.source || 'unknown',
-          image: getRestaurantImage(item.name) // Add image for each restaurant
+          image: getRestaurantImage(item.name)
         }));
-
-        // Extract all unique cuisines
-        const cuisineSet = new Set();
-        processedData.forEach(item => {
-          if (item.cuisine) {
-            const cuisines = item.cuisine.split(',').map(c => c.trim());
-            cuisines.forEach(c => {
-              if (c && c.length > 0) {
-                const formatted = c.charAt(0).toUpperCase() + c.slice(1).toLowerCase();
-                cuisineSet.add(formatted);
-              }
-            });
-          }
-          if (item.types && item.types.length > 0) {
-            item.types.forEach(type => {
-              if (type && type !== 'restaurant' && type.length > 0) {
-                const formatted = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase().replace(/_/g, ' ');
-                cuisineSet.add(formatted);
-              }
-            });
-          }
-        });
-
-        const sortedCuisines = Array.from(cuisineSet).sort();
-        setAvailableCuisines(sortedCuisines);
         setRestaurants(processedData);
-        setFilteredRestaurants(processedData);
-        setLoading(false);
-
-        // Cache the processed data
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify(processedData));
-          localStorage.setItem(CACHE_EXPIRY_KEY, (Date.now() + CACHE_DURATION).toString());
-          setCacheStatus('fresh');
-          console.log(`✅ Successfully loaded ${processedData.length} restaurants and cached for 24 hours!`);
-        } catch (cacheError) {
-          console.warn('⚠️ Failed to cache data (localStorage might be full):', cacheError);
-          setCacheStatus('error');
-        }
+        setCacheStatus('fallback');
+        setLoadingProgress({
+          loaded: processedData.length,
+          total: processedData.length,
+          phase: 'complete',
+          message: `Loaded ${processedData.length.toLocaleString()} restaurants (offline)`
+        });
+        setTimeout(() => {
+          if (!isCancelled) setLoadingProgress(prev => ({ ...prev, phase: 'idle' }));
+        }, 2000);
       } catch (error) {
-        console.error("Error loading restaurant data:", error);
-        try {
-          const response = await fetch("/data/ncr_food_places2.json");
-          const data = await response.json();
-          const validData = data.items.filter(item => {
-            // Check basic validity
-            if (!item || !item.name || typeof item.lat !== 'number' ||
-                typeof item.lng !== 'number' || item.lat === 0 || item.lng === 0) {
-              return false;
-            }
-
-            // Include all valid restaurants
-            return true;
-          });
-          const processedData = validData.map(item => ({
-            ...item,
-            name: String(item.name || 'Unknown'),
-            address: String(item.address || ''),
-            types: Array.isArray(item.types) ? item.types : [],
-            priceLevelNum: getPriceLevelNum(item.priceLevel),
-            cuisine: item.cuisine || '',
-            openingHours: item.openingHours || '',
-            hasOnlineDelivery: item.hasOnlineDelivery || false,
-            hasTableBooking: item.hasTableBooking || false,
-            isDeliveringNow: item.isDeliveringNow || false,
-            takeaway: item.takeaway || false,
-            image: getRestaurantImage(item.name)
-          }));
-          setRestaurants(processedData);
-          setFilteredRestaurants(processedData);
-
-          // Cache fallback data too
-          try {
-            localStorage.setItem(CACHE_KEY, JSON.stringify(processedData));
-            localStorage.setItem(CACHE_EXPIRY_KEY, (Date.now() + CACHE_DURATION).toString());
-          } catch (e) {
-            console.warn('Cache error:', e);
-          }
-
-          console.log(`⚠️ Loaded ${processedData.length} restaurants from NCR data only`);
-        } catch (fallbackError) {
-          console.error("Failed to load any restaurant data:", fallbackError);
+        if (!isCancelled) {
+          setRestaurants([]);
+          setLoadingProgress({ loaded: 0, total: 0, phase: 'idle', message: '' });
         }
+      }
+      if (!isCancelled) setLoading(false);
+    };
+
+    loadRestaurants();
+
+    // Cleanup: Cancel pending updates when dependencies change
+    return () => {
+      isCancelled = true;
+    };
+  }, [userLocation, useApiMode, fetchRestaurantsFromApi, showNearbyOnly, searchRadius]);
+
+  // Refetch when TEXT filters change (only in API mode) - separate from nearby filter
+  // Note: showNearbyOnly changes are handled by the main loading effect above
+  useEffect(() => {
+    // Skip if not in API mode, still loading, or no filter changes
+    if (!useApiMode || loading) return;
+    // Skip on initial render (no filters active)
+    if (!debouncedSearchQuery && selectedCuisine === "all" &&
+        selectedPriceLevel === "all" && minRating === 0) return;
+
+    let isCancelled = false;
+
+    const refetchWithFilters = async () => {
+      const locationToUse = userLocation || defaultCenter;
+
+      try {
+        setLoading(true);
+        const result = await fetchRestaurantsFromApi(
+          locationToUse.lat,
+          locationToUse.lng,
+          {
+            radius: showNearbyOnly ? searchRadius * 1000 : 0,
+            limit: showNearbyOnly ? 5000 : 5000, // Show ALL nearby restaurants
+            cuisine: selectedCuisine !== "all" ? selectedCuisine : undefined,
+            minRatingFilter: minRating > 0 ? minRating : undefined,
+            priceLevel: selectedPriceLevel !== "all" ? selectedPriceLevel : undefined,
+            search: debouncedSearchQuery || undefined
+          }
+        );
+
+        if (isCancelled) return;
+
+        console.log(`⚡ Refetch: ${result.restaurants.length} restaurants (nearby: ${showNearbyOnly})`);
+        setRestaurants(result.restaurants);
+        setTotalFromApi(result.total);
         setLoading(false);
+      } catch (error) {
+        if (!isCancelled) setLoading(false);
       }
     };
-    loadAllRestaurants();
-  }, []);
+
+    // Debounce the refetch
+    const timer = setTimeout(refetchWithFilters, 300);
+    return () => {
+      clearTimeout(timer);
+      isCancelled = true;
+    };
+  }, [debouncedSearchQuery, selectedCuisine, selectedPriceLevel, minRating,
+      showNearbyOnly, searchRadius, userLocation, useApiMode, fetchRestaurantsFromApi]);
 
 
-  useEffect(() => {
+  // Simplified filtering - server handles most filters in API mode
+  // Only client-side filtering needed for delivery/openNow (not in API) and fallback mode
+  const filteredRestaurants = useMemo(() => {
     let filtered = restaurants;
-    if (userLocation && showNearbyOnly) {
-      filtered = filtered.map(restaurant => {
-        const distance = calculateDistance(
-          userLocation.lat,
-          userLocation.lng,
-          restaurant.lat,
-          restaurant.lng
-        );
-        return { ...restaurant, distance };
-      }).filter(restaurant => restaurant.distance <= searchRadius)
-        .sort((a, b) => a.distance - b.distance);
-    } else if (userLocation) {
+
+    // Add distance if user location is available and not already set by API
+    if (userLocation && filtered.length > 0 && !filtered[0].distance) {
       filtered = filtered.map(restaurant => {
         const distance = calculateDistance(
           userLocation.lat,
@@ -645,35 +829,13 @@ const validData = allItems.filter(item => {
         return { ...restaurant, distance };
       });
     }
-    if (searchQuery) {
-      filtered = filtered.filter(restaurant => {
-        const name = String(restaurant.name || '').toLowerCase();
-        const address = String(restaurant.address || '').toLowerCase();
-        const query = searchQuery.toLowerCase();
-        return name.includes(query) || address.includes(query);
-      });
+
+    // Sort by distance if available
+    if (filtered.length > 0 && filtered[0].distance !== undefined) {
+      filtered = [...filtered].sort((a, b) => (a.distance || 0) - (b.distance || 0));
     }
-    if (selectedCuisine !== "all") {
-      filtered = filtered.filter(restaurant => {
-        const cuisineLower = selectedCuisine.toLowerCase();
-        const restaurantCuisine = (restaurant.cuisine || '').toLowerCase();
-        const hasInCuisineField = restaurantCuisine.includes(cuisineLower);
-        const hasInTypes = restaurant.types && restaurant.types.some(type =>
-          type.toLowerCase().replace(/_/g, ' ').includes(cuisineLower)
-        );
-        return hasInCuisineField || hasInTypes;
-      });
-    }
-    if (selectedPriceLevel !== "all") {
-      filtered = filtered.filter(restaurant =>
-        restaurant.priceLevelNum === parseInt(selectedPriceLevel)
-      );
-    }
-    if (minRating > 0) {
-      filtered = filtered.filter(restaurant =>
-        restaurant.rating && restaurant.rating >= minRating
-      );
-    }
+
+    // Client-side filters (not handled by API)
     if (deliveryFilter !== "all") {
       filtered = filtered.filter(restaurant => {
         switch(deliveryFilter) {
@@ -688,15 +850,83 @@ const validData = allItems.filter(item => {
         }
       });
     }
+
     if (openNowFilter) {
       filtered = filtered.filter(restaurant => {
         const openStatus = isOpenNow(restaurant.openingHours);
         return openStatus === true || openStatus === null;
       });
     }
-    setFilteredRestaurants(filtered);
-  }, [searchQuery, selectedPriceLevel, minRating, restaurants, userLocation, showNearbyOnly, searchRadius,
-      selectedCuisine, deliveryFilter, openNowFilter]);
+
+    // Fallback mode: apply filters that API would normally handle
+    if (!useApiMode) {
+      if (debouncedSearchQuery) {
+        const query = debouncedSearchQuery.toLowerCase();
+        filtered = filtered.filter(restaurant => {
+          const name = String(restaurant.name || '').toLowerCase();
+          const address = String(restaurant.address || '').toLowerCase();
+          return name.includes(query) || address.includes(query);
+        });
+      }
+
+      if (selectedCuisine !== "all") {
+        const cuisineLower = selectedCuisine.toLowerCase();
+        filtered = filtered.filter(restaurant => {
+          const restaurantCuisine = (restaurant.cuisine || '').toLowerCase();
+          const hasInCuisineField = restaurantCuisine.includes(cuisineLower);
+          const hasInTypes = restaurant.types && restaurant.types.some(type =>
+            type.toLowerCase().replace(/_/g, ' ').includes(cuisineLower)
+          );
+          return hasInCuisineField || hasInTypes;
+        });
+      }
+
+      if (selectedPriceLevel !== "all") {
+        const priceLevel = parseInt(selectedPriceLevel);
+        filtered = filtered.filter(restaurant =>
+          restaurant.priceLevelNum === priceLevel
+        );
+      }
+
+      if (minRating > 0) {
+        filtered = filtered.filter(restaurant =>
+          restaurant.rating && restaurant.rating >= minRating
+        );
+      }
+
+      if (showNearbyOnly && userLocation) {
+        filtered = filtered.filter(restaurant => restaurant.distance <= searchRadius);
+      }
+    }
+
+    return filtered;
+  }, [restaurants, userLocation, deliveryFilter, openNowFilter, useApiMode,
+      debouncedSearchQuery, selectedCuisine, selectedPriceLevel, minRating, showNearbyOnly, searchRadius]);
+
+  // Limit markers for performance
+  const displayedRestaurants = useMemo(() => {
+    const hasActiveFilters =
+      debouncedSearchQuery !== "" ||
+      selectedPriceLevel !== "all" ||
+      minRating > 0 ||
+      selectedCuisine !== "all" ||
+      deliveryFilter !== "all" ||
+      openNowFilter ||
+      showNearbyOnly;
+
+    const maxMarkers = hasActiveFilters ? 500 : 200;
+    return filteredRestaurants.slice(0, maxMarkers);
+  }, [filteredRestaurants, debouncedSearchQuery, selectedPriceLevel, minRating,
+      selectedCuisine, deliveryFilter, openNowFilter, showNearbyOnly]);
+
+  // Pagination calculations for list view
+  const paginatedRestaurants = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredRestaurants.slice(startIndex, endIndex);
+  }, [filteredRestaurants, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredRestaurants.length / itemsPerPage);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -748,7 +978,7 @@ const validData = allItems.filter(item => {
   }
 
   return (
-    <LoadScript googleMapsApiKey={GOOGLE_MAPS_API_KEY}>
+    <>
       {loading && <LoadingModal message="Loading restaurant data..." />}
       <div className="restaurant-locator">
         {/* Header */}
@@ -767,6 +997,32 @@ const validData = allItems.filter(item => {
           </div>
         </div>
       </header>
+
+      {/* Compact Loading Indicator - Small yellow badge in corner */}
+      {loadingProgress.phase !== 'idle' && (
+        <div className={`loading-indicator ${loadingProgress.phase}`}>
+          <div className="loading-indicator-icon">
+            {loadingProgress.phase === 'complete' ? '✓' : ''}
+          </div>
+          <div className="loading-indicator-content">
+            <div className="loading-indicator-progress">
+              <div
+                className="loading-indicator-fill"
+                style={{
+                  width: loadingProgress.total > 0
+                    ? `${Math.min((loadingProgress.loaded / loadingProgress.total) * 100, 100)}%`
+                    : loadingProgress.phase === 'initial' ? '30%' : '100%'
+                }}
+              />
+            </div>
+            <span className="loading-indicator-text">
+              {loadingProgress.total > 0
+                ? `${loadingProgress.loaded.toLocaleString()}/${loadingProgress.total.toLocaleString()}`
+                : 'Loading...'}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Main Layout */}
       <div className="main-layout">
@@ -788,7 +1044,7 @@ const validData = allItems.filter(item => {
             {quickFilters.map(filter => (
               <button
                 key={filter.id}
-                className={`quick-filter ${activeQuickFilter === filter.id ? 'active' : ''}`}
+                className={`quick-filter ${isQuickFilterActive(filter.id) ? 'active' : ''}`}
                 onClick={() => handleQuickFilter(filter.id)}
               >
                 <span className="filter-icon">{filter.icon}</span>
@@ -847,82 +1103,74 @@ const validData = allItems.filter(item => {
           {/* Map Container - Show when map view is active */}
           {activeView === 'map' && (
             <div className="map-container" style={{ width: '100%', height: '100%' }}>
-              <GoogleMap
-                mapContainerStyle={mapContainerStyle}
-                center={mapCenter}
-                zoom={mapZoom}
-                options={mapOptions}
-                onLoad={onMapLoad}
-              >
-                {/* User Location Marker */}
-                {userLocation && isMapLoaded && (
-                  <Marker
-                    position={{ lat: userLocation.lat, lng: userLocation.lng }}
-                    icon={{
-                      path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
-                      fillColor: '#4285F4',
-                      fillOpacity: 1,
-                      strokeColor: '#ffffff',
-                      strokeWeight: 3,
-                      scale: 10
-                    }}
-                    title="Your Location"
+              {/* Google Maps - loads immediately with async loading for better performance */}
+              <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+                <Map
+                  style={mapContainerStyle}
+                  defaultCenter={defaultCenter}
+                  center={mapCenter}
+                  zoom={mapZoom}
+                  mapId={MAP_ID}
+                  gestureHandling="greedy"
+                  onCameraChanged={(ev) => {
+                    setMapCenter(ev.detail.center);
+                    setMapZoom(ev.detail.zoom);
+                  }}
+                  onTilesLoaded={() => {
+                    setIsMapLoaded(true);
+                    if (!userLocation) getUserLocation();
+                  }}
+                >
+                  {/* Map Bounds Tracker for SuperCluster */}
+                  <MapBoundsTracker onBoundsChange={handleBoundsChange} />
+
+                  {/* SuperCluster-based Restaurant Markers - handles 18k+ points efficiently */}
+                  <ClusteredMarkers
+                    restaurants={filteredRestaurants}
+                    onMarkerClick={setSelectedRestaurant}
+                    getMarkerColor={getMarkerColor}
+                    bounds={mapBounds}
+                    zoom={mapZoom}
                   />
-                )}
 
-                {/* Restaurant Markers with Clustering */}
-                {isMapLoaded && (
-                  <MarkerClusterer>
-                    {(clusterer) =>
-displayedRestaurants.map((restaurant, index) => {
-  // ✅ STRICT validation - check for valid numbers
-  if (!restaurant.lat || !restaurant.lng || 
-      typeof restaurant.lat !== 'number' || 
-      typeof restaurant.lng !== 'number' ||
-      restaurant.lat === 0 || restaurant.lng === 0 ||
-      isNaN(restaurant.lat) || isNaN(restaurant.lng)) {
-    return null;
-  }
-  
-  return (
-    <Marker
-      key={restaurant.id || index}
-      position={{ lat: restaurant.lat, lng: restaurant.lng }}
-                            clusterer={clusterer}
-                            icon={getMarkerIcon(restaurant.priceLevelNum)}
-                            title={restaurant.name}
-                            onClick={() => setSelectedRestaurant(restaurant)}
-                          />
-                        );
-                      })
-                    }
-                  </MarkerClusterer>
-                )}
+                  {/* User Location Marker */}
+                  {userLocation && (
+                    <AdvancedMarker
+                      position={{ lat: userLocation.lat, lng: userLocation.lng }}
+                      title="Your Location"
+                    >
+                      <div className="user-location-marker">
+                        <div className="pulse-ring"></div>
+                        <div className="user-dot"></div>
+                      </div>
+                    </AdvancedMarker>
+                  )}
 
-                {/* Info Window for Selected Restaurant */}
-                {selectedRestaurant && selectedRestaurant.lat && selectedRestaurant.lng && (
-                  <InfoWindow
-                    position={{ lat: selectedRestaurant.lat, lng: selectedRestaurant.lng }}
-                    onCloseClick={() => setSelectedRestaurant(null)}
-                  >
-                    <div className="info-window">
-                      <h3>{selectedRestaurant.name}</h3>
-                      <p>{selectedRestaurant.address}</p>
-                      {selectedRestaurant.rating && (
-                        <p>⭐ {selectedRestaurant.rating} ({selectedRestaurant.userRatingCount || 0} reviews)</p>
-                      )}
-                      {selectedRestaurant.priceLevelNum && (
-                        <p>{getPriceLevelSymbol(selectedRestaurant.priceLevelNum)}</p>
-                      )}
-                      {selectedRestaurant.googleMapsUri && (
-                        <a href={selectedRestaurant.googleMapsUri} target="_blank" rel="noopener noreferrer">
-                          View on Google Maps →
-                        </a>
-                      )}
-                    </div>
-                  </InfoWindow>
-                )}
-              </GoogleMap>
+                  {/* Info Window for Selected Restaurant */}
+                  {selectedRestaurant && selectedRestaurant.lat && selectedRestaurant.lng && (
+                    <InfoWindow
+                      position={{ lat: selectedRestaurant.lat, lng: selectedRestaurant.lng }}
+                      onCloseClick={() => setSelectedRestaurant(null)}
+                    >
+                      <div className="info-window">
+                        <h3>{selectedRestaurant.name}</h3>
+                        <p>{selectedRestaurant.address}</p>
+                        {selectedRestaurant.rating && (
+                          <p>⭐ {selectedRestaurant.rating} ({selectedRestaurant.userRatingCount || 0} reviews)</p>
+                        )}
+                        {selectedRestaurant.priceLevelNum && (
+                          <p>{getPriceLevelSymbol(selectedRestaurant.priceLevelNum)}</p>
+                        )}
+                        {selectedRestaurant.googleMapsUri && (
+                          <a href={selectedRestaurant.googleMapsUri} target="_blank" rel="noopener noreferrer">
+                            View on Google Maps →
+                          </a>
+                        )}
+                      </div>
+                    </InfoWindow>
+                  )}
+                </Map>
+              </APIProvider>
 
               {userLocation && (
                 <button
@@ -1220,6 +1468,6 @@ displayedRestaurants.map((restaurant, index) => {
         </div>
       )}
       </div>
-    </LoadScript>
+    </>
   );
 }

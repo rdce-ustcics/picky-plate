@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, message: data.message, user: data.user, token: data.token };
     } catch (e) {
-      console.error('Login error:', e);
+      // console.error('Login error:', e);
       return { success: false, message: 'Unable to connect to server' };
     }
   };
@@ -84,7 +84,7 @@ export const AuthProvider = ({ children }) => {
       // No token or user set here; requires OTP verification first
       return { success: true, message: data.message, email };
     } catch (e) {
-      console.error('Signup error:', e);
+      // console.error('Signup error:', e);
       return { success: false, message: 'Unable to connect to server' };
     }
   };
@@ -132,7 +132,7 @@ export const AuthProvider = ({ children }) => {
         cooldownSec: data.cooldownSec
       };
     } catch (e) {
-      console.error('Request OTP error:', e);
+      // console.error('Request OTP error:', e);
       return { success: false, message: 'Unable to connect to server' };
     }
   };
@@ -157,7 +157,7 @@ export const AuthProvider = ({ children }) => {
         allowPasswordReset: data.allowPasswordReset
       };
     } catch (e) {
-      console.error('Verify OTP error:', e);
+      // console.error('Verify OTP error:', e);
       return { success: false, message: 'Unable to connect to server' };
     }
   };
@@ -185,7 +185,7 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, message: data.message };
     } catch (e) {
-      console.error('Reset password error:', e);
+      // console.error('Reset password error:', e);
       return { success: false, message: 'Unable to connect to server' };
     }
   };

@@ -35,8 +35,6 @@
       "Bash(cmd //c \"taskkill /PID 4672 /F\")",
       "Bash(timeout /t 5 /nobreak:*)",
       "Bash(cmd //c \"taskkill /IM node.exe /F\" 2)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
       "mcp__ide__getDiagnostics",
       "Bash(cmd //c \"taskkill /PID 33568 /F\")",
       "Bash(cmd //c \"del test-performance.js\")",

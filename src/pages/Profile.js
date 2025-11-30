@@ -238,7 +238,7 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
           setKids(Array.isArray(data.kids) ? data.kids : []);
         }
       } catch (err) {
-        console.error('Error loading kids', err);
+        // console.error('Error loading kids', err);
       } finally {
         if (!cancelled) setLoadingKids(false);
       }

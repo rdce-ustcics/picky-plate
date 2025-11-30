@@ -75,7 +75,7 @@ router.post('/request-otp', async (req, res) => {
       cooldownSec: OTP_RESEND_COOLDOWN_SEC,
     });
   } catch (e) {
-    console.error('[request-otp] error:', e);
+    // console.error('[request-otp] error:', e);
     return res.status(500).json({ success: false, message: 'Error sending OTP' });
   }
 });
@@ -131,7 +131,7 @@ router.post('/verify-otp', async (req, res) => {
       return res.json({ success: true, message: 'Email verified. You can now log in.' });
     }
   } catch (e) {
-    console.error('[verify-otp] error:', e);
+    // console.error('[verify-otp] error:', e);
     return res.status(500).json({ success: false, message: 'Error verifying OTP' });
   }
 });
@@ -184,7 +184,7 @@ router.post('/forgot-password', async (req, res) => {
       cooldownSec: OTP_RESEND_COOLDOWN_SEC,
     });
   } catch (e) {
-    console.error('[forgot-password] error:', e);
+    // console.error('[forgot-password] error:', e);
     return res.status(500).json({ success: false, message: 'Error sending password reset OTP' });
   }
 });
@@ -222,7 +222,7 @@ router.post('/reset-password', async (req, res) => {
 
     return res.json({ success: true, message: 'Password reset successfully. You can now log in.' });
   } catch (e) {
-    console.error('[reset-password] error:', e);
+    // console.error('[reset-password] error:', e);
     return res.status(500).json({ success: false, message: 'Error resetting password' });
   }
 });
@@ -240,7 +240,7 @@ router.post('/invalidate-otp', async (req, res) => {
     await Otp.deleteOne({ email, purpose });
     return res.json({ success: true });
   } catch (e) {
-    console.error('[invalidate-otp] error:', e);
+    // console.error('[invalidate-otp] error:', e);
     return res.status(500).json({ success: false, message: 'Error invalidating OTP' });
   }
 });

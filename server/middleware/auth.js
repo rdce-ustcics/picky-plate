@@ -50,7 +50,7 @@ const protect = async (req, res, next) => {
     if (!result.ok) return res.status(result.code).json({ success: false, message: result.msg });
     next();
   } catch (error) {
-    console.error('Auth error:', error);
+    // console.error('Auth error:', error);
     return res.status(401).json({ success: false, message: 'Authentication failed.' });
   }
 };
@@ -69,7 +69,7 @@ const requireAdmin = async (req, res, next) => {
 
     next();
   } catch (error) {
-    console.error('Admin auth error:', error);
+    // console.error('Admin auth error:', error);
     return res.status(401).json({ success: false, message: 'Authentication failed.' });
   }
 };

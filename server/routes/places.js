@@ -27,6 +27,250 @@ function requireAdmin(req, res, next) {
 // -------- Health ----------
 router.get("/ping", (_req, res) => res.json({ ok: true }));
 
+// ============================================================
+// GEOSPATIAL NEARBY SEARCH - Uses 2dsphere index for speed
+// ============================================================
+router.get("/nearby", async (req, res) => {
+  console.log('📍 /api/places/nearby called:', {
+    lat: req.query.lat,
+    lng: req.query.lng,
+    radius: req.query.radius,
+    limit: req.query.limit,
+    mode: req.query.radius === '0' ? 'ALL_RESTAURANTS' : 'GEO_SEARCH'
+  });
+  try {
+    const {
+      lat,
+      lng,
+      radius = 5000,      // Default 5km radius in meters
+      limit = 100,        // Max restaurants to return
+      page = 1,
+      cuisine,            // Filter by cuisine type
+      minRating,          // Minimum rating filter
+      priceLevel,         // Price level filter (1-4)
+      search,             // Text search for name
+      city,               // Filter by city
+      sortBy = "distance" // "distance" | "rating" | "name"
+    } = req.query;
+
+    // Validate required params
+    if (!lat || !lng) {
+      return res.status(400).json({
+        error: "Missing required parameters: lat and lng"
+      });
+    }
+
+    const latitude = parseFloat(lat);
+    const longitude = parseFloat(lng);
+    // Allow up to 100km radius, or 0 for "all restaurants" mode
+    const radiusParam = parseInt(radius);
+    const maxDistance = radiusParam === 0 ? null : Math.min(radiusParam || 5000, 100000); // Max 100km or null for all
+    const pageNum = Math.max(parseInt(page) || 1, 1);
+    // When fetching ALL restaurants (radius=0), allow much higher limit
+    const requestedLimit = parseInt(limit) || 100;
+    const limitNum = maxDistance === null
+      ? Math.min(requestedLimit, 20000) // Allow up to 20k for "all" mode
+      : Math.min(requestedLimit, 10000); // Allow up to 10k for geo queries
+    const skip = (pageNum - 1) * limitNum;
+
+    // Build match conditions for filtering
+    const matchConditions = {};
+
+    // ALWAYS filter to Metro Manila (NCR) only
+    // Based on research: Metro Manila boundaries
+    // Sources: OpenStreetMap, PhilAtlas, latitude.to
+    const METRO_MANILA_BOUNDS = {
+      south: 14.35,  // Muntinlupa/Las Piñas southern edge
+      north: 14.78,  // Caloocan/Valenzuela northern edge
+      west: 120.90,  // Manila Bay western edge
+      east: 121.15   // Marikina/Rizal eastern edge
+    };
+
+    // Add NCR boundary conditions
+    matchConditions.lat = {
+      $gte: METRO_MANILA_BOUNDS.south,
+      $lte: METRO_MANILA_BOUNDS.north
+    };
+    matchConditions.lng = {
+      $gte: METRO_MANILA_BOUNDS.west,
+      $lte: METRO_MANILA_BOUNDS.east
+    };
+
+    if (cuisine) {
+      const cuisineTypes = cuisine.split(",").map(c => c.trim().toLowerCase());
+      matchConditions.$or = [
+        { types: { $in: cuisineTypes } },
+        { cuisine: { $regex: cuisineTypes.join("|"), $options: "i" } }
+      ];
+    }
+
+    if (minRating) {
+      matchConditions.rating = { $gte: parseFloat(minRating) };
+    }
+
+    if (priceLevel) {
+      matchConditions.priceLevelNum = parseInt(priceLevel);
+    }
+
+    if (city) {
+      matchConditions.city = { $regex: city, $options: "i" };
+    }
+
+    if (search) {
+      matchConditions.name = { $regex: search, $options: "i" };
+    }
+
+    let restaurants, total;
+
+    if (maxDistance === null) {
+      // "All restaurants" mode - no distance filter, use simple find
+      const query = Object.keys(matchConditions).length > 0 ? matchConditions : {};
+
+      total = await FoodPlace.countDocuments(query);
+
+      let sortOption = { rating: -1 }; // Default sort by rating
+      if (sortBy === "name") sortOption = { name: 1 };
+
+      restaurants = await FoodPlace.find(query)
+        .sort(sortOption)
+        .skip(skip)
+        .limit(limitNum)
+        .lean();
+
+      // Add distance field (will be calculated client-side)
+      restaurants = restaurants.map(r => ({ ...r, distance: null }));
+    } else {
+      // Use $geoNear aggregation for geospatial query with distance
+      const pipeline = [
+        {
+          $geoNear: {
+            near: {
+              type: "Point",
+              coordinates: [longitude, latitude]
+            },
+            distanceField: "distance",
+            maxDistance: maxDistance,
+            spherical: true,
+            query: matchConditions,
+            key: "location"  // Specify which 2dsphere index to use
+          }
+        }
+      ];
+
+      // Add sorting
+      if (sortBy === "rating") {
+        pipeline.push({ $sort: { rating: -1, distance: 1 } });
+      } else if (sortBy === "name") {
+        pipeline.push({ $sort: { name: 1 } });
+      }
+      // Default sort by distance is already applied by $geoNear
+
+      // Get total count (without pagination)
+      const countPipeline = [...pipeline, { $count: "total" }];
+      const countResult = await FoodPlace.aggregate(countPipeline);
+      total = countResult[0]?.total || 0;
+
+      // Add pagination
+      pipeline.push({ $skip: skip });
+      pipeline.push({ $limit: limitNum });
+
+      // Execute query
+      restaurants = await FoodPlace.aggregate(pipeline);
+    }
+
+    // Format response to match frontend expectations
+    const formattedRestaurants = restaurants.map(r => ({
+      id: r.providerId || r._id.toString(),
+      name: r.name,
+      lat: r.lat,
+      lng: r.lng,
+      address: r.address,
+      rating: r.rating,
+      userRatingCount: r.userRatingCount,
+      priceLevel: r.priceLevel,
+      priceLevelNum: r.priceLevelNum,
+      cuisine: r.cuisine,
+      locality: r.locality,
+      city: r.city,
+      hasOnlineDelivery: r.hasOnlineDelivery,
+      hasTableBooking: r.hasTableBooking,
+      isDeliveringNow: r.isDeliveringNow,
+      averageCostForTwo: r.averageCostForTwo,
+      currency: r.currency,
+      googleMapsUri: r.googleMapsUri,
+      zomatoUrl: r.zomatoUrl,
+      types: r.types,
+      // Handle null distance (when fetching all restaurants without location)
+      distance: r.distance != null ? Math.round(r.distance) : null,
+      distanceKm: r.distance != null ? (r.distance / 1000).toFixed(2) : null
+    }));
+
+    console.log(`✅ Found ${formattedRestaurants.length} restaurants (total: ${total})`);
+    res.json({
+      restaurants: formattedRestaurants,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum),
+        hasMore: skip + restaurants.length < total
+      },
+      query: {
+        lat: latitude,
+        lng: longitude,
+        radius: maxDistance
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ Nearby search error:', err.message);
+    res.status(500).json({
+      error: "Nearby search failed",
+      detail: err.message
+    });
+  }
+});
+
+// Get all unique cities for dropdown filter
+router.get("/cities", async (_req, res) => {
+  try {
+    const cities = await FoodPlace.distinct("city");
+    const filtered = cities.filter(c => c && c.trim()).sort();
+    res.json({ cities: filtered });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to get cities" });
+  }
+});
+
+// Get all unique cuisine types for filter
+router.get("/cuisines", async (_req, res) => {
+  try {
+    const types = await FoodPlace.distinct("types");
+    const filtered = types.filter(t => t && t.trim()).sort();
+    res.json({ cuisines: filtered });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to get cuisines" });
+  }
+});
+
+// Get restaurant stats
+router.get("/stats", async (_req, res) => {
+  try {
+    const [total, withRating, cities] = await Promise.all([
+      FoodPlace.countDocuments(),
+      FoodPlace.countDocuments({ rating: { $gt: 0 } }),
+      FoodPlace.distinct("city")
+    ]);
+    res.json({
+      total,
+      withRating,
+      cities: cities.filter(c => c).length
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to get stats" });
+  }
+});
+
 // -------- Details ----------
 router.get("/details/:placeId", async (req, res) => {
   try {

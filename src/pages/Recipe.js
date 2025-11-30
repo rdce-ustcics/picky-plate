@@ -190,7 +190,7 @@ export default function CommunityRecipes() {
               setSelectedRecipe(data.recipe);
             }
           } catch (e) {
-            console.error("Failed to load shared recipe:", e);
+            // console.error("Failed to load shared recipe:", e);
           }
         })();
       }
@@ -365,12 +365,12 @@ export default function CommunityRecipes() {
           // Then load images progressively in background
           loadImagesProgressively(recipesWithPlaceholders);
         } else {
-          console.error("recipes_list_error:", data);
+          // console.error("recipes_list_error:", data);
           setItems([]); setTotal(0); setPages(1);
           setLoading(false);
         }
       } catch (e) {
-        console.error("recipes_list_error:", e);
+        // console.error("recipes_list_error:", e);
         setItems([]); setTotal(0); setPages(1);
         setLoading(false);
       }
@@ -558,7 +558,7 @@ export default function CommunityRecipes() {
 
       return pdf;
     } catch (err) {
-      console.error("PDF generation failed:", err);
+      // console.error("PDF generation failed:", err);
       return null;
     } finally {
       node.classList.remove("pdf-mode");
@@ -623,7 +623,7 @@ export default function CommunityRecipes() {
           closeReport();
           return;
         }
-        console.error("report_failed:", data);
+        // console.error("report_failed:", data);
         alert("Failed to report. Please try again.");
         return;
       }
@@ -639,7 +639,7 @@ export default function CommunityRecipes() {
 
       closeReport();
     } catch (e) {
-      console.error("report_error:", e);
+      // console.error("report_error:", e);
       alert("Failed to report. Please try again.");
     } finally {
       setReportLoading(false);
@@ -662,8 +662,8 @@ export default function CommunityRecipes() {
     }
     recipeCreatorId = recipeCreatorId.trim();
 
-    // Debug log (remove in production)
-    console.log("isRecipeOwner check:", { userId, recipeCreatorId, match: userId === recipeCreatorId });
+    // Debug log (commented out for performance)
+    // console.log("isRecipeOwner check:", { userId, recipeCreatorId, match: userId === recipeCreatorId });
 
     return userId && recipeCreatorId && userId === recipeCreatorId;
   };
@@ -840,7 +840,7 @@ export default function CommunityRecipes() {
       alert("Recipe updated successfully!");
       closeEditModal();
     } catch (e) {
-      console.error("update_recipe_error:", e);
+      // console.error("update_recipe_error:", e);
       alert("Failed to update recipe. Please try again.");
     } finally {
       setEditLoading(false);
@@ -943,7 +943,7 @@ export default function CommunityRecipes() {
       setSelectedRecipe(null);
       alert("Recipe deleted successfully");
     } catch (e) {
-      console.error("delete_recipe_error:", e);
+      // console.error("delete_recipe_error:", e);
       alert("Failed to delete recipe. Please try again.");
     }
   }
@@ -1107,7 +1107,7 @@ export default function CommunityRecipes() {
                 </div>
 
                 {/* Allergen Exclusions */}
-                <div className="cr-dropdown" ref={allergenMenuRef} style={{ marginTop: '0.75rem' }}>
+                <div className="cr-dropdown cr-allergen-dropdown" ref={allergenMenuRef}>
                   <button
                     onClick={() => setShowAllergenMenu((s) => !s)}
                     className="cr-dropdown-btn"
@@ -1267,7 +1267,7 @@ export default function CommunityRecipes() {
                       {/* Favorite Button - NEW */}
                       <button
                         onClick={(e) => toggleFavorite(recipe._id, e)}
-                        className="absolute top-3 left-3 w-9 h-9 rounded-full bg-white/90 backdrop-blur flex items-center justify-center transition-all hover:scale-110 shadow-md"
+                        className="recipe-card-favorite-btn"
                         aria-label={isFavorite(recipe._id) ? "Remove from favorites" : "Add to favorites"}
                       >
                         <Heart
@@ -1598,46 +1598,41 @@ export default function CommunityRecipes() {
         </div>
       )}
 
-      {/* Edit Modal - keeping existing structure but with mobile styles */}
+      {/* Edit Modal */}
       {showEditModal && editingRecipe && (
         <div className="cr-modal-overlay" onClick={closeEditModal}>
-          <div
-            className="cr-modal"
-            style={{ maxWidth: '48rem' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ padding: '1.5rem', borderBottom: '2px solid #fde68a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ width: '3rem', height: '3rem', borderRadius: '0.75rem', background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="cr-edit-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cr-edit-modal-header">
+              <div className="cr-edit-modal-header-content">
+                <div className="cr-edit-modal-icon-box">
                   <Edit className="w-6 h-6 text-white" />
                 </div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#78350f' }}>Edit Recipe</h3>
+                <h3 className="cr-edit-modal-title">Edit Recipe</h3>
               </div>
-              <button onClick={closeEditModal} className="cr-modal-close" style={{ position: 'relative', top: 0, right: 0 }}>
+              <button onClick={closeEditModal} className="cr-edit-modal-close">
                 <X className="w-5 h-5 text-gray-700" />
               </button>
             </div>
 
-            <div style={{ padding: '1.5rem', maxHeight: 'calc(100vh - 250px)', overflowY: 'auto' }}>
+            <div className="cr-edit-modal-body">
               {/* Image Upload */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#78350f', marginBottom: '0.5rem' }}>
+              <div className="cr-form-group">
+                <label className="cr-form-label">
                   Recipe Image (Landscape only)
                 </label>
                 {editImagePreview && (
-                  <div style={{ borderRadius: '1rem', overflow: 'hidden', marginBottom: '0.75rem', border: '3px solid #fbbf24' }}>
-                    <img src={editImagePreview} alt="Preview" style={{ width: '100%', height: '180px', objectFit: 'cover' }} />
+                  <div className="cr-image-preview-container">
+                    <img src={editImagePreview} alt="Preview" className="cr-image-preview" />
                   </div>
                 )}
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleEditImageUpload}
-                  className="cr-exclude-input"
-                  style={{ width: '100%' }}
+                  className="cr-file-input"
                 />
                 {editErrors.image && (
-                  <p style={{ fontSize: '0.8rem', color: '#dc2626', marginTop: '0.375rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <p className="cr-error-text">
                     <AlertCircle className="w-4 h-4" />
                     {editErrors.image}
                   </p>
@@ -1645,43 +1640,37 @@ export default function CommunityRecipes() {
               </div>
 
               {/* Title */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#78350f', marginBottom: '0.5rem' }}>
-                  Recipe Title *
-                </label>
+              <div className="cr-form-group">
+                <label className="cr-form-label">Recipe Title *</label>
                 <input
                   type="text"
                   value={editForm.title}
                   onChange={(e) => handleEditFormChange("title", e.target.value)}
-                  className="cr-exclude-input"
-                  style={{ width: '100%', borderColor: editErrors.title ? '#dc2626' : '#fde68a' }}
+                  className={`cr-text-input ${editErrors.title ? 'error' : ''}`}
                   placeholder="Enter recipe title..."
                 />
                 {editErrors.title && (
-                  <p style={{ fontSize: '0.8rem', color: '#dc2626', marginTop: '0.375rem' }}>{editErrors.title}</p>
+                  <p className="cr-error-text-small">{editErrors.title}</p>
                 )}
               </div>
 
               {/* Description */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#78350f', marginBottom: '0.5rem' }}>
-                  Description *
-                </label>
+              <div className="cr-form-group">
+                <label className="cr-form-label">Description *</label>
                 <textarea
                   value={editForm.description}
                   onChange={(e) => handleEditFormChange("description", e.target.value)}
                   rows={3}
-                  className="cr-report-textarea"
-                  style={{ borderColor: editErrors.description ? '#dc2626' : '#fde68a' }}
+                  className={`cr-textarea-input ${editErrors.description ? 'error' : ''}`}
                   placeholder="Describe your recipe..."
                 />
                 {editErrors.description && (
-                  <p style={{ fontSize: '0.8rem', color: '#dc2626', marginTop: '0.375rem' }}>{editErrors.description}</p>
+                  <p className="cr-error-text-small">{editErrors.description}</p>
                 )}
               </div>
 
               {/* Recipe Details Grid */}
-              <div className="cr-advanced-grid" style={{ marginBottom: '1.25rem' }}>
+              <div className="cr-advanced-grid">
                 <select
                   value={editForm.prepTime}
                   onChange={(e) => handleEditFormChange("prepTime", e.target.value)}
@@ -1727,98 +1716,88 @@ export default function CommunityRecipes() {
               </div>
 
               {/* Ingredients */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#78350f', marginBottom: '0.5rem' }}>
-                  Ingredients *
-                </label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div className="cr-form-group">
+                <label className="cr-form-label">Ingredients *</label>
+                <div className="cr-ingredient-list">
                   {editForm.ingredients.map((ingredient, index) => (
-                    <div key={index} style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div key={index} className="cr-ingredient-row">
                       <input
                         type="text"
                         value={ingredient}
                         onChange={(e) => handleEditIngredientChange(index, e.target.value)}
-                        className="cr-exclude-input"
-                        style={{ flex: 1 }}
+                        className="cr-text-input"
                         placeholder={`Ingredient ${index + 1}...`}
                       />
                       {editForm.ingredients.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeEditIngredient(index)}
-                          style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.5rem', background: '#fee2e2', color: '#dc2626', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          className="cr-remove-btn"
                         >
                           <X className="w-4 h-4" />
                         </button>
                       )}
                     </div>
                   ))}
-                  <button type="button" onClick={addEditIngredient} className="cr-exclude-add-btn" style={{ width: '100%', justifyContent: 'center' }}>
+                  <button type="button" onClick={addEditIngredient} className="cr-add-btn">
                     <PlusCircle className="w-4 h-4" />
                     Add Ingredient
                   </button>
                 </div>
                 {editErrors.ingredients && (
-                  <p style={{ fontSize: '0.8rem', color: '#dc2626', marginTop: '0.375rem' }}>{editErrors.ingredients}</p>
+                  <p className="cr-error-text-small">{editErrors.ingredients}</p>
                 )}
               </div>
 
               {/* Instructions */}
-              <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#78350f', marginBottom: '0.5rem' }}>
-                  Instructions *
-                </label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div className="cr-form-group">
+                <label className="cr-form-label">Instructions *</label>
+                <div className="cr-instruction-list">
                   {editForm.instructions.map((instruction, index) => (
-                    <div key={index} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-                      <div style={{ width: '1.75rem', height: '1.75rem', borderRadius: '50%', background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)', color: 'white', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '0.5rem' }}>
-                        {index + 1}
-                      </div>
+                    <div key={index} className="cr-instruction-row">
+                      <div className="cr-instruction-number">{index + 1}</div>
                       <textarea
                         value={instruction}
                         onChange={(e) => handleEditInstructionChange(index, e.target.value)}
                         rows={2}
-                        className="cr-report-textarea"
-                        style={{ flex: 1, minHeight: 'auto' }}
+                        className="cr-textarea-input"
                         placeholder={`Step ${index + 1}...`}
                       />
                       {editForm.instructions.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeEditInstruction(index)}
-                          style={{ width: '2.5rem', height: '2.5rem', borderRadius: '0.5rem', background: '#fee2e2', color: '#dc2626', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                          className="cr-remove-btn"
                         >
                           <X className="w-4 h-4" />
                         </button>
                       )}
                     </div>
                   ))}
-                  <button type="button" onClick={addEditInstruction} className="cr-exclude-add-btn" style={{ width: '100%', justifyContent: 'center' }}>
+                  <button type="button" onClick={addEditInstruction} className="cr-add-btn">
                     <PlusCircle className="w-4 h-4" />
                     Add Step
                   </button>
                 </div>
                 {editErrors.instructions && (
-                  <p style={{ fontSize: '0.8rem', color: '#dc2626', marginTop: '0.375rem' }}>{editErrors.instructions}</p>
+                  <p className="cr-error-text-small">{editErrors.instructions}</p>
                 )}
               </div>
 
               {/* Notes */}
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#78350f', marginBottom: '0.5rem' }}>
-                  Chef's Notes (Optional)
-                </label>
+              <div className="cr-form-group">
+                <label className="cr-form-label">Chef's Notes (Optional)</label>
                 <textarea
                   value={editForm.notes}
                   onChange={(e) => handleEditFormChange("notes", e.target.value)}
                   rows={2}
-                  className="cr-report-textarea"
+                  className="cr-textarea-input"
                   placeholder="Any tips or variations..."
                 />
               </div>
             </div>
 
-            <div style={{ padding: '1rem 1.5rem', borderTop: '2px solid #fde68a', display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+            <div className="cr-edit-modal-footer">
               <button onClick={closeEditModal} className="cr-modal-btn cr-modal-btn-secondary">
                 Cancel
               </button>

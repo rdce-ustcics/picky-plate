@@ -284,7 +284,7 @@ const sanitizeSessionForClient = (s, requestingToken = null) => {
           });
           broadcastState(code);
         } catch (e) {
-          console.error('Error creating session', e);
+          // console.error('Error creating session', e);
           cb({ ok: false, error: 'Failed to create session' });
         }
       }
@@ -482,7 +482,7 @@ socket.on(
           };
         }
       } catch (err) {
-        console.error('Failed to load UserPreferences:', err);
+        // console.error('Failed to load UserPreferences:', err);
       }
     }
 
@@ -784,7 +784,7 @@ socket.on(
         cb({ ok: true, state });
         broadcastState(code);
       } catch (e) {
-        console.error('AI generation failed:', e);
+        // console.error('AI generation failed:', e);
         cb({
           ok: false,
           error: 'Failed to generate restaurants with AI. Please try again.',

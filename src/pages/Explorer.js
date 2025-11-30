@@ -70,7 +70,7 @@ export default function Explorer() {
         setLoading(false);
       }
     } catch (e) {
-      console.error("Error fetching cultural recipes:", e);
+      // console.error("Error fetching cultural recipes:", e);
       setError("Failed to load recipes");
       setDishes([]);
       setLoading(false);
@@ -106,7 +106,7 @@ export default function Explorer() {
               );
             }
           } catch (e) {
-            console.error(`Failed to load image for ${recipe.name}:`, e);
+            // console.error(`Failed to load image for ${recipe.name}:`, e);
             // Mark as done loading even if failed
             setDishes(prevDishes =>
               prevDishes.map(dish =>
@@ -158,7 +158,7 @@ export default function Explorer() {
       }
       return null;
     } catch (e) {
-      console.error("Error fetching recipe details:", e);
+      // console.error("Error fetching recipe details:", e);
       return null;
     }
   };
@@ -409,12 +409,12 @@ export default function Explorer() {
       return;
     }
 
-    console.log("🔐 Auth check:", {
-      isAuthenticated,
-      isAdmin,
-      user: user?.email || "unknown",
-      role: user?.role || "unknown"
-    });
+    // console.log("🔐 Auth check:", {
+    //   isAuthenticated,
+    //   isAdmin,
+    //   user: user?.email || "unknown",
+    //   role: user?.role || "unknown"
+    // });
 
     try {
       const cleanIngredients = recipeForm.ingredients.filter(item => item.trim());
@@ -438,17 +438,17 @@ export default function Explorer() {
         "Content-Type": "application/json"
       };
 
-      console.log("📤 Sending cultural recipe payload:", {
-        name: payload.name,
-        desc: payload.desc,
-        region: payload.region,
-        hasImage: !!payload.img,
-        imageSize: payload.img ? `${(payload.img.length / 1024).toFixed(2)} KB` : '0 KB',
-        ingredientsCount: payload.ingredients.length,
-        instructionsCount: payload.instructions.length
-      });
+      // console.log("📤 Sending cultural recipe payload:", {
+      //   name: payload.name,
+      //   desc: payload.desc,
+      //   region: payload.region,
+      //   hasImage: !!payload.img,
+      //   imageSize: payload.img ? `${(payload.img.length / 1024).toFixed(2)} KB` : '0 KB',
+      //   ingredientsCount: payload.ingredients.length,
+      //   instructionsCount: payload.instructions.length
+      // });
 
-      console.log("📋 Request headers:", headers);
+      // console.log("📋 Request headers:", headers);
 
       const url = editingRecipe
         ? `${API_BASE}/api/cultural-recipes/${editingRecipe.id}`
@@ -464,22 +464,22 @@ export default function Explorer() {
 
       const data = await res.json();
 
-      console.log("📥 Server response:", {
-        status: res.status,
-        success: data.success,
-        error: data.error
-      });
+      // console.log("📥 Server response:", {
+      //   status: res.status,
+      //   success: data.success,
+      //   error: data.error
+      // });
 
       if (res.ok && data.success) {
         alert("Recipe saved successfully!");
         closeEditForm();
         await fetchRecipes();
       } else {
-        console.error("❌ Failed to save recipe:", data);
+        // console.error("❌ Failed to save recipe:", data);
         alert(data.error || "Failed to save recipe");
       }
     } catch (e) {
-      console.error("❌ Save recipe error:", e);
+      // console.error("❌ Save recipe error:", e);
       alert(`Failed to save recipe: ${e.message}`);
     }
   };
@@ -506,7 +506,7 @@ export default function Explorer() {
         alert(data.error || "Failed to delete recipe");
       }
     } catch (e) {
-      console.error("Delete recipe error:", e);
+      // console.error("Delete recipe error:", e);
       alert("Failed to delete recipe");
     }
   };

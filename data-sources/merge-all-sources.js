@@ -110,7 +110,7 @@ function deduplicateRestaurants(restaurants) {
   const unique = [];
   const processed = new Set();
 
-  console.log('Removing duplicates...');
+  // console.log('Removing duplicates...');
 
   for (let i = 0; i < restaurants.length; i++) {
     if (processed.has(i)) continue;
@@ -132,38 +132,38 @@ function deduplicateRestaurants(restaurants) {
     unique.push(merged);
     processed.add(i);
 
-    if ((i + 1) % 1000 === 0) {
-      console.log(`  Processed ${i + 1}/${restaurants.length}...`);
-    }
+    // if ((i + 1) % 1000 === 0) {
+    //   console.log(`  Processed ${i + 1}/${restaurants.length}...`);
+    // }
   }
 
   const duplicatesRemoved = restaurants.length - unique.length;
-  console.log(`Removed ${duplicatesRemoved} duplicates (${unique.length} unique restaurants)\n`);
+  // console.log(`Removed ${duplicatesRemoved} duplicates (${unique.length} unique restaurants)\n`);
 
   return unique;
 }
 
 // Main merge function
 function mergeAllSources() {
-  console.log('Starting data merge process...\n');
+  // console.log('Starting data merge process...\n');
 
   // Load Zomato data
-  console.log('Loading Zomato data...');
+  // console.log('Loading Zomato data...');
   const zomatoPath = path.resolve('./public/data/ncr_food_places2.json');
   const zomatoData = JSON.parse(fs.readFileSync(zomatoPath, 'utf8'));
   const zomatoRestaurants = zomatoData.items.map(r => ({
     ...r,
     source: 'Zomato'
   }));
-  console.log(`  Loaded ${zomatoRestaurants.length} restaurants from Zomato\n`);
+  // console.log(`  Loaded ${zomatoRestaurants.length} restaurants from Zomato\n`);
 
   // Load OSM data
-  console.log('Loading OpenStreetMap data...');
+  // console.log('Loading OpenStreetMap data...');
   const osmPath = path.resolve('./data/osm_restaurants.json');
 
   if (!fs.existsSync(osmPath)) {
-    console.log('  ⚠ OSM data not found. Run fetch-osm-restaurants.js first.');
-    console.log('  Using only Zomato data for now.\n');
+    // console.log('  ⚠ OSM data not found. Run fetch-osm-restaurants.js first.');
+    // console.log('  Using only Zomato data for now.\n');
 
     // Just save Zomato data as-is
     const output = {
@@ -178,18 +178,18 @@ function mergeAllSources() {
 
     const outPath = path.resolve('./public/data/ncr_food_places2.json');
     fs.writeFileSync(outPath, JSON.stringify(output, null, 2), 'utf8');
-    console.log(`✓ Saved ${zomatoRestaurants.length} restaurants to ${outPath}`);
+    // console.log(`✓ Saved ${zomatoRestaurants.length} restaurants to ${outPath}`);
     return;
   }
 
   const osmData = JSON.parse(fs.readFileSync(osmPath, 'utf8'));
   const osmRestaurants = osmData.items;
-  console.log(`  Loaded ${osmRestaurants.length} restaurants from OSM\n`);
+  // console.log(`  Loaded ${osmRestaurants.length} restaurants from OSM\n`);
 
   // Combine all restaurants
-  console.log('Combining data from all sources...');
+  // console.log('Combining data from all sources...');
   const allRestaurants = [...zomatoRestaurants, ...osmRestaurants];
-  console.log(`  Total before deduplication: ${allRestaurants.length}\n`);
+  // console.log(`  Total before deduplication: ${allRestaurants.length}\n`);
 
   // Remove duplicates
   const uniqueRestaurants = deduplicateRestaurants(allRestaurants);
@@ -215,25 +215,25 @@ function mergeAllSources() {
     stats.byCity[city] = (stats.byCity[city] || 0) + 1;
   });
 
-  console.log('--- Final Dataset Statistics ---');
-  console.log(`Total unique restaurants: ${stats.total}`);
-  console.log(`With ratings: ${stats.withRatings}`);
-  console.log(`With phone numbers: ${stats.withPhone}`);
-  console.log(`With websites: ${stats.withWebsite}`);
-  console.log(`With opening hours: ${stats.withHours}\n`);
+  // console.log('--- Final Dataset Statistics ---');
+  // console.log(`Total unique restaurants: ${stats.total}`);
+  // console.log(`With ratings: ${stats.withRatings}`);
+  // console.log(`With phone numbers: ${stats.withPhone}`);
+  // console.log(`With websites: ${stats.withWebsite}`);
+  // console.log(`With opening hours: ${stats.withHours}\n`);
 
-  console.log('By Source:');
-  Object.entries(stats.bySources).forEach(([source, count]) => {
-    console.log(`  ${source}: ${count}`);
-  });
+  // console.log('By Source:');
+  // Object.entries(stats.bySources).forEach(([source, count]) => {
+  //   console.log(`  ${source}: ${count}`);
+  // });
 
-  console.log('\nTop Cities:');
-  Object.entries(stats.byCity)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10)
-    .forEach(([city, count]) => {
-      console.log(`  ${city}: ${count}`);
-    });
+  // console.log('\nTop Cities:');
+  // Object.entries(stats.byCity)
+  //   .sort((a, b) => b[1] - a[1])
+  //   .slice(0, 10)
+  //   .forEach(([city, count]) => {
+  //     console.log(`  ${city}: ${count}`);
+  //   });
 
   // Save merged data
   const output = {
@@ -250,8 +250,8 @@ function mergeAllSources() {
   const outPath = path.resolve('./public/data/ncr_food_places2.json');
   fs.writeFileSync(outPath, JSON.stringify(output, null, 2), 'utf8');
 
-  console.log(`\n✓ Merged data saved to ${outPath}`);
-  console.log('\n🎉 All done! Your restaurant locator now has more comprehensive data!');
+  // console.log(`\n✓ Merged data saved to ${outPath}`);
+  // console.log('\n🎉 All done! Your restaurant locator now has more comprehensive data!');
 }
 
 if (require.main === module) {

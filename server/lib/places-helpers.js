@@ -5,7 +5,7 @@ const axios = require("axios");
 // ======== ENV / GOOGLE ========
 const GOOGLE_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 if (!GOOGLE_API_KEY) {
-  console.warn("[Places] Missing GOOGLE_MAPS_API_KEY in /server/.env");
+  // console.warn("[Places] Missing GOOGLE_MAPS_API_KEY in /server/.env");
 }
 const PLACES_FIELD_MASK = [
   "places.id","places.displayName","places.formattedAddress","places.location",

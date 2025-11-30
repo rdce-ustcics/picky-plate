@@ -6,167 +6,170 @@ const CulturalRecipe = require("../models/CulturalRecipe");
 
 /**
  * GET /api/surprise
- * Fetch random recipes from both community recipes and cultural recipes
- * Returns a mix of recipes for the "Surprise Me" feature
+ * Fetch random recipes using MongoDB $sample (FAST)
  */
 router.get("/", async (req, res) => {
   try {
     const { limit = 10 } = req.query;
     const maxLimit = Math.min(parseInt(limit, 10) || 10, 50);
+    const halfLimit = Math.ceil(maxLimit / 2);
 
-    // Fetch active community recipes (not flagged, not deleted, not under review)
-    const communityRecipes = await Recipe.find({
-      isDeleted: false,
-      isFlagged: false,
-      state: { $ne: "forReview" }
-    })
-      .select('title author image prepTime cookTime difficulty servings description ingredients instructions tags allergens notes')
-      .lean();
+    // Use $sample aggregation for fast random selection
+    const [communityRecipes, culturalRecipes] = await Promise.all([
+      Recipe.aggregate([
+        { $match: { isDeleted: false, isFlagged: false, state: { $ne: "forReview" } } },
+        { $sample: { size: halfLimit } },
+        { $project: { title: 1, author: 1, image: 1, prepTime: 1, cookTime: 1, difficulty: 1, servings: 1, description: 1, ingredients: 1, instructions: 1, tags: 1, allergens: 1, notes: 1 } }
+      ]),
+      CulturalRecipe.aggregate([
+        { $match: { isActive: true } },
+        { $sample: { size: halfLimit } },
+        { $project: { name: 1, desc: 1, region: 1, img: 1, ingredients: 1, instructions: 1, recipe: 1 } }
+      ])
+    ]);
 
-    // Fetch active cultural recipes
-    const culturalRecipes = await CulturalRecipe.find({
-      isActive: true
-    })
-      .select('name desc region img ingredients instructions recipe')
-      .lean();
-
-    // Transform recipes to a common format
-    const formattedCommunityRecipes = communityRecipes.map(recipe => ({
-      id: recipe._id,
-      name: recipe.title,
+    // Transform to common format
+    const formattedCommunity = communityRecipes.map(r => ({
+      id: r._id,
+      name: r.title,
       type: "community",
-      author: recipe.author || "Community",
-      restaurant: `By ${recipe.author || "Community"}`,
-      image: recipe.image || "https://images.unsplash.com/photo-1546548970-71785318a17b?w=800&q=80",
-      description: recipe.description || "",
-      prepTime: recipe.prepTime,
-      cookTime: recipe.cookTime,
-      difficulty: recipe.difficulty,
-      servings: recipe.servings,
-      ingredients: recipe.ingredients || [],
-      instructions: recipe.instructions || [],
-      tags: recipe.tags || [],
-      allergens: recipe.allergens || [],
-      notes: recipe.notes || ""
+      author: r.author || "Community",
+      restaurant: `By ${r.author || "Community"}`,
+      image: r.image || "https://images.unsplash.com/photo-1546548970-71785318a17b?w=800&q=80",
+      description: r.description || "",
+      prepTime: r.prepTime,
+      cookTime: r.cookTime,
+      difficulty: r.difficulty,
+      servings: r.servings,
+      ingredients: r.ingredients || [],
+      instructions: r.instructions || [],
+      tags: r.tags || [],
+      allergens: r.allergens || [],
+      notes: r.notes || ""
     }));
 
-    const formattedCulturalRecipes = culturalRecipes.map(recipe => ({
-      id: recipe._id,
-      name: recipe.name,
+    const formattedCultural = culturalRecipes.map(r => ({
+      id: r._id,
+      name: r.name,
       type: "cultural",
       author: "Cultural Recipe",
-      restaurant: `Traditional ${recipe.region} Cuisine`,
-      image: recipe.img || "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=800&q=80",
-      description: recipe.desc || "",
-      region: recipe.region,
-      ingredients: recipe.ingredients || [],
-      instructions: recipe.instructions || [],
-      recipe: recipe.recipe || []
+      restaurant: `Traditional ${r.region} Cuisine`,
+      image: r.img || "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=800&q=80",
+      description: r.desc || "",
+      region: r.region,
+      ingredients: r.ingredients || [],
+      instructions: r.instructions || [],
+      recipe: r.recipe || []
     }));
 
-    // Combine both types of recipes
-    const allRecipes = [...formattedCommunityRecipes, ...formattedCulturalRecipes];
+    // Combine and shuffle
+    const allRecipes = [...formattedCommunity, ...formattedCultural]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, maxLimit);
 
-    // Shuffle the array
-    const shuffled = allRecipes.sort(() => Math.random() - 0.5);
-
-    // Return limited number of recipes
-    const result = shuffled.slice(0, maxLimit);
-
-    res.json({
-      success: true,
-      recipes: result,
-      total: allRecipes.length
-    });
+    res.json({ success: true, recipes: allRecipes, total: allRecipes.length });
   } catch (e) {
-    console.error("surprise_recipes_error:", e);
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch surprise recipes"
-    });
+    res.status(500).json({ success: false, error: "Failed to fetch surprise recipes" });
   }
 });
 
 /**
  * GET /api/surprise/random
- * Get a single random recipe
+ * Get a single random recipe using MongoDB $sample (VERY FAST)
  */
 router.get("/random", async (req, res) => {
   try {
-    // Fetch active community recipes
-    const communityRecipes = await Recipe.find({
-      isDeleted: false,
-      isFlagged: false,
-      state: { $ne: "forReview" }
-    })
-      .select('title author image prepTime cookTime difficulty servings description')
-      .lean();
+    // Randomly choose which collection to sample from (50/50 chance)
+    const useCultural = Math.random() > 0.5;
 
-    // Fetch active cultural recipes
-    const culturalRecipes = await CulturalRecipe.find({
-      isActive: true
-    })
-      .select('name desc region img ingredients instructions recipe')
-      .lean();
+    let recipe = null;
 
-    // Transform recipes to a common format
-    const formattedCommunityRecipes = communityRecipes.map(recipe => ({
-      id: recipe._id,
-      name: recipe.title,
-      type: "community",
-      author: recipe.author || "Community",
-      restaurant: `By ${recipe.author || "Community"}`,
-      image: recipe.image || "https://images.unsplash.com/photo-1546548970-71785318a17b?w=800&q=80",
-      description: recipe.description || "",
-      prepTime: recipe.prepTime,
-      cookTime: recipe.cookTime,
-      difficulty: recipe.difficulty,
-      servings: recipe.servings,
-      ingredients: recipe.ingredients || [],
-      instructions: recipe.instructions || [],
-      tags: recipe.tags || [],
-      allergens: recipe.allergens || [],
-      notes: recipe.notes || ""
-    }));
+    if (useCultural) {
+      // Try cultural first
+      const [culturalRecipe] = await CulturalRecipe.aggregate([
+        { $match: { isActive: true } },
+        { $sample: { size: 1 } },
+        { $project: { name: 1, desc: 1, region: 1, img: 1, ingredients: 1, instructions: 1, recipe: 1 } }
+      ]);
 
-    const formattedCulturalRecipes = culturalRecipes.map(recipe => ({
-      id: recipe._id,
-      name: recipe.name,
-      type: "cultural",
-      author: "Cultural Recipe",
-      restaurant: `Traditional ${recipe.region} Cuisine`,
-      image: recipe.img || "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=800&q=80",
-      description: recipe.desc || "",
-      region: recipe.region,
-      ingredients: recipe.ingredients || [],
-      instructions: recipe.instructions || [],
-      recipe: recipe.recipe || []
-    }));
-
-    // Combine both types of recipes
-    const allRecipes = [...formattedCommunityRecipes, ...formattedCulturalRecipes];
-
-    if (allRecipes.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: "No recipes available"
-      });
+      if (culturalRecipe) {
+        recipe = {
+          id: culturalRecipe._id,
+          name: culturalRecipe.name,
+          type: "cultural",
+          author: "Cultural Recipe",
+          restaurant: `Traditional ${culturalRecipe.region} Cuisine`,
+          image: culturalRecipe.img || "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=800&q=80",
+          description: culturalRecipe.desc || "",
+          region: culturalRecipe.region,
+          ingredients: culturalRecipe.ingredients || [],
+          instructions: culturalRecipe.instructions || [],
+          recipe: culturalRecipe.recipe || []
+        };
+      }
     }
 
-    // Get a random recipe
-    const randomIndex = Math.floor(Math.random() * allRecipes.length);
-    const randomRecipe = allRecipes[randomIndex];
+    // If no cultural recipe or we chose community
+    if (!recipe) {
+      const [communityRecipe] = await Recipe.aggregate([
+        { $match: { isDeleted: false, isFlagged: false, state: { $ne: "forReview" } } },
+        { $sample: { size: 1 } },
+        { $project: { title: 1, author: 1, image: 1, prepTime: 1, cookTime: 1, difficulty: 1, servings: 1, description: 1, ingredients: 1, instructions: 1, tags: 1, allergens: 1, notes: 1 } }
+      ]);
 
-    res.json({
-      success: true,
-      recipe: randomRecipe
-    });
+      if (communityRecipe) {
+        recipe = {
+          id: communityRecipe._id,
+          name: communityRecipe.title,
+          type: "community",
+          author: communityRecipe.author || "Community",
+          restaurant: `By ${communityRecipe.author || "Community"}`,
+          image: communityRecipe.image || "https://images.unsplash.com/photo-1546548970-71785318a17b?w=800&q=80",
+          description: communityRecipe.description || "",
+          prepTime: communityRecipe.prepTime,
+          cookTime: communityRecipe.cookTime,
+          difficulty: communityRecipe.difficulty,
+          servings: communityRecipe.servings,
+          ingredients: communityRecipe.ingredients || [],
+          instructions: communityRecipe.instructions || [],
+          tags: communityRecipe.tags || [],
+          allergens: communityRecipe.allergens || [],
+          notes: communityRecipe.notes || ""
+        };
+      }
+    }
+
+    // Fallback: try the other collection if first was empty
+    if (!recipe) {
+      const [fallback] = await CulturalRecipe.aggregate([
+        { $match: { isActive: true } },
+        { $sample: { size: 1 } }
+      ]);
+
+      if (fallback) {
+        recipe = {
+          id: fallback._id,
+          name: fallback.name,
+          type: "cultural",
+          author: "Cultural Recipe",
+          restaurant: `Traditional ${fallback.region} Cuisine`,
+          image: fallback.img || "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=800&q=80",
+          description: fallback.desc || "",
+          region: fallback.region,
+          ingredients: fallback.ingredients || [],
+          instructions: fallback.instructions || [],
+          recipe: fallback.recipe || []
+        };
+      }
+    }
+
+    if (!recipe) {
+      return res.status(404).json({ success: false, error: "No recipes available" });
+    }
+
+    res.json({ success: true, recipe });
   } catch (e) {
-    console.error("random_recipe_error:", e);
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch random recipe"
-    });
+    res.status(500).json({ success: false, error: "Failed to fetch random recipe" });
   }
 });
 

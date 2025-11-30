@@ -21,7 +21,7 @@ const requireAuth = async (req, res, next) => {
     req.decoded = decoded; // handy for logging
     next();
   } catch (e) {
-    console.error('requireAuth error:', e.message);
+    // console.error('requireAuth error:', e.message);
     return res.status(401).json({ success: false, error: 'Invalid token' });
   }
 };

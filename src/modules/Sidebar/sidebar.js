@@ -10,11 +10,11 @@ const Sidebar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false); // NEW: State for desktop sidebar toggle
 
-  // Debug lines
-  console.log('🔍 Sidebar Debug:');
-  console.log('User:', user);
-  console.log('User Role:', user?.role);
-  console.log('Is Admin?:', user?.role === 'admin');
+  // Debug lines (commented out for performance)
+  // console.log('🔍 Sidebar Debug:');
+  // console.log('User:', user);
+  // console.log('User Role:', user?.role);
+  // console.log('Is Admin?:', user?.role === 'admin');
 
   useEffect(() => {
     if (isMobileMenuOpen) document.body.classList.add("mobile-menu-open");
@@ -45,9 +45,9 @@ const Sidebar = () => {
     { to: "/profile", label: "Profile", icon: <FiUser /> },
   ];
   
-  console.log('📋 Public Items:', publicItems);
-  console.log('📋 Auth Items:', authItems);
-  console.log('📋 Is Authenticated:', isAuthenticated);
+  // console.log('📋 Public Items:', publicItems);
+  // console.log('📋 Auth Items:', authItems);
+  // console.log('📋 Is Authenticated:', isAuthenticated);
   
   return (
     <>

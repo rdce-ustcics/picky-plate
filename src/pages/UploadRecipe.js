@@ -158,7 +158,7 @@ export default function UploadRecipe() {
         window.location.href = "/recipes";
       });
     } catch (err) {
-      console.error("Error uploading recipe:", err);
+      // console.error("Error uploading recipe:", err);
       Swal.fire({
         icon: 'error',
         title: 'Network error',

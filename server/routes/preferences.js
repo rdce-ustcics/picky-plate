@@ -23,7 +23,7 @@ function requireAuth(req, res, next) {
     req.user = { id: String(decoded.id) };
     next();
   } catch (e) {
-    console.error('preferences_auth_error:', e);
+    // console.error('preferences_auth_error:', e);
     return res.status(401).json({ error: 'invalid_token' });
   }
 }
@@ -61,7 +61,7 @@ router.get('/me', async (req, res) => {
       onboardingDone: !!prefs.onboardingDone,
     });
   } catch (e) {
-    console.error('GET /preferences/me error:', e);
+    // console.error('GET /preferences/me error:', e);
     res.status(500).json({ error: 'server_error' });
   }
 });
@@ -113,7 +113,7 @@ router.put('/me', async (req, res) => {
       onboardingDone: !!prefs.onboardingDone,
     });
   } catch (e) {
-    console.error('PUT /preferences/me error:', e);
+    // console.error('PUT /preferences/me error:', e);
     res.status(500).json({ error: 'server_error' });
   }
 });
@@ -130,7 +130,7 @@ router.get('/kids', async (req, res) => {
       kids: kids || [],
     });
   } catch (e) {
-    console.error('GET /preferences/kids error:', e);
+    // console.error('GET /preferences/kids error:', e);
     res.status(500).json({ success: false, message: 'server_error' });
   }
 });
@@ -182,7 +182,7 @@ router.post('/kids', async (req, res) => {
       kid: doc,
     });
   } catch (e) {
-    console.error('POST /preferences/kids error:', e);
+    // console.error('POST /preferences/kids error:', e);
     res.status(500).json({ success: false, message: 'server_error' });
   }
 });
@@ -197,7 +197,7 @@ router.delete('/kids/:kidId', async (req, res) => {
 
     res.json({ success: true });
   } catch (e) {
-    console.error('DELETE /preferences/kids/:kidId error:', e);
+    // console.error('DELETE /preferences/kids/:kidId error:', e);
     res.status(500).json({ success: false, message: 'server_error' });
   }
 });

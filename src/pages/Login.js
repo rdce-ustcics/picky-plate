@@ -146,13 +146,13 @@ export default function Login() {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok || data?.success === false) {
-      console.error("Failed to send OTP after signup:", data?.message || res.statusText);
+      // console.error("Failed to send OTP after signup:", data?.message || res.statusText);
       // Still continue to OTP page - user can resend code
     } else {
       initialCooldown = Number.isFinite(data?.cooldownSec) ? Number(data.cooldownSec) : 60;
     }
   } catch (err) {
-    console.error("Failed to send OTP after signup:", err);
+    // console.error("Failed to send OTP after signup:", err);
     // Still continue to OTP page - user can resend code
   }
 
@@ -178,7 +178,7 @@ export default function Login() {
   }, 500);
 }
     } catch (err) {
-      console.error("Auth error:", err);
+      // console.error("Auth error:", err);
       setApiError(err?.message || "Unable to connect to server. Please try again.");
     } finally {
       setIsLoading(false);

@@ -159,7 +159,7 @@ router.get("/", async (req, res) => {
       pages: Math.ceil(total / l),
     });
   } catch (e) {
-    console.error("recipes_list_error:", e);
+    // console.error("recipes_list_error:", e);
     res.status(500).json({ success: false, error: "list_failed" });
   }
 });
@@ -189,7 +189,7 @@ router.get("/:id", async (req, res) => {
       },
     });
   } catch (e) {
-    console.error("get_recipe_error:", e);
+    // console.error("get_recipe_error:", e);
     res.status(500).json({ success: false, error: "get_failed" });
   }
 });
@@ -246,7 +246,7 @@ router.post("/", protect, async (req, res) => {
 
     res.status(201).json({ success: true, recipe: doc });
   } catch (e) {
-    console.error("create_recipe_error:", e);
+    // console.error("create_recipe_error:", e);
     res.status(500).json({ success: false, error: "create_failed" });
   }
 });
@@ -269,7 +269,7 @@ router.put("/:id", protect, async (req, res) => {
     const isAdmin = req.user?.role === "admin";
     const isOwner = userId && recipeCreatorId && userId === recipeCreatorId;
 
-    console.log("Edit permission check:", { userId, recipeCreatorId, isOwner, isAdmin });
+    // console.log("Edit permission check:", { userId, recipeCreatorId, isOwner, isAdmin });
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({
@@ -328,7 +328,7 @@ router.put("/:id", protect, async (req, res) => {
 
     res.json({ success: true, recipe });
   } catch (e) {
-    console.error("update_recipe_error:", e);
+    // console.error("update_recipe_error:", e);
     res.status(500).json({ success: false, error: "update_failed" });
   }
 });
@@ -351,7 +351,7 @@ router.delete("/:id", protect, async (req, res) => {
     const isAdmin = req.user?.role === "admin";
     const isOwner = userId && recipeCreatorId && userId === recipeCreatorId;
 
-    console.log("Delete permission check:", { userId, recipeCreatorId, isOwner, isAdmin });
+    // console.log("Delete permission check:", { userId, recipeCreatorId, isOwner, isAdmin });
 
     if (!isOwner && !isAdmin) {
       return res.status(403).json({
@@ -368,7 +368,7 @@ router.delete("/:id", protect, async (req, res) => {
 
     res.json({ success: true, message });
   } catch (e) {
-    console.error("delete_recipe_error:", e);
+    // console.error("delete_recipe_error:", e);
     res.status(500).json({ success: false, error: "delete_failed" });
   }
 });
@@ -433,7 +433,7 @@ router.post("/:id/report", protect, async (req, res) => {
       message: 'Recipe reported successfully. Our admin team will review it.' 
     });
   } catch (e) {
-    console.error('report_recipe_error:', e);
+    // console.error('report_recipe_error:', e);
     res.status(500).json({ 
       success: false, 
       message: 'Failed to report recipe. Please try again.' 
