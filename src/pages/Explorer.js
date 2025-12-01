@@ -3,7 +3,6 @@ import { Plus, Edit, Trash2, X, Download, Camera } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import jsPDF from "jspdf";
 import LoadingModal from "../components/LoadingModal";
-import { getCached, setCache, clearCache, CACHE_KEYS, CACHE_TTL } from "../utils/cache";
 import "./Explorer.css";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
@@ -32,21 +31,8 @@ export default function Explorer() {
   });
   const [imagePreview, setImagePreview] = useState(null);
 
-  // Fetch cultural recipes from database (with caching)
-  const fetchRecipes = async (forceRefresh = false) => {
-    const cacheKey = CACHE_KEYS.CULTURAL_RECIPES_REGION(region);
-
-    // Check cache first (unless forcing refresh)
-    if (!forceRefresh) {
-      const cached = getCached(cacheKey);
-      if (cached) {
-        setDishes(cached);
-        setError(null);
-        setLoading(false);
-        return;
-      }
-    }
-
+  // Fetch cultural recipes from database
+  const fetchRecipes = async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -77,14 +63,13 @@ export default function Explorer() {
         setLoading(false);
 
         // Step 2: Load images one by one
-        loadImagesOneByOne(recipesWithPlaceholders, cacheKey);
+        loadImagesOneByOne(recipesWithPlaceholders);
       } else {
         setError("Failed to load recipes");
         setDishes([]);
         setLoading(false);
       }
     } catch (e) {
-      // console.error("Error fetching cultural recipes:", e);
       setError("Failed to load recipes");
       setDishes([]);
       setLoading(false);
@@ -92,9 +77,8 @@ export default function Explorer() {
   };
 
   // Load images in parallel batches for faster progressive loading
-  const loadImagesOneByOne = async (recipes, cacheKey) => {
+  const loadImagesOneByOne = async (recipes) => {
     const BATCH_SIZE = 10; // Load 10 images at once for speed
-    const updatedRecipes = [...recipes];
 
     for (let i = 0; i < recipes.length; i += BATCH_SIZE) {
       const batch = recipes.slice(i, i + BATCH_SIZE);
@@ -102,29 +86,26 @@ export default function Explorer() {
       // Load this batch in parallel
       await Promise.all(
         batch.map(async (recipe) => {
-          const recipeIndex = updatedRecipes.findIndex(r => r.id === recipe.id);
           try {
             const res = await fetch(`${API_BASE}/api/cultural-recipes/${recipe.id}`);
             const data = await res.json();
 
             if (res.ok && data.success) {
-              const updatedRecipe = {
-                ...recipe,
-                img: data.recipe.img || "/images/default-dish.png",
-                imageLoading: false
-              };
-              updatedRecipes[recipeIndex] = updatedRecipe;
-
               // Update this specific recipe with its image
               setDishes(prevDishes =>
                 prevDishes.map(dish =>
-                  dish.id === recipe.id ? updatedRecipe : dish
+                  dish.id === recipe.id
+                    ? {
+                        ...dish,
+                        img: data.recipe.img || "/images/default-dish.png",
+                        imageLoading: false
+                      }
+                    : dish
                 )
               );
             }
           } catch (e) {
             // Mark as done loading even if failed
-            updatedRecipes[recipeIndex] = { ...recipe, imageLoading: false };
             setDishes(prevDishes =>
               prevDishes.map(dish =>
                 dish.id === recipe.id
@@ -136,9 +117,6 @@ export default function Explorer() {
         })
       );
     }
-
-    // Cache the fully loaded recipes (with images)
-    setCache(cacheKey, updatedRecipes, CACHE_TTL.CULTURAL_RECIPES);
   };
 
   useEffect(() => {
@@ -178,7 +156,6 @@ export default function Explorer() {
       }
       return null;
     } catch (e) {
-      // console.error("Error fetching recipe details:", e);
       return null;
     }
   };
@@ -429,13 +406,6 @@ export default function Explorer() {
       return;
     }
 
-    // console.log("🔐 Auth check:", {
-    //   isAuthenticated,
-    //   isAdmin,
-    //   user: user?.email || "unknown",
-    //   role: user?.role || "unknown"
-    // });
-
     try {
       const cleanIngredients = recipeForm.ingredients.filter(item => item.trim());
       const cleanInstructions = recipeForm.instructions.filter(item => item.trim());
@@ -458,18 +428,6 @@ export default function Explorer() {
         "Content-Type": "application/json"
       };
 
-      // console.log("📤 Sending cultural recipe payload:", {
-      //   name: payload.name,
-      //   desc: payload.desc,
-      //   region: payload.region,
-      //   hasImage: !!payload.img,
-      //   imageSize: payload.img ? `${(payload.img.length / 1024).toFixed(2)} KB` : '0 KB',
-      //   ingredientsCount: payload.ingredients.length,
-      //   instructionsCount: payload.instructions.length
-      // });
-
-      // console.log("📋 Request headers:", headers);
-
       const url = editingRecipe
         ? `${API_BASE}/api/cultural-recipes/${editingRecipe.id}`
         : `${API_BASE}/api/cultural-recipes`;
@@ -484,27 +442,14 @@ export default function Explorer() {
 
       const data = await res.json();
 
-      // console.log("📥 Server response:", {
-      //   status: res.status,
-      //   success: data.success,
-      //   error: data.error
-      // });
-
       if (res.ok && data.success) {
         alert("Recipe saved successfully!");
         closeEditForm();
-        // Clear all region caches to show new recipe
-        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("All"));
-        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("Luzon"));
-        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("Visayas"));
-        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("Mindanao"));
-        await fetchRecipes(true); // Force refresh
+        await fetchRecipes();
       } else {
-        // console.error("❌ Failed to save recipe:", data);
         alert(data.error || "Failed to save recipe");
       }
     } catch (e) {
-      // console.error("❌ Save recipe error:", e);
       alert(`Failed to save recipe: ${e.message}`);
     }
   };
@@ -525,18 +470,12 @@ export default function Explorer() {
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // Clear all region caches
-        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("All"));
-        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("Luzon"));
-        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("Visayas"));
-        clearCache(CACHE_KEYS.CULTURAL_RECIPES_REGION("Mindanao"));
-        await fetchRecipes(true); // Force refresh
+        await fetchRecipes();
         setModalDish(null);
       } else {
         alert(data.error || "Failed to delete recipe");
       }
     } catch (e) {
-      // console.error("Delete recipe error:", e);
       alert("Failed to delete recipe");
     }
   };
@@ -686,7 +625,7 @@ export default function Explorer() {
             {modalDish.ingredients && modalDish.ingredients.length > 0 && (
               <div className="recipe-box">
                 <h3>Ingredients</h3>
-                <ul>
+                <ul className="ingredients-list">
                   {modalDish.ingredients.map((ingredient, i) => (
                     <li key={i}>{ingredient}</li>
                   ))}
@@ -694,13 +633,16 @@ export default function Explorer() {
               </div>
             )}
 
-            {/* Instructions Section */}
+            {/* Instructions Section - NOW WITH NUMBERED STEPS */}
             {modalDish.instructions && modalDish.instructions.length > 0 && (
-              <div className="recipe-box">
+              <div className="recipe-box instructions-box">
                 <h3>Instructions</h3>
-                <ol>
+                <ol className="instructions-list">
                   {modalDish.instructions.map((step, i) => (
-                    <li key={i}>{step}</li>
+                    <li key={i}>
+                      <span className="step-number">{i + 1}</span>
+                      <span className="step-text">{step}</span>
+                    </li>
                   ))}
                 </ol>
               </div>
@@ -890,6 +832,7 @@ export default function Explorer() {
                 <div className="recipe-items">
                   {recipeForm.instructions.map((item, index) => (
                     <div key={index} className="recipe-item">
+                      <span className="step-label">{index + 1}.</span>
                       <input
                         type="text"
                         value={item}
@@ -925,4 +868,3 @@ export default function Explorer() {
     </>
   );
 }
-

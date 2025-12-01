@@ -281,6 +281,71 @@
   color: #92400e;
 }
 
+/* Ingredients List - Bullet style */
+.ingredients-list {
+  list-style-type: disc;
+  padding-left: 24px;
+  margin: 0;
+}
+
+.ingredients-list li {
+  margin: 8px 0;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+/* Instructions List - Numbered style */
+.instructions-box {
+  background: white;
+}
+
+.instructions-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: none;
+}
+
+.instructions-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 0;
+  border-bottom: 1px solid #fef3c7;
+  color: #92400e;
+  line-height: 1.6;
+}
+
+.instructions-list li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.instructions-list li:first-child {
+  padding-top: 0;
+}
+
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  background: linear-gradient(to bottom right, #fbbf24, #f59e0b);
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);
+}
+
+.step-text {
+  flex: 1;
+  padding-top: 3px;
+}
+
 .modal-actions {
   display: flex;
   gap: 10px;
@@ -494,6 +559,21 @@
 .recipe-item input {
   flex: 1;
   margin-bottom: 0;
+}
+
+/* Step label for form inputs */
+.step-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  background: linear-gradient(to bottom right, #fbbf24, #f59e0b);
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .btn-remove-item {

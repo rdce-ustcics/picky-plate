@@ -4,11 +4,12 @@ import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import {
   Plus, Clock, TrendingUp, X, ChefHat, Users, ChevronDown, PlusCircle,
   Filter, Search, FileText, Download, Flag, Edit, Trash2, AlertCircle, Loader,
-  Heart, BookmarkPlus, Share2, Flame, Timer, UtensilsCrossed, Copy, Check
+  Heart, BookmarkPlus, Share2, Flame, Timer, UtensilsCrossed, Copy, Check, Camera
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import Swal from 'sweetalert2';
 import LoadingModal from "../components/LoadingModal";
 import "./Recipe.css";
 
@@ -130,6 +131,28 @@ export default function CommunityRecipes() {
   const [editImagePreview, setEditImagePreview] = useState(null);
   const [editLoading, setEditLoading] = useState(false);
   const [editErrors, setEditErrors] = useState({});
+  const [editImageValidating, setEditImageValidating] = useState(false);
+  const [editImageValidation, setEditImageValidation] = useState(null);
+
+  // ============================================
+  // UPLOAD RECIPE MODAL STATE (NEW)
+  // ============================================
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    title: "",
+    description: "",
+    prepTime: "",
+    cookTime: "",
+    difficulty: "Easy",
+    servings: "",
+    notes: "",
+    ingredients: ["", "", ""],
+    instructions: ["", "", ""],
+    tags: [],
+    allergens: [],
+    image: null
+  });
+  const [uploadLoading, setUploadLoading] = useState(false);
 
   // NEW: Favorites/Bookmarks (local storage for demo)
   const [favorites, setFavorites] = useState(() => {
@@ -408,44 +431,44 @@ export default function CommunityRecipes() {
   }, []);
 
   // Fetch recipes (lite mode first for instant display, then load images)
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const headers = isAuthenticated ? authHeaders() : {};
-        headers["x-user-id"] = activeUserId;
+  const fetchRecipes = useCallback(async () => {
+    setLoading(true);
+    try {
+      const headers = isAuthenticated ? authHeaders() : {};
+      headers["x-user-id"] = activeUserId;
 
-        // Fetch in lite mode (no images) for instant display
-        const res = await fetch(`${API_BASE}/api/recipes?${query}&lite=true`, { headers });
-        const data = await res.json();
-        if (res.ok) {
-          // Set recipes with placeholders immediately (instant display!)
-          const recipesWithPlaceholders = (data.items || []).map(recipe => ({
-            ...recipe,
-            imageActivated: false,
-            imageLoading: true,
-            image: null, // Will be loaded progressively
-            actualImage: null
-          }));
-          setItems(recipesWithPlaceholders);
-          setTotal(data.total || 0);
-          setPages(data.pages || 1);
-          setLoading(false); // Hide loading modal immediately
+      // Fetch in lite mode (no images) for instant display
+      const res = await fetch(`${API_BASE}/api/recipes?${query}&lite=true`, { headers });
+      const data = await res.json();
+      if (res.ok) {
+        // Set recipes with placeholders immediately (instant display!)
+        const recipesWithPlaceholders = (data.items || []).map(recipe => ({
+          ...recipe,
+          imageActivated: false,
+          imageLoading: true,
+          image: null, // Will be loaded progressively
+          actualImage: null
+        }));
+        setItems(recipesWithPlaceholders);
+        setTotal(data.total || 0);
+        setPages(data.pages || 1);
+        setLoading(false); // Hide loading modal immediately
 
-          // Then load images progressively in background
-          loadImagesProgressively(recipesWithPlaceholders);
-        } else {
-          // console.error("recipes_list_error:", data);
-          setItems([]); setTotal(0); setPages(1);
-          setLoading(false);
-        }
-      } catch (e) {
-        // console.error("recipes_list_error:", e);
+        // Then load images progressively in background
+        loadImagesProgressively(recipesWithPlaceholders);
+      } else {
         setItems([]); setTotal(0); setPages(1);
         setLoading(false);
       }
-    })();
+    } catch (e) {
+      setItems([]); setTotal(0); setPages(1);
+      setLoading(false);
+    }
   }, [query, isAuthenticated, authHeaders, activeUserId, loadImagesProgressively]);
+
+  useEffect(() => {
+    fetchRecipes();
+  }, [fetchRecipes]);
 
   const handleImageLoad = useCallback((recipeId) => {
     setItems(prevItems =>
@@ -628,7 +651,6 @@ export default function CommunityRecipes() {
 
       return pdf;
     } catch (err) {
-      // console.error("PDF generation failed:", err);
       return null;
     } finally {
       node.classList.remove("pdf-mode");
@@ -693,7 +715,6 @@ export default function CommunityRecipes() {
           closeReport();
           return;
         }
-        // console.error("report_failed:", data);
         alert("Failed to report. Please try again.");
         return;
       }
@@ -709,7 +730,6 @@ export default function CommunityRecipes() {
 
       closeReport();
     } catch (e) {
-      // console.error("report_error:", e);
       alert("Failed to report. Please try again.");
     } finally {
       setReportLoading(false);
@@ -718,27 +738,17 @@ export default function CommunityRecipes() {
 
   const isRecipeOwner = (recipe) => {
     if (!user || !recipe) return false;
-
-    // Get user ID (frontend returns 'id', not '_id')
     const userId = String(user.id || user._id || "").trim();
-
-    // Get recipe creator ID (handle ObjectId object or string)
     let recipeCreatorId = "";
     if (recipe.createdBy) {
-      // Handle both ObjectId object and string
       recipeCreatorId = typeof recipe.createdBy === 'object'
         ? String(recipe.createdBy._id || recipe.createdBy.$oid || recipe.createdBy)
         : String(recipe.createdBy);
     }
     recipeCreatorId = recipeCreatorId.trim();
-
-    // Debug log (commented out for performance)
-    // console.log("isRecipeOwner check:", { userId, recipeCreatorId, match: userId === recipeCreatorId });
-
     return userId && recipeCreatorId && userId === recipeCreatorId;
   };
 
-  // Check if user can modify recipe (owner OR admin)
   const canModifyRecipe = (recipe) => {
     if (!user || !recipe) return false;
     return isRecipeOwner(recipe) || isAdmin;
@@ -767,6 +777,8 @@ export default function CommunityRecipes() {
     });
     setEditImagePreview(recipe.image || null);
     setEditErrors({});
+    setEditImageValidating(false);
+    setEditImageValidation(null);
     setShowEditModal(true);
     setSelectedRecipe(null);
   }
@@ -816,6 +828,46 @@ export default function CommunityRecipes() {
     });
   };
 
+  const validateEditImage = async (imageData) => {
+    if (!imageData) return;
+
+    setEditImageValidating(true);
+    setEditImageValidation(null);
+
+    try {
+      const headers = { "Content-Type": "application/json", ...authHeaders() };
+
+      const res = await fetch(`${API_BASE}/api/recipes/validate-image`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ image: imageData }),
+      });
+
+      const data = await res.json();
+
+      setEditImageValidation({
+        approved: data.approved,
+        message: data.message,
+        details: data.details || {},
+        skipped: data.skipped
+      });
+
+      if (!data.approved && !data.skipped) {
+        setEditErrors(prev => ({ ...prev, image: data.message }));
+      }
+
+    } catch (err) {
+      console.error("Edit image validation error:", err);
+      setEditImageValidation({
+        approved: true,
+        message: "Validation unavailable",
+        skipped: true
+      });
+    } finally {
+      setEditImageValidating(false);
+    }
+  };
+
   const handleEditImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -835,9 +887,13 @@ export default function CommunityRecipes() {
 
       const reader = new FileReader();
       reader.onloadend = () => {
-        setEditImagePreview(reader.result);
-        setEditForm(prev => ({ ...prev, image: reader.result }));
+        const imageData = reader.result;
+        setEditImagePreview(imageData);
+        setEditForm(prev => ({ ...prev, image: imageData }));
         setEditErrors(prev => ({ ...prev, image: null }));
+        setEditImageValidation(null);
+        // Trigger Cloud Vision validation
+        validateEditImage(imageData);
       };
       reader.readAsDataURL(file);
     } catch (error) {
@@ -865,6 +921,15 @@ export default function CommunityRecipes() {
     const validInstructions = editForm.instructions.filter(inst => inst.trim());
     if (validInstructions.length === 0) {
       errors.instructions = "At least one instruction is required";
+    }
+
+    // Check image validation if a new image was uploaded
+    if (editImagePreview && editImageValidation && !editImageValidation.approved && !editImageValidation.skipped) {
+      errors.image = "Image not approved - please upload a valid food image";
+    }
+
+    if (editImagePreview && editImageValidating) {
+      errors.image = "Please wait for image validation to complete";
     }
 
     return errors;
@@ -910,7 +975,6 @@ export default function CommunityRecipes() {
       alert("Recipe updated successfully!");
       closeEditModal();
     } catch (e) {
-      // console.error("update_recipe_error:", e);
       alert("Failed to update recipe. Please try again.");
     } finally {
       setEditLoading(false);
@@ -964,24 +1028,6 @@ export default function CommunityRecipes() {
     }
   };
 
-  const toggleEditTag = (tag) => {
-    setEditForm(prev => ({
-      ...prev,
-      tags: prev.tags.includes(tag)
-        ? prev.tags.filter(t => t !== tag)
-        : [...prev.tags, tag]
-    }));
-  };
-
-  const toggleEditAllergen = (allergen) => {
-    setEditForm(prev => ({
-      ...prev,
-      allergens: prev.allergens.includes(allergen)
-        ? prev.allergens.filter(a => a !== allergen)
-        : [...prev.allergens, allergen]
-    }));
-  };
-
   async function handleDeleteRecipe(recipe) {
     if (!canModifyRecipe(recipe)) {
       alert("You don't have permission to delete this recipe");
@@ -1013,7 +1059,6 @@ export default function CommunityRecipes() {
       setSelectedRecipe(null);
       alert("Recipe deleted successfully");
     } catch (e) {
-      // console.error("delete_recipe_error:", e);
       alert("Failed to delete recipe. Please try again.");
     }
   }
@@ -1025,6 +1070,214 @@ export default function CommunityRecipes() {
       case 'medium': return 'medium';
       case 'hard': return 'hard';
       default: return 'easy';
+    }
+  };
+
+  // ============================================
+  // UPLOAD RECIPE MODAL FUNCTIONS
+  // ============================================
+
+  const openUploadModal = () => {
+    if (!isAuthenticated) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Login required',
+        text: 'Please log in to upload a recipe.',
+      });
+      return;
+    }
+    setUploadForm({
+      title: "",
+      description: "",
+      prepTime: "",
+      cookTime: "",
+      difficulty: "Easy",
+      servings: "",
+      notes: "",
+      ingredients: ["", "", ""],
+      instructions: ["", "", ""],
+      tags: [],
+      allergens: [],
+      image: null
+    });
+    setShowUploadModal(true);
+  };
+
+  const closeUploadModal = () => {
+    setShowUploadModal(false);
+    setUploadForm({
+      title: "",
+      description: "",
+      prepTime: "",
+      cookTime: "",
+      difficulty: "Easy",
+      servings: "",
+      notes: "",
+      ingredients: ["", "", ""],
+      instructions: ["", "", ""],
+      tags: [],
+      allergens: [],
+      image: null
+    });
+  };
+
+  const handleUploadFormChange = (field, value) => {
+    setUploadForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleUploadImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => setUploadForm(prev => ({ ...prev, image: reader.result }));
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const addUploadIngredient = () => {
+    setUploadForm(prev => ({ ...prev, ingredients: [...prev.ingredients, ""] }));
+  };
+
+  const removeUploadIngredient = (index) => {
+    if (uploadForm.ingredients.length > 1) {
+      setUploadForm(prev => ({
+        ...prev,
+        ingredients: prev.ingredients.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const updateUploadIngredient = (index, value) => {
+    const next = [...uploadForm.ingredients];
+    next[index] = value;
+    setUploadForm(prev => ({ ...prev, ingredients: next }));
+  };
+
+  const addUploadInstruction = () => {
+    setUploadForm(prev => ({ ...prev, instructions: [...prev.instructions, ""] }));
+  };
+
+  const removeUploadInstruction = (index) => {
+    if (uploadForm.instructions.length > 1) {
+      setUploadForm(prev => ({
+        ...prev,
+        instructions: prev.instructions.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const updateUploadInstruction = (index, value) => {
+    const next = [...uploadForm.instructions];
+    next[index] = value;
+    setUploadForm(prev => ({ ...prev, instructions: next }));
+  };
+
+  const toggleUploadTag = (tag) => {
+    setUploadForm(prev => ({
+      ...prev,
+      tags: prev.tags.includes(tag) ? prev.tags.filter(t => t !== tag) : [...prev.tags, tag]
+    }));
+  };
+
+  const toggleUploadAllergen = (a) => {
+    setUploadForm(prev => ({
+      ...prev,
+      allergens: prev.allergens.includes(a) ? prev.allergens.filter(t => t !== a) : [...prev.allergens, a]
+    }));
+  };
+
+  const validateUploadForm = () => {
+    const errs = [];
+    if (!uploadForm.title.trim()) errs.push("Dish name is required");
+    if (!uploadForm.description.trim()) errs.push("Description is required");
+
+    const cleanIngredients = uploadForm.ingredients.map(s => s.trim()).filter(Boolean);
+    if (cleanIngredients.length === 0) errs.push("At least one ingredient is required");
+
+    const cleanInstructions = uploadForm.instructions.map(s => s.trim()).filter(Boolean);
+    if (cleanInstructions.length === 0) errs.push("At least one instruction is required");
+
+    if (!uploadForm.prepTime) errs.push("Prep time is required");
+    if (!uploadForm.cookTime) errs.push("Cook time is required");
+    if (!uploadForm.servings) errs.push("Serving size is required");
+    if (!uploadForm.difficulty) errs.push("Difficulty is required");
+
+    if (errs.length) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Please fix these',
+        html: `<ul style="text-align:left;margin:0;padding-left:18px;">${errs.map(e => `<li>${e}</li>`).join("")}</ul>`
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const handleUploadSubmit = async () => {
+    if (!validateUploadForm()) return;
+
+    setUploadLoading(true);
+
+    const recipeData = {
+      title: uploadForm.title.trim(),
+      description: uploadForm.description.trim(),
+      image: uploadForm.image || "",
+      ingredients: uploadForm.ingredients.map(i => i.trim()).filter(Boolean),
+      instructions: uploadForm.instructions.map(i => i.trim()).filter(Boolean),
+      prepTime: uploadForm.prepTime,
+      cookTime: uploadForm.cookTime,
+      difficulty: uploadForm.difficulty,
+      notes: uploadForm.notes.trim(),
+      servings: uploadForm.servings,
+      tags: uploadForm.tags,
+      allergens: uploadForm.allergens
+    };
+
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (isAuthenticated) Object.assign(headers, authHeaders());
+
+      const res = await fetch(`${API_BASE}/api/recipes`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(recipeData),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        if (res.status === 401) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Login required',
+            text: 'Please log in to upload a recipe.',
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Upload failed',
+            text: data?.error || 'Something went wrong.',
+          });
+        }
+        return;
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Recipe uploaded!',
+        showConfirmButton: true,
+      }).then(() => {
+        closeUploadModal();
+        // Refresh the recipe list
+        fetchRecipes();
+      });
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Network error',
+        text: 'Please try again.',
+      });
+    } finally {
+      setUploadLoading(false);
     }
   };
 
@@ -1050,10 +1303,11 @@ export default function CommunityRecipes() {
                 {showMine ? "My Recipes" : "All Recipes"}
               </button>
 
-              <Link to="/recipes/upload" className="cr-btn-upload">
+              {/* Changed from Link to button that opens modal */}
+              <button onClick={openUploadModal} className="cr-btn-upload">
                 <Plus className="w-4 h-4" />
                 Upload Recipe
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -1078,7 +1332,7 @@ export default function CommunityRecipes() {
 
             {/* Quick Filters */}
             <div className="cr-quick-filters">
-              {/* Tag Dropdown - FIXED with position calculation */}
+              {/* Tag Dropdown */}
               <div className="cr-dropdown" ref={tagMenuRef}>
                 <button
                   ref={tagButtonRef}
@@ -1183,7 +1437,7 @@ export default function CommunityRecipes() {
                   </select>
                 </div>
 
-                {/* Allergen Exclusions - FIXED with position calculation */}
+                {/* Allergen Exclusions */}
                 <div className="cr-dropdown cr-allergen-dropdown" ref={allergenMenuRef}>
                   <button
                     ref={allergenButtonRef}
@@ -1306,9 +1560,9 @@ export default function CommunityRecipes() {
               <h3 className="cr-empty-title">No recipes found</h3>
               <p className="cr-empty-text">
                 Try adjusting your filters or{" "}
-                <Link to="/recipes/upload" className="cr-empty-link">
+                <button onClick={openUploadModal} className="cr-empty-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
                   be the first to add one!
-                </Link>
+                </button>
               </p>
             </div>
           ) : (
@@ -1348,7 +1602,7 @@ export default function CommunityRecipes() {
                         </span>
                       )}
 
-                      {/* Favorite Button - NEW */}
+                      {/* Favorite Button */}
                       <button
                         onClick={(e) => toggleFavorite(recipe._id, e)}
                         className="recipe-card-favorite-btn"
@@ -1701,9 +1955,7 @@ export default function CommunityRecipes() {
             <div className="cr-edit-modal-body">
               {/* Image Upload */}
               <div className="cr-form-group">
-                <label className="cr-form-label">
-                  Recipe Image (Landscape only)
-                </label>
+                <label className="cr-form-label">Recipe Image (Landscape only)</label>
                 {editImagePreview && (
                   <div className="cr-image-preview-container">
                     <img src={editImagePreview} alt="Preview" className="cr-image-preview" />
@@ -1899,6 +2151,260 @@ export default function CommunityRecipes() {
                   <>
                     <Edit className="w-4 h-4" />
                     Save Changes
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================
+          UPLOAD RECIPE MODAL (NEW)
+          ============================================ */}
+      {showUploadModal && (
+        <div className="cr-modal-overlay" onClick={closeUploadModal}>
+          <div className="cr-upload-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="cr-edit-modal-header">
+              <div className="cr-edit-modal-header-content">
+                <div className="cr-edit-modal-icon-box">
+                  <Plus className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="cr-edit-modal-title">Add A Plate</h3>
+                  <p style={{ fontSize: '0.8rem', color: '#92400E', margin: 0 }}>Share your culinary creation</p>
+                </div>
+              </div>
+              <button onClick={closeUploadModal} className="cr-edit-modal-close">
+                <X className="w-5 h-5 text-gray-700" />
+              </button>
+            </div>
+
+            <div className="cr-edit-modal-body">
+              {/* Photo Upload */}
+              <div className="cr-form-group">
+                <label className="cr-form-label">Photo (optional)</label>
+                <input type="file" accept="image/*" onChange={handleUploadImageUpload} className="hidden" id="upload-photo" style={{ display: 'none' }} />
+                <label
+                  htmlFor="upload-photo"
+                  className="cr-upload-photo-box"
+                >
+                  {uploadForm.image ? (
+                    <img src={uploadForm.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                      <Camera style={{ width: '48px', height: '48px', color: '#F59E0B', marginBottom: '8px' }} />
+                      <p style={{ color: '#92400E', fontWeight: '500', margin: 0 }}>Upload a photo</p>
+                      <p style={{ color: '#B45309', fontSize: '12px', marginTop: '4px' }}>Click to browse</p>
+                    </div>
+                  )}
+                </label>
+              </div>
+
+              {/* Dish Name */}
+              <div className="cr-form-group">
+                <label className="cr-form-label">Dish Name *</label>
+                <input
+                  type="text"
+                  value={uploadForm.title}
+                  onChange={(e) => handleUploadFormChange("title", e.target.value)}
+                  className="cr-text-input"
+                  placeholder="Enter dish name"
+                />
+              </div>
+
+              {/* Description */}
+              <div className="cr-form-group">
+                <label className="cr-form-label">Description *</label>
+                <input
+                  type="text"
+                  value={uploadForm.description}
+                  onChange={(e) => handleUploadFormChange("description", e.target.value)}
+                  className="cr-text-input"
+                  placeholder="Brief description of your dish"
+                />
+              </div>
+
+              {/* Ingredients */}
+              <div className="cr-form-group">
+                <label className="cr-form-label">Ingredients *</label>
+                <div className="cr-ingredient-list">
+                  {uploadForm.ingredients.map((ingredient, index) => (
+                    <div key={index} className="cr-ingredient-row">
+                      <input
+                        type="text"
+                        value={ingredient}
+                        onChange={(e) => updateUploadIngredient(index, e.target.value)}
+                        className="cr-text-input"
+                        placeholder="e.g., ½ cup coconut milk"
+                      />
+                      {uploadForm.ingredients.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeUploadIngredient(index)}
+                          className="cr-remove-btn"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button type="button" onClick={addUploadIngredient} className="cr-add-btn">
+                    <PlusCircle className="w-4 h-4" />
+                    Add Ingredient
+                  </button>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="cr-form-group">
+                <label className="cr-form-label">Instructions *</label>
+                <div className="cr-instruction-list">
+                  {uploadForm.instructions.map((instruction, index) => (
+                    <div key={index} className="cr-instruction-row">
+                      <div className="cr-instruction-number">{index + 1}</div>
+                      <input
+                        type="text"
+                        value={instruction}
+                        onChange={(e) => updateUploadInstruction(index, e.target.value)}
+                        className="cr-text-input"
+                        placeholder={`Step ${index + 1}`}
+                      />
+                      {uploadForm.instructions.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeUploadInstruction(index)}
+                          className="cr-remove-btn"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button type="button" onClick={addUploadInstruction} className="cr-add-btn">
+                    <PlusCircle className="w-4 h-4" />
+                    Add Step
+                  </button>
+                </div>
+              </div>
+
+              {/* Times / Difficulty / Servings */}
+              <div className="cr-advanced-grid">
+                <select
+                  value={uploadForm.prepTime}
+                  onChange={(e) => handleUploadFormChange("prepTime", e.target.value)}
+                  className="cr-select"
+                >
+                  <option value="">Prep Time *</option>
+                  {PREP_TIME_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={uploadForm.cookTime}
+                  onChange={(e) => handleUploadFormChange("cookTime", e.target.value)}
+                  className="cr-select"
+                >
+                  <option value="">Cook Time *</option>
+                  {COOK_TIME_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={uploadForm.difficulty}
+                  onChange={(e) => handleUploadFormChange("difficulty", e.target.value)}
+                  className="cr-select"
+                >
+                  <option value="Easy">Easy</option>
+                  <option value="Medium">Medium</option>
+                  <option value="Hard">Hard</option>
+                </select>
+
+                <select
+                  value={uploadForm.servings}
+                  onChange={(e) => handleUploadFormChange("servings", e.target.value)}
+                  className="cr-select"
+                >
+                  <option value="">Servings *</option>
+                  {SERVING_SIZE_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Tags */}
+              <div className="cr-form-group">
+                <label className="cr-form-label">Tags (optional)</label>
+                <div className="cr-tags-grid">
+                  {TAG_OPTIONS.map((tag) => {
+                    const active = uploadForm.tags.includes(tag);
+                    return (
+                      <button
+                        type="button"
+                        key={tag}
+                        onClick={() => toggleUploadTag(tag)}
+                        className={`cr-tag-chip ${active ? 'active' : ''}`}
+                      >
+                        #{tag}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Allergens */}
+              <div className="cr-form-group">
+                <label className="cr-form-label">Allergens (optional)</label>
+                <div className="cr-tags-grid">
+                  {ALLERGENS.map((a) => {
+                    const active = uploadForm.allergens.includes(a);
+                    return (
+                      <button
+                        type="button"
+                        key={a}
+                        onClick={() => toggleUploadAllergen(a)}
+                        className={`cr-allergen-chip ${active ? 'active' : ''}`}
+                      >
+                        {a}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Personal Notes */}
+              <div className="cr-form-group">
+                <label className="cr-form-label">Personal Notes (optional)</label>
+                <textarea
+                  value={uploadForm.notes}
+                  onChange={(e) => handleUploadFormChange("notes", e.target.value)}
+                  className="cr-textarea-input"
+                  rows={3}
+                  placeholder="Add any cooking tips or variations..."
+                />
+              </div>
+            </div>
+
+            <div className="cr-edit-modal-footer">
+              <button onClick={closeUploadModal} className="cr-modal-btn cr-modal-btn-secondary">
+                Cancel
+              </button>
+              <button
+                onClick={handleUploadSubmit}
+                disabled={uploadLoading}
+                className={`cr-modal-btn cr-modal-btn-primary ${uploadLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {uploadLoading ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Uploading...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4" />
+                    Upload Recipe
                   </>
                 )}
               </button>

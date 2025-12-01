@@ -1,6 +1,6 @@
 // client/src/pages/UploadRecipe.js
 import React, { useState } from 'react';
-import { Plus, X, Camera } from 'lucide-react';
+import { Plus, X, Camera, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useAuth } from '../auth/AuthContext';
 
@@ -45,6 +45,11 @@ export default function UploadRecipe() {
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedAllergens, setSelectedAllergens] = useState([]);
 
+  // Image validation states
+  const [imageValidating, setImageValidating] = useState(false);
+  const [imageValidation, setImageValidation] = useState(null); // { approved, message, details }
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const addIngredient = () => setIngredients([...ingredients, '']);
   const removeIngredient = (index) => {
     if (ingredients.length > 1) setIngredients(ingredients.filter((_, i) => i !== index));
@@ -68,13 +73,91 @@ export default function UploadRecipe() {
     setSelectedAllergens((prev) => prev.includes(a) ? prev.filter(t => t !== a) : [...prev, a]);
   };
 
+  const validateImage = async (imageData) => {
+    if (!imageData) return;
+
+    setImageValidating(true);
+    setImageValidation(null);
+
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (isAuthenticated) Object.assign(headers, authHeaders());
+
+      const res = await fetch("http://localhost:4000/api/recipes/validate-image", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ image: imageData }),
+      });
+
+      const data = await res.json();
+
+      setImageValidation({
+        approved: data.approved,
+        message: data.message,
+        details: data.details || {},
+        skipped: data.skipped
+      });
+
+      // If image is not approved, show alert
+      if (!data.approved && !data.skipped) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Image Not Approved',
+          html: `
+            <p>${data.message}</p>
+            ${data.details?.inappropriateFlags?.length > 0
+              ? `<p class="text-red-500 mt-2">Flagged for: ${data.details.inappropriateFlags.join(', ')}</p>`
+              : ''}
+            ${data.details?.detectedLabels?.length > 0
+              ? `<p class="text-gray-500 mt-2 text-sm">Detected: ${data.details.detectedLabels.join(', ')}</p>`
+              : ''}
+          `,
+          confirmButtonColor: '#F59E0B'
+        });
+      }
+
+    } catch (err) {
+      console.error("Image validation error:", err);
+      // Allow upload on validation error (fallback)
+      setImageValidation({
+        approved: true,
+        message: "Validation unavailable - proceeding",
+        skipped: true
+      });
+    } finally {
+      setImageValidating(false);
+    }
+  };
+
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        Swal.fire({
+          icon: 'error',
+          title: 'File Too Large',
+          text: 'Please upload an image smaller than 5MB',
+          confirmButtonColor: '#F59E0B'
+        });
+        return;
+      }
+
       const reader = new FileReader();
-      reader.onloadend = () => setImage(reader.result);
+      reader.onloadend = () => {
+        const imageData = reader.result;
+        setImage(imageData);
+        setImageValidation(null);
+        // Trigger validation
+        validateImage(imageData);
+      };
       reader.readAsDataURL(file);
     }
+  };
+
+  const clearImage = () => {
+    setImage(null);
+    setImageValidation(null);
   };
 
   const validate = () => {
@@ -93,11 +176,22 @@ export default function UploadRecipe() {
     if (!servings) errs.push("Serving size is required");
     if (!difficulty) errs.push("Difficulty is required");
 
+    // Check image validation if image exists
+    if (image && imageValidation && !imageValidation.approved && !imageValidation.skipped) {
+      errs.push("Image not approved - please upload a valid food image");
+    }
+
+    // Check if image is still being validated
+    if (image && imageValidating) {
+      errs.push("Please wait for image validation to complete");
+    }
+
     if (errs.length) {
       Swal.fire({
         icon: 'error',
         title: 'Please fix these',
-        html: `<ul style="text-align:left;margin:0;padding-left:18px;">${errs.map(e => `<li>${e}</li>`).join("")}</ul>`
+        html: `<ul style="text-align:left;margin:0;padding-left:18px;">${errs.map(e => `<li>${e}</li>`).join("")}</ul>`,
+        confirmButtonColor: '#F59E0B'
       });
       return false;
     }
@@ -106,6 +200,8 @@ export default function UploadRecipe() {
 
   const handleSubmit = async () => {
     if (!validate()) return;
+
+    setIsSubmitting(true);
 
     const recipeData = {
       title: dishName.trim(),
@@ -139,12 +235,14 @@ export default function UploadRecipe() {
             icon: 'warning',
             title: 'Login required',
             text: 'Please log in to upload a recipe.',
+            confirmButtonColor: '#F59E0B'
           });
         } else {
           Swal.fire({
             icon: 'error',
             title: 'Upload failed',
             text: data?.error || 'Something went wrong.',
+            confirmButtonColor: '#F59E0B'
           });
         }
         return;
@@ -154,16 +252,19 @@ export default function UploadRecipe() {
         icon: 'success',
         title: 'Recipe uploaded!',
         showConfirmButton: true,
+        confirmButtonColor: '#F59E0B'
       }).then(() => {
         window.location.href = "/recipes";
       });
     } catch (err) {
-      // console.error("Error uploading recipe:", err);
       Swal.fire({
         icon: 'error',
         title: 'Network error',
         text: 'Please try again.',
+        confirmButtonColor: '#F59E0B'
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -243,10 +344,27 @@ export default function UploadRecipe() {
                 <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="photo-upload" />
                 <label
                   htmlFor="photo-upload"
-                  className="block border-2 border-dashed border-[#FCD34D] rounded-xl h-64 flex flex-col items-center justify-center cursor-pointer hover:border-[#F59E0B] transition bg-white"
+                  className={`border-2 border-dashed rounded-xl h-64 flex flex-col items-center justify-center cursor-pointer transition bg-white
+                    ${imageValidation?.approved === false && !imageValidation?.skipped
+                      ? 'border-red-400 hover:border-red-500'
+                      : imageValidation?.approved
+                        ? 'border-green-400 hover:border-green-500'
+                        : 'border-[#FCD34D] hover:border-[#F59E0B]'
+                    }`}
                 >
                   {image ? (
-                    <img src={image} alt="Preview" className="w-full h-full object-cover rounded-xl" />
+                    <div className="relative w-full h-full">
+                      <img src={image} alt="Preview" className="w-full h-full object-cover rounded-xl" />
+                      {/* Validation overlay */}
+                      {imageValidating && (
+                        <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
+                          <div className="bg-white rounded-lg px-4 py-3 flex items-center gap-2">
+                            <Loader2 className="w-5 h-5 text-[#F59E0B] animate-spin" />
+                            <span className="text-[#92400E] font-medium">Validating image...</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <>
                       <Camera className="w-16 h-16 text-[#F59E0B] mb-3" />
@@ -255,7 +373,48 @@ export default function UploadRecipe() {
                     </>
                   )}
                 </label>
+
+                {/* Clear image button */}
+                {image && !imageValidating && (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); clearImage(); }}
+                    className="absolute top-2 right-2 bg-white/90 hover:bg-white rounded-full p-1.5 shadow-md transition"
+                  >
+                    <X className="w-5 h-5 text-[#92400E]" />
+                  </button>
+                )}
               </div>
+
+              {/* Validation status message */}
+              {imageValidation && !imageValidating && (
+                <div className={`mt-2 flex items-center gap-2 text-sm ${
+                  imageValidation.approved ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {imageValidation.approved ? (
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      <span>{imageValidation.skipped ? 'Image accepted' : 'Image approved - food detected!'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-4 h-4" />
+                      <span>{imageValidation.message}</span>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Detected food labels */}
+              {imageValidation?.details?.foodLabels?.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {imageValidation.details.foodLabels.slice(0, 5).map((label, i) => (
+                    <span key={i} className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -419,9 +578,26 @@ export default function UploadRecipe() {
           {/* Submit */}
           <button
             onClick={handleSubmit}
-            className="w-full bg-[#F59E0B] hover:bg-[#D97706] text-white font-bold py-4 rounded-xl transition"
+            disabled={isSubmitting || imageValidating || (image && imageValidation && !imageValidation.approved && !imageValidation.skipped)}
+            className={`w-full font-bold py-4 rounded-xl transition flex items-center justify-center gap-2
+              ${isSubmitting || imageValidating || (image && imageValidation && !imageValidation.approved && !imageValidation.skipped)
+                ? 'bg-gray-400 cursor-not-allowed text-gray-200'
+                : 'bg-[#F59E0B] hover:bg-[#D97706] text-white'
+              }`}
           >
-            Upload Recipe
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Uploading...
+              </>
+            ) : imageValidating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Validating Image...
+              </>
+            ) : (
+              'Upload Recipe'
+            )}
           </button>
         </div>
       </div>

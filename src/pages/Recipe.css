@@ -11,6 +11,7 @@
   min-height: 100vh;
   background: linear-gradient(to bottom, #FEF3C7 0%, #FDE68A 50%, #FEF3C7 100%);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  position: relative;
 }
 
 /* ========================================
@@ -65,6 +66,7 @@
   background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
   position: relative;
   overflow: hidden;
+  z-index: 10;
 }
 
 .cr-header::before {
@@ -635,6 +637,8 @@
   max-width: 1600px;
   margin: 0 auto;
   padding: 1rem;
+  position: relative;
+  z-index: 1;
 }
 
 .cr-recipe-grid {
@@ -974,28 +978,50 @@
 }
 
 /* ========================================
-   RECIPE MODAL
+   RECIPE MODAL - FIXED OVERLAY
    ======================================== */
 
 .cr-modal-overlay {
   position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  z-index: 50;
-  padding: 0;
+  z-index: 99999;
+  padding: 1rem;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .cr-modal {
   background: #fefbeb;
   width: 100%;
-  max-height: 95vh;
-  border-radius: 1.5rem 1.5rem 0 0;
+  max-width: 720px;
+  max-height: 90vh;
+  border-radius: 1.5rem;
   overflow-y: auto;
-  animation: modalSlideUp 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  animation: modalZoomIn 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  position: relative;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 3px solid #fbbf24;
+}
+
+@keyframes modalZoomIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @keyframes modalSlideUp {
@@ -1041,6 +1067,11 @@
   justify-content: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s ease;
+  z-index: 10;
+}
+
+.cr-modal-close:hover {
+  transform: scale(1.1);
 }
 
 .cr-modal-close:active {
@@ -1343,14 +1374,20 @@
 
 .cr-report-modal {
   position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 60;
+  z-index: 999999;
   padding: 1rem;
+  box-sizing: border-box;
 }
 
 .cr-report-content {
@@ -1362,17 +1399,6 @@
   border: 3px solid #fbbf24;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: modalZoomIn 0.3s ease;
-}
-
-@keyframes modalZoomIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
 }
 
 .cr-report-header {
@@ -1462,9 +1488,15 @@
 
 .cr-edit-modal {
   max-width: 48rem;
+  width: 100%;
   background: white;
-  border-radius: 1rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 3px solid #fbbf24;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .cr-edit-modal-header {
@@ -1473,6 +1505,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .cr-edit-modal-header-content {
@@ -1512,8 +1545,8 @@
 
 .cr-edit-modal-body {
   padding: 1.5rem;
-  max-height: calc(100vh - 250px);
   overflow-y: auto;
+  flex: 1;
 }
 
 .cr-form-group {
@@ -1556,6 +1589,7 @@
   border-radius: 0.5rem;
   font-size: 0.875rem;
   transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
 .cr-text-input:focus {
@@ -1576,6 +1610,7 @@
   resize: vertical;
   transition: border-color 0.2s;
   min-height: auto;
+  box-sizing: border-box;
 }
 
 .cr-textarea-input:focus {
@@ -1694,6 +1729,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.75rem;
+  flex-shrink: 0;
 }
 
 /* ========================================
@@ -1796,11 +1832,6 @@
 
   .recipe-card-image-container {
     height: 200px;
-  }
-
-  .cr-modal-overlay {
-    align-items: center;
-    padding: 1rem;
   }
 
   .cr-modal {
@@ -2049,6 +2080,18 @@
     width: 100%;
     justify-content: center;
   }
+
+  /* Mobile modal - slide up from bottom */
+  .cr-modal-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .cr-modal {
+    border-radius: 1.5rem 1.5rem 0 0;
+    max-height: 95vh;
+    animation: modalSlideUp 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  }
 }
 
 @media (max-width: 480px) {
@@ -2089,4 +2132,227 @@
     padding: 0.5rem 0.5rem;
     font-size: 0.75rem;
   }
+}
+
+/* ========================================
+   BODY SCROLL LOCK WHEN MODAL OPEN
+   ======================================== */
+
+body.modal-open {
+  overflow: hidden;
+}
+
+/* ========================================
+   UPLOAD RECIPE MODAL STYLES
+   ======================================== */
+
+.cr-upload-modal {
+  max-width: 48rem;
+  width: 100%;
+  background: linear-gradient(145deg, #fffdf7 0%, #fefbf0 50%, #fef9e8 100%);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 3px solid #fbbf24;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom header styling for upload modal */
+.cr-upload-modal .cr-edit-modal-header {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-bottom: 2px solid #fbbf24;
+}
+
+.cr-upload-modal .cr-edit-modal-body {
+  background: transparent;
+}
+
+/* Section dividers in upload modal */
+.cr-upload-modal .cr-form-group {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(251, 191, 36, 0.2);
+}
+
+.cr-upload-modal .cr-form-group:last-child {
+  border-bottom: none;
+}
+
+/* Enhanced labels */
+.cr-upload-modal .cr-form-label {
+  color: #92400E;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cr-upload-photo-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #FCD34D;
+  border-radius: 1rem;
+  height: 160px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: linear-gradient(145deg, #fffbeb 0%, #fef8e0 100%);
+  overflow: hidden;
+  position: relative;
+}
+
+.cr-upload-photo-box::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px dashed rgba(251, 191, 36, 0.3);
+  border-radius: 0.75rem;
+  pointer-events: none;
+}
+
+.cr-upload-photo-box:hover {
+  border-color: #F59E0B;
+  background: linear-gradient(145deg, #fef7dc 0%, #fef3c7 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(251, 191, 36, 0.2);
+}
+
+/* Enhanced input fields in upload modal */
+.cr-upload-modal .cr-text-input,
+.cr-upload-modal .cr-textarea-input {
+  background: white;
+  border: 2px solid #fde68a;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.cr-upload-modal .cr-text-input:focus,
+.cr-upload-modal .cr-textarea-input:focus {
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15), inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Enhanced select dropdowns */
+.cr-upload-modal .cr-select {
+  background: white;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Enhanced footer */
+.cr-upload-modal .cr-edit-modal-footer {
+  background: linear-gradient(to top, #fef3c7 0%, transparent 100%);
+  border-top: 2px solid rgba(251, 191, 36, 0.3);
+}
+
+/* Tags grid for upload modal */
+.cr-tags-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cr-tag-chip {
+  padding: 0.4rem 0.85rem;
+  border-radius: 2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 2px solid #FCD34D;
+  background: linear-gradient(145deg, #fffbeb 0%, #fef7dc 100%);
+  color: #92400E;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.cr-tag-chip:hover {
+  border-color: #F59E0B;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(251, 191, 36, 0.2);
+}
+
+.cr-tag-chip.active {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  border-color: #f59e0b;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.35);
+}
+
+.cr-allergen-chip {
+  padding: 0.4rem 0.85rem;
+  border-radius: 2rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 2px solid #FCD34D;
+  background: linear-gradient(145deg, #fffbeb 0%, #fef7dc 100%);
+  color: #92400E;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.cr-allergen-chip:hover {
+  border-color: #fca5a5;
+  background: linear-gradient(145deg, #fef2f2 0%, #fee2e2 100%);
+  color: #991b1b;
+  transform: translateY(-1px);
+}
+
+.cr-allergen-chip.active {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border-color: #dc2626;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+}
+
+/* Mobile responsive for upload modal */
+@media (max-width: 640px) {
+  .cr-upload-modal {
+    border-radius: 1.5rem 1.5rem 0 0;
+    max-height: 95vh;
+  }
+
+  .cr-upload-photo-box {
+    height: 140px;
+  }
+
+  .cr-tags-grid {
+    gap: 0.375rem;
+  }
+
+  .cr-tag-chip,
+  .cr-allergen-chip {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* Add/Remove button enhancements for upload modal */
+.cr-upload-modal .cr-add-btn {
+  background: linear-gradient(145deg, #fef7dc 0%, #fef3c7 100%);
+  border: 2px dashed #fde68a;
+  transition: all 0.2s ease;
+}
+
+.cr-upload-modal .cr-add-btn:hover {
+  background: linear-gradient(145deg, #fef3c7 0%, #fde68a 100%);
+  border-style: solid;
+  border-color: #fbbf24;
+  transform: translateY(-1px);
+}
+
+.cr-upload-modal .cr-remove-btn {
+  background: linear-gradient(145deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1px solid #fecaca;
+}
+
+.cr-upload-modal .cr-remove-btn:hover {
+  background: linear-gradient(145deg, #fee2e2 0%, #fecaca 100%);
+  transform: scale(1.05);
+}
+
+/* Instruction number enhancement */
+.cr-upload-modal .cr-instruction-number {
+  box-shadow: 0 3px 8px rgba(251, 191, 36, 0.3);
 }

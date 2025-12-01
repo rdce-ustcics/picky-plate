@@ -43,19 +43,17 @@ function ClusteredMarkers({ restaurants, onMarkerClick, getMarkerColor, bounds, 
         const { cluster: isCluster, point_count: pointCount, restaurant } = cluster.properties;
 
         if (isCluster) {
-          // Render cluster marker
-          const size = Math.min(50, 20 + (pointCount / restaurants.length) * 100);
+          // Render cluster marker - Dashboard golden style
+          const size = Math.min(55, 24 + (pointCount / restaurants.length) * 100);
           return (
             <AdvancedMarker
               key={`cluster-${cluster.id}`}
               position={{ lat, lng }}
               onClick={() => {
-                // Zoom into cluster
                 const expansionZoom = Math.min(
                   supercluster.getClusterExpansionZoom(cluster.id),
                   16
                 );
-                // The map will auto-zoom when we update zoom state
               }}
             >
               <div
@@ -63,17 +61,18 @@ function ClusteredMarkers({ restaurants, onMarkerClick, getMarkerColor, bounds, 
                 style={{
                   width: `${size}px`,
                   height: `${size}px`,
-                  background: `linear-gradient(135deg, #ff6b6b, #ee5a5a)`,
+                  background: `linear-gradient(135deg, #F5B83D 0%, #E8A828 100%)`,
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: size > 35 ? '14px' : '12px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-                  border: '3px solid white',
-                  cursor: 'pointer'
+                  color: '#92400E',
+                  fontWeight: '800',
+                  fontSize: size > 40 ? '15px' : '13px',
+                  boxShadow: '0 4px 16px rgba(245, 184, 61, 0.4)',
+                  border: '4px solid white',
+                  cursor: 'pointer',
+                  fontFamily: "'Nunito', 'Poppins', sans-serif"
                 }}
               >
                 {pointCount}
@@ -82,7 +81,7 @@ function ClusteredMarkers({ restaurants, onMarkerClick, getMarkerColor, bounds, 
           );
         }
 
-        // Render individual restaurant marker
+        // Render individual restaurant marker - Dashboard style
         return (
           <AdvancedMarker
             key={`restaurant-${restaurant?.id || cluster.id}`}
@@ -92,12 +91,12 @@ function ClusteredMarkers({ restaurants, onMarkerClick, getMarkerColor, bounds, 
             <div
               className="restaurant-marker"
               style={{
-                width: '24px',
-                height: '24px',
+                width: '28px',
+                height: '28px',
                 background: getMarkerColor(restaurant?.priceLevelNum),
                 borderRadius: '50%',
-                border: '3px solid white',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                border: '4px solid white',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
                 cursor: 'pointer'
               }}
             />
@@ -161,12 +160,147 @@ const mapContainerStyle = {
 
 // Default center (Metro Manila - centered on NCR bounds)
 const defaultCenter = {
-  lat: 14.565,   // Center of NCR (14.35 to 14.78)
-  lng: 121.025   // Center of NCR (120.90 to 121.15)
+  lat: 14.565,
+  lng: 121.025
 };
 
 // Google Maps Map ID (required for AdvancedMarker)
 const MAP_ID = process.env.REACT_APP_GOOGLE_MAP_ID || "DEMO_MAP_ID";
+
+// ========================================
+// ICON COMPONENTS - Dashboard Style
+// ========================================
+
+const SearchIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8"/>
+    <path d="m21 21-4.35-4.35"/>
+  </svg>
+);
+
+const FilterIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+  </svg>
+);
+
+const RefreshIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+    <path d="M3 3v5h5"/>
+    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+    <path d="M16 16h5v5"/>
+  </svg>
+);
+
+const LocationIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M12 2v2"/>
+    <path d="M12 20v2"/>
+    <path d="m4.93 4.93 1.41 1.41"/>
+    <path d="m17.66 17.66 1.41 1.41"/>
+    <path d="M2 12h2"/>
+    <path d="M20 12h2"/>
+    <path d="m6.34 17.66-1.41 1.41"/>
+    <path d="m19.07 4.93-1.41 1.41"/>
+  </svg>
+);
+
+const StarIcon = ({ filled }) => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill={filled ? "#F5B83D" : "none"} stroke="#F5B83D" strokeWidth="2">
+    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"/>
+    <line x1="6" y1="6" x2="18" y2="18"/>
+  </svg>
+);
+
+const MapPinIcon = ({ size = 18 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+    <circle cx="12" cy="10" r="3"/>
+  </svg>
+);
+
+const TruckIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
+    <path d="M15 18H9"/>
+    <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/>
+    <circle cx="17" cy="18" r="2"/>
+    <circle cx="7" cy="18" r="2"/>
+  </svg>
+);
+
+const ClockIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <polyline points="12 6 12 12 16 14"/>
+  </svg>
+);
+
+const FireIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+  </svg>
+);
+
+const LeafIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/>
+    <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
+  </svg>
+);
+
+const WalletIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/>
+    <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/>
+    <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>
+  </svg>
+);
+
+const CheckCircleIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+    <polyline points="22 4 12 14.01 9 11.01"/>
+  </svg>
+);
+
+const ChevronDownIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 12 15 18 9"/>
+  </svg>
+);
+
+const ExternalLinkIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+    <polyline points="15 3 21 3 21 9"/>
+    <line x1="10" y1="14" x2="21" y2="3"/>
+  </svg>
+);
+
+const WarningIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+    <line x1="12" y1="9" x2="12" y2="13"/>
+    <line x1="12" y1="17" x2="12.01" y2="17"/>
+  </svg>
+);
+
+const UtensilsIcon = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/>
+    <path d="M7 2v20"/>
+    <path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+  </svg>
+);
 
 export default function RestaurantLocator() {
   const mapInstanceRef = useRef(null);
@@ -187,28 +321,28 @@ export default function RestaurantLocator() {
   const [deliveryFilter, setDeliveryFilter] = useState("all");
   const [openNowFilter, setOpenNowFilter] = useState(false);
   const [availableCuisines, setAvailableCuisines] = useState([]);
-  const [activeView, setActiveView] = useState("map"); // map or list
-  const [showFilterModal, setShowFilterModal] = useState(false); // Filter modal state
+  const [activeView, setActiveView] = useState("map");
+  const [showFilterModal, setShowFilterModal] = useState(false);
   const [mapCenter, setMapCenter] = useState(defaultCenter);
   const [mapZoom, setMapZoom] = useState(11);
-  const [mapBounds, setMapBounds] = useState(null); // For SuperCluster
+  const [mapBounds, setMapBounds] = useState(null);
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [cacheStatus, setCacheStatus] = useState('checking');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [totalFromApi, setTotalFromApi] = useState(0);
-  const [useApiMode, setUseApiMode] = useState(true); // Use API by default
+  const [useApiMode, setUseApiMode] = useState(true);
 
   // Progress tracking for loading bar
   const [loadingProgress, setLoadingProgress] = useState({
     loaded: 0,
     total: 0,
-    phase: 'idle', // 'idle' | 'initial' | 'background' | 'complete'
+    phase: 'idle',
     message: ''
   });
 
-  // Debounce search query to prevent filtering on every keystroke
+  // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
@@ -232,15 +366,13 @@ export default function RestaurantLocator() {
     "Dasmariñas Village", "San Lorenzo Village", "Urdaneta Village", "Magallanes Village"
   ];
 
-  // NCR Bounding Box (Metro Manila bounds - matches API filter)
   const NCR_BOUNDS = {
-    north: 14.78,   // Northern edge (Caloocan/Valenzuela)
-    south: 14.35,   // Southern edge (Muntinlupa/Las Piñas)
-    east: 121.15,   // Eastern edge (Marikina/Rizal border)
-    west: 120.90    // Western edge (Manila Bay)
+    north: 14.78,
+    south: 14.35,
+    east: 121.15,
+    west: 120.90
   };
 
-  // Check if coordinates are within NCR bounds
   const isWithinNCR = (lat, lng) => {
     return lat >= NCR_BOUNDS.south &&
            lat <= NCR_BOUNDS.north &&
@@ -248,7 +380,6 @@ export default function RestaurantLocator() {
            lng <= NCR_BOUNDS.east;
   };
 
-  // Check if address contains Metro Manila city
   const addressContainsMetroManila = (address) => {
     if (!address) return false;
     const addressLower = address.toLowerCase();
@@ -268,53 +399,7 @@ export default function RestaurantLocator() {
     "Pizza Hut": "https://upload.wikimedia.org/wikipedia/sco/thumb/d/d2/Pizza_Hut_logo.svg/220px-Pizza_Hut_logo.svg.png",
     "Shakey's": "https://upload.wikimedia.org/wikipedia/en/thumb/5/57/Shakey%27s_Pizza_logo.svg/220px-Shakey%27s_Pizza_logo.svg.png",
     "Shakey's Pizza": "https://upload.wikimedia.org/wikipedia/en/thumb/5/57/Shakey%27s_Pizza_logo.svg/220px-Shakey%27s_Pizza_logo.svg.png",
-    "Kenny Rogers": "https://1000logos.net/wp-content/uploads/2022/09/Kenny-Rogers-Roasters-Logo.png",
-    "Kenny Rogers Roasters": "https://1000logos.net/wp-content/uploads/2022/09/Kenny-Rogers-Roasters-Logo.png",
-    "Tokyo Tokyo": "https://tokyotokyo.com.ph/wp-content/uploads/2019/09/tokyo-tokyo-logo.png",
-    "Max's": "https://upload.wikimedia.org/wikipedia/en/thumb/f/fe/Max%27s_Restaurant_logo.svg/220px-Max%27s_Restaurant_logo.svg.png",
-    "Max's Restaurant": "https://upload.wikimedia.org/wikipedia/en/thumb/f/fe/Max%27s_Restaurant_logo.svg/220px-Max%27s_Restaurant_logo.svg.png",
-    "Goldilocks": "https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Goldilocks_Bakeshop_logo.svg/220px-Goldilocks_Bakeshop_logo.svg.png",
-    "Red Ribbon": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/Red_Ribbon_logo.svg/220px-Red_Ribbon_logo.svg.png",
     "Starbucks": "https://upload.wikimedia.org/wikipedia/en/thumb/d/d3/Starbucks_Corporation_Logo_2011.svg/200px-Starbucks_Corporation_Logo_2011.svg.png",
-    "Coffee Bean": "https://upload.wikimedia.org/wikipedia/en/thumb/0/09/The_Coffee_Bean_%26_Tea_Leaf_logo.svg/220px-The_Coffee_Bean_%26_Tea_Leaf_logo.svg.png",
-    "The Coffee Bean & Tea Leaf": "https://upload.wikimedia.org/wikipedia/en/thumb/0/09/The_Coffee_Bean_%26_Tea_Leaf_logo.svg/220px-The_Coffee_Bean_%26_Tea_Leaf_logo.svg.png",
-    "Tim Hortons": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Tim_Hortons_Logo.svg/220px-Tim_Hortons_Logo.svg.png",
-    "Dunkin'": "https://upload.wikimedia.org/wikipedia/en/thumb/b/b8/Dunkin%27_logo.svg/220px-Dunkin%27_logo.svg.png",
-    "Dunkin' Donuts": "https://upload.wikimedia.org/wikipedia/en/thumb/b/b8/Dunkin%27_logo.svg/220px-Dunkin%27_logo.svg.png",
-    "Krispy Kreme": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Krispy_Kreme_Logo.svg/220px-Krispy_Kreme_Logo.svg.png",
-    "J.Co": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/J.CO_logo.svg/220px-J.CO_logo.svg.png",
-    "J.CO": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/52/J.CO_logo.svg/220px-J.CO_logo.svg.png",
-    "Pancake House": "https://www.pancakehouse.com.ph/wp-content/uploads/2020/04/Pancake-House-Logo.png",
-    "Denny's": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/84/Denny%27s_logo.svg/220px-Denny%27s_logo.svg.png",
-    "IHOP": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/IHOP_logo.svg/220px-IHOP_logo.svg.png",
-    "Wendy's": "https://upload.wikimedia.org/wikipedia/en/thumb/3/32/Wendy%27s_full_logo_2012.svg/200px-Wendy%27s_full_logo_2012.svg.png",
-    "Subway": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Subway_2016_logo.svg/220px-Subway_2016_logo.svg.png",
-    "Taco Bell": "https://upload.wikimedia.org/wikipedia/en/thumb/b/b3/Taco_Bell_2016.svg/220px-Taco_Bell_2016.svg.png",
-    "Popeyes": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Popeyes_logo.svg/220px-Popeyes_logo.svg.png",
-    "BonChon": "https://upload.wikimedia.org/wikipedia/en/thumb/8/8f/BonChon_Chicken_logo.svg/220px-BonChon_Chicken_logo.svg.png",
-    "Frankie's": "https://frankiesgroup.ph/wp-content/uploads/2019/06/frankies-logo.png",
-    "Army Navy": "https://armynavyburger.com/wp-content/uploads/2019/06/army-navy-logo.png",
-    "Yellow Cab": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Yellow_Cab_Pizza_logo.svg/220px-Yellow_Cab_Pizza_logo.svg.png",
-    "Angel's Pizza": "https://www.angelspizza.com.ph/wp-content/uploads/2020/04/Angels-Pizza-Logo.png",
-    "Angels Pizza": "https://www.angelspizza.com.ph/wp-content/uploads/2020/04/Angels-Pizza-Logo.png",
-    "Domino's": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Domino%27s_pizza_logo.svg/220px-Domino%27s_pizza_logo.svg.png",
-    "Domino's Pizza": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Domino%27s_pizza_logo.svg/220px-Domino%27s_pizza_logo.svg.png",
-    "Papa John's": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Papa_John%27s_Logo_2019.svg/220px-Papa_John%27s_Logo_2019.svg.png",
-    "S&R": "https://www.snrpizza.ph/wp-content/uploads/2020/04/SNR-Pizza-Logo.png",
-    "Sbarro": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Sbarro_logo.svg/220px-Sbarro_logo.svg.png",
-    "Potato Corner": "https://www.potatocorner.com/wp-content/uploads/2019/06/potato-corner-logo.png",
-    "Turks": "https://turks.ph/wp-content/uploads/2019/06/turks-logo.png",
-    "Andok's": "https://andoks.com/wp-content/uploads/2020/04/Andoks-Logo.png",
-    "Andoks": "https://andoks.com/wp-content/uploads/2020/04/Andoks-Logo.png",
-    "Baliwag": "https://www.baliwaglechon.com/wp-content/uploads/2020/04/Baliwag-Lechon-Logo.png",
-    "Gerry's Grill": "https://www.gerrysgrill.com/wp-content/uploads/2019/06/gerrys-logo.png",
-    "Kuya J": "https://kuyaj.com.ph/wp-content/uploads/2019/06/kuyaj-logo.png",
-    "Cabalen": "https://cabalen.ph/wp-content/uploads/2019/06/cabalen-logo.png",
-    "Conti's": "https://contis.ph/wp-content/uploads/2019/06/contis-logo.png",
-    "Vikings": "https://vikings.ph/wp-content/uploads/2019/06/vikings-logo.png",
-    "Spiral": "https://www.shangri-la.com/images/default-source/logos/spiral-logo.png",
-    "Sambokojin": "https://sambokojin.com/wp-content/uploads/2019/06/sambokojin-logo.png",
-    "Yakimix": "https://yakimix.com.ph/wp-content/uploads/2019/06/yakimix-logo.png"
   };
 
   const getRestaurantImage = (name) => {
@@ -332,9 +417,8 @@ export default function RestaurantLocator() {
     return "https://img.icons8.com/color/200/restaurant.png";
   };
 
-  // Quick filters with proper toggle functionality - checks actual state for toggling
+  // Quick filters with proper toggle functionality
   const handleQuickFilter = (filterId) => {
-    // Check actual filter state to determine if we should toggle on or off
     const isCurrentlyActive = (() => {
       switch(filterId) {
         case 'popular': return minRating >= 4;
@@ -348,7 +432,6 @@ export default function RestaurantLocator() {
     })();
 
     if (isCurrentlyActive) {
-      // Deactivate the filter
       switch(filterId) {
         case 'popular':
           setMinRating(0);
@@ -372,7 +455,6 @@ export default function RestaurantLocator() {
           break;
       }
     } else {
-      // Activate the filter
       switch(filterId) {
         case 'popular':
           setMinRating(4);
@@ -400,15 +482,14 @@ export default function RestaurantLocator() {
   };
 
   const quickFilters = [
-    { id: 'popular', label: "What's Popular", icon: '🔥' },
-    { id: 'healthy', label: 'Healthy Options', icon: '🥗' },
-    { id: 'nearme', label: 'Near Me', icon: '📍' },
-    { id: 'cheap', label: 'Budget Friendly', icon: '💰' },
-    { id: 'delivery', label: 'Delivery', icon: '🚚' },
-    { id: 'open', label: 'Open Now', icon: '🟢' },
+    { id: 'popular', label: "Popular", icon: <FireIcon /> },
+    { id: 'healthy', label: 'Healthy', icon: <LeafIcon /> },
+    { id: 'nearme', label: 'Near Me', icon: <MapPinIcon /> },
+    { id: 'cheap', label: 'Budget', icon: <WalletIcon /> },
+    { id: 'delivery', label: 'Delivery', icon: <TruckIcon /> },
+    { id: 'open', label: 'Open Now', icon: <ClockIcon /> },
   ];
 
-  // Check if a quick filter is active based on actual filter state
   const isQuickFilterActive = (filterId) => {
     switch(filterId) {
       case 'popular': return minRating >= 4;
@@ -473,24 +554,22 @@ export default function RestaurantLocator() {
     setSearchRadius(5);
   };
 
-  // Get marker color based on price level (used by ClusteredMarkers)
+  // Updated marker colors - Dashboard golden theme
   const getMarkerColor = useCallback((priceLevelNum) => {
     const colors = {
-      1: '#65a30d',  // Green - budget friendly
-      2: '#e2a044',  // Yellow - moderate
-      3: '#dc7928',  // Orange - expensive
-      4: '#dc2626'   // Red - very expensive
+      1: '#16A34A', // Green - Budget
+      2: '#F5B83D', // Gold - Moderate
+      3: '#EA580C', // Orange - Premium
+      4: '#DC2626'  // Red - Luxury
     };
-    return colors[priceLevelNum] || '#9ca3af';
+    return colors[priceLevelNum] || '#F5B83D';
   }, []);
 
-  // Handle map bounds change for SuperCluster
   const handleBoundsChange = useCallback((bounds, zoom) => {
     setMapBounds(bounds);
     setMapZoom(zoom);
   }, []);
 
-  // Get user's current location
   const getUserLocation = () => {
     setLocationLoading(true);
     setLocationError(null);
@@ -509,7 +588,6 @@ export default function RestaurantLocator() {
         setLocationLoading(false);
         setMapCenter({ lat: latitude, lng: longitude });
         setMapZoom(14);
-        // Auto-enable nearby mode to reduce initial load and improve performance
         setShowNearbyOnly(true);
       },
       (error) => {
@@ -528,11 +606,6 @@ export default function RestaurantLocator() {
             errorMessage = `Location error: ${error.message}`;
         }
 
-        // console.error('❌ Geolocation error:', {
-        //   code: error.code,
-        //   message: error.message
-        // });
-
         setLocationError(errorMessage);
         setLocationLoading(false);
       },
@@ -544,12 +617,9 @@ export default function RestaurantLocator() {
     );
   };
 
-
-  // Fetch restaurants from API based on location and filters
-  // NOTE: This loads ALL restaurants for client-side pagination - do NOT include currentPage as dependency
   const fetchRestaurantsFromApi = useCallback(async (lat, lng, options = {}) => {
     const {
-      radius = searchRadius * 1000, // Convert km to meters
+      radius = searchRadius * 1000,
       cuisine = selectedCuisine !== "all" ? selectedCuisine : undefined,
       minRatingFilter = minRating > 0 ? minRating : undefined,
       priceLevel = selectedPriceLevel !== "all" ? selectedPriceLevel : undefined,
@@ -603,30 +673,26 @@ export default function RestaurantLocator() {
           setAvailableCuisines([...new Set(formatted)]);
         }
       } catch (error) {
-        // Fallback cuisines if API fails
         setAvailableCuisines(['Filipino', 'Japanese', 'Korean', 'Chinese', 'Italian', 'American', 'Thai', 'Indian', 'Mexican', 'Fast Food', 'Cafe', 'Seafood', 'Pizza', 'Burger', 'Ramen']);
       }
     };
     loadCuisines();
   }, []);
 
-  // Main data loading effect - uses API with location (OPTIMIZED for speed)
+  // Main data loading effect
   useEffect(() => {
-    let isCancelled = false; // Prevent stale updates
+    let isCancelled = false;
 
     const loadRestaurants = async () => {
       setLoading(true);
       setCacheStatus('loading');
       setLoadingProgress({ loaded: 0, total: 0, phase: 'initial', message: 'Connecting to database...' });
 
-      // Determine location to use
       const locationToUse = userLocation || defaultCenter;
 
       if (useApiMode) {
         try {
-          // FAST INITIAL LOAD: Show ALL nearby restaurants, or 3000 for all mode
-          // SuperCluster handles clustering efficiently
-          const initialLimit = showNearbyOnly ? 5000 : 3000; // 5000 for nearby = show all within radius
+          const initialLimit = showNearbyOnly ? 5000 : 3000;
 
           setLoadingProgress({ loaded: 0, total: 0, phase: 'initial', message: 'Fetching restaurants...' });
 
@@ -636,16 +702,15 @@ export default function RestaurantLocator() {
             { radius: showNearbyOnly ? searchRadius * 1000 : 0, limit: initialLimit }
           );
 
-          if (isCancelled) return; // Don't update if effect was cleaned up
+          if (isCancelled) return;
 
-          console.log(`⚡ Fast load: ${result.restaurants.length} restaurants (nearby: ${showNearbyOnly})`);
+          console.log(`Fast load: ${result.restaurants.length} restaurants (nearby: ${showNearbyOnly})`);
 
           setRestaurants(result.restaurants);
           setTotalFromApi(result.total);
           setCacheStatus('api');
           setLoading(false);
 
-          // Update progress - initial load complete
           setLoadingProgress({
             loaded: result.restaurants.length,
             total: result.total,
@@ -655,11 +720,9 @@ export default function RestaurantLocator() {
               : 'All restaurants loaded!'
           });
 
-          // BACKGROUND LOAD: Only when NOT in nearby mode and there are more restaurants
           if (!showNearbyOnly && result.total > initialLimit) {
-            // Load remaining data in background (non-blocking)
             setTimeout(async () => {
-              if (isCancelled) return; // Check again before background load
+              if (isCancelled) return;
 
               try {
                 setLoadingProgress(prev => ({
@@ -674,13 +737,12 @@ export default function RestaurantLocator() {
                   { radius: 0, limit: 20000 }
                 );
 
-                if (isCancelled) return; // Check again after async call
+                if (isCancelled) return;
 
-                console.log(`📊 Background load complete: ${fullResult.restaurants.length} restaurants`);
+                console.log(`Background load complete: ${fullResult.restaurants.length} restaurants`);
                 setRestaurants(fullResult.restaurants);
                 setTotalFromApi(fullResult.total);
 
-                // Mark loading as complete
                 setLoadingProgress({
                   loaded: fullResult.restaurants.length,
                   total: fullResult.total,
@@ -688,7 +750,6 @@ export default function RestaurantLocator() {
                   message: `All ${fullResult.restaurants.length.toLocaleString()} restaurants loaded!`
                 });
 
-                // Hide progress bar after 2 seconds
                 setTimeout(() => {
                   if (!isCancelled) {
                     setLoadingProgress(prev => ({ ...prev, phase: 'idle' }));
@@ -700,7 +761,6 @@ export default function RestaurantLocator() {
               }
             }, 100);
           } else {
-            // No background load needed - hide after 2 seconds
             setTimeout(() => {
               if (!isCancelled) {
                 setLoadingProgress(prev => ({ ...prev, phase: 'idle' }));
@@ -710,14 +770,14 @@ export default function RestaurantLocator() {
           return;
         } catch (apiError) {
           if (isCancelled) return;
-          console.error('❌ API failed, falling back to JSON:', apiError.message);
+          console.error('API failed, falling back to JSON:', apiError.message);
           setUseApiMode(false);
           setLoadingProgress({ loaded: 0, total: 0, phase: 'initial', message: 'Switching to offline mode...' });
         }
       }
 
-      // Fallback: Load from static JSON files (legacy mode)
-      console.log('⚠️ Using fallback JSON mode (API disabled or failed)');
+      // Fallback: Load from static JSON files
+      console.log('Using fallback JSON mode (API disabled or failed)');
       setLoadingProgress({ loaded: 0, total: 0, phase: 'initial', message: 'Loading from local data...' });
       try {
         const response = await fetch("/data/ncr_food_places2.json");
@@ -756,18 +816,14 @@ export default function RestaurantLocator() {
 
     loadRestaurants();
 
-    // Cleanup: Cancel pending updates when dependencies change
     return () => {
       isCancelled = true;
     };
   }, [userLocation, useApiMode, fetchRestaurantsFromApi, showNearbyOnly, searchRadius]);
 
-  // Refetch when TEXT filters change (only in API mode) - separate from nearby filter
-  // Note: showNearbyOnly changes are handled by the main loading effect above
+  // Refetch when TEXT filters change
   useEffect(() => {
-    // Skip if not in API mode, still loading, or no filter changes
     if (!useApiMode || loading) return;
-    // Skip on initial render (no filters active)
     if (!debouncedSearchQuery && selectedCuisine === "all" &&
         selectedPriceLevel === "all" && minRating === 0) return;
 
@@ -783,7 +839,7 @@ export default function RestaurantLocator() {
           locationToUse.lng,
           {
             radius: showNearbyOnly ? searchRadius * 1000 : 0,
-            limit: showNearbyOnly ? 5000 : 5000, // Show ALL nearby restaurants
+            limit: showNearbyOnly ? 5000 : 5000,
             cuisine: selectedCuisine !== "all" ? selectedCuisine : undefined,
             minRatingFilter: minRating > 0 ? minRating : undefined,
             priceLevel: selectedPriceLevel !== "all" ? selectedPriceLevel : undefined,
@@ -793,7 +849,7 @@ export default function RestaurantLocator() {
 
         if (isCancelled) return;
 
-        console.log(`⚡ Refetch: ${result.restaurants.length} restaurants (nearby: ${showNearbyOnly})`);
+        console.log(`Refetch: ${result.restaurants.length} restaurants (nearby: ${showNearbyOnly})`);
         setRestaurants(result.restaurants);
         setTotalFromApi(result.total);
         setLoading(false);
@@ -802,7 +858,6 @@ export default function RestaurantLocator() {
       }
     };
 
-    // Debounce the refetch
     const timer = setTimeout(refetchWithFilters, 300);
     return () => {
       clearTimeout(timer);
@@ -811,13 +866,10 @@ export default function RestaurantLocator() {
   }, [debouncedSearchQuery, selectedCuisine, selectedPriceLevel, minRating,
       showNearbyOnly, searchRadius, userLocation, useApiMode, fetchRestaurantsFromApi]);
 
-
-  // Simplified filtering - server handles most filters in API mode
-  // Only client-side filtering needed for delivery/openNow (not in API) and fallback mode
+  // Simplified filtering
   const filteredRestaurants = useMemo(() => {
     let filtered = restaurants;
 
-    // Add distance if user location is available and not already set by API
     if (userLocation && filtered.length > 0 && !filtered[0].distance) {
       filtered = filtered.map(restaurant => {
         const distance = calculateDistance(
@@ -830,12 +882,10 @@ export default function RestaurantLocator() {
       });
     }
 
-    // Sort by distance if available
     if (filtered.length > 0 && filtered[0].distance !== undefined) {
       filtered = [...filtered].sort((a, b) => (a.distance || 0) - (b.distance || 0));
     }
 
-    // Client-side filters (not handled by API)
     if (deliveryFilter !== "all") {
       filtered = filtered.filter(restaurant => {
         switch(deliveryFilter) {
@@ -858,7 +908,6 @@ export default function RestaurantLocator() {
       });
     }
 
-    // Fallback mode: apply filters that API would normally handle
     if (!useApiMode) {
       if (debouncedSearchQuery) {
         const query = debouncedSearchQuery.toLowerCase();
@@ -919,7 +968,7 @@ export default function RestaurantLocator() {
   }, [filteredRestaurants, debouncedSearchQuery, selectedPriceLevel, minRating,
       selectedCuisine, deliveryFilter, openNowFilter, showNearbyOnly]);
 
-  // Pagination calculations for list view
+  // Pagination calculations
   const paginatedRestaurants = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -928,7 +977,6 @@ export default function RestaurantLocator() {
 
   const totalPages = Math.ceil(filteredRestaurants.length / itemsPerPage);
 
-  // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, selectedPriceLevel, minRating, selectedCuisine, deliveryFilter, openNowFilter, showNearbyOnly, searchRadius]);
@@ -944,11 +992,11 @@ export default function RestaurantLocator() {
     const hasHalfStar = rating % 1 >= 0.5;
     for (let i = 0; i < 5; i++) {
       if (i < fullStars) {
-        stars.push(<span key={i} className="star filled">★</span>);
+        stars.push(<StarIcon key={i} filled={true} />);
       } else if (i === fullStars && hasHalfStar) {
-        stars.push(<span key={i} className="star half">★</span>);
+        stars.push(<span key={i} className="star half"><StarIcon filled={true} /></span>);
       } else {
-        stars.push(<span key={i} className="star">☆</span>);
+        stars.push(<StarIcon key={i} filled={false} />);
       }
     }
     return stars;
@@ -963,15 +1011,24 @@ export default function RestaurantLocator() {
     }
   };
 
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (selectedPriceLevel !== "all") count++;
+    if (minRating > 0) count++;
+    if (selectedCuisine !== "all") count++;
+    if (deliveryFilter !== "all") count++;
+    if (openNowFilter) count++;
+    return count;
+  };
+
   if (!GOOGLE_MAPS_API_KEY) {
     return (
       <div className="restaurant-locator">
-        <div className="error-container" style={{ padding: '40px', textAlign: 'center' }}>
-          <h2>⚠️ Google Maps API Key Missing</h2>
+        <div className="error-container">
+          <WarningIcon />
+          <h2>Google Maps API Key Missing</h2>
           <p>Please add your Google Maps API key to the .env file:</p>
-          <pre style={{ background: '#f5f5f5', padding: '10px', borderRadius: '5px', display: 'inline-block' }}>
-            REACT_APP_GOOGLE_MAPS_API_KEY=your_api_key_here
-          </pre>
+          <pre>REACT_APP_GOOGLE_MAPS_API_KEY=your_api_key_here</pre>
         </div>
       </div>
     );
@@ -981,492 +1038,513 @@ export default function RestaurantLocator() {
     <>
       {loading && <LoadingModal message="Loading restaurant data..." />}
       <div className="restaurant-locator">
-        {/* Header */}
-      <header className="app-header">
-        <div className="header-content">
-          <div className="brand">
-            <div className="logo-icon">🍴</div>
-            <div className="brand-text">
-              <h1>Pick-A-Plate</h1>
-              <p>Your personal food companion</p>
+        {/* Header - Dashboard Style */}
+        <header className="app-header">
+          <div className="header-content">
+            <div className="brand">
+              <div className="logo-icon">
+                <MapPinIcon size={28} />
+              </div>
+              <div className="brand-text">
+                <h1>Restaurant Locator</h1>
+                <p>Discover the best eats near you</p>
+              </div>
+            </div>
+            <div className="header-stats">
+              <span className="stat-value">{filteredRestaurants.length.toLocaleString()}</span>
+              <span className="stat-label">Places Found</span>
             </div>
           </div>
-          <div className="header-stats">
-            <span className="stat-value">{filteredRestaurants.length}</span>
-            <span className="stat-label">Places Found</span>
-          </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Compact Loading Indicator - Small yellow badge in corner */}
-      {loadingProgress.phase !== 'idle' && (
-        <div className={`loading-indicator ${loadingProgress.phase}`}>
-          <div className="loading-indicator-icon">
-            {loadingProgress.phase === 'complete' ? '✓' : ''}
-          </div>
-          <div className="loading-indicator-content">
-            <div className="loading-indicator-progress">
-              <div
-                className="loading-indicator-fill"
-                style={{
-                  width: loadingProgress.total > 0
-                    ? `${Math.min((loadingProgress.loaded / loadingProgress.total) * 100, 100)}%`
-                    : loadingProgress.phase === 'initial' ? '30%' : '100%'
-                }}
-              />
+        {/* Compact Loading Indicator */}
+        {loadingProgress.phase !== 'idle' && (
+          <div className={`loading-indicator ${loadingProgress.phase}`}>
+            <div className="loading-indicator-icon">
+              {loadingProgress.phase === 'complete' ? <CheckCircleIcon /> : null}
             </div>
-            <span className="loading-indicator-text">
-              {loadingProgress.total > 0
-                ? `${loadingProgress.loaded.toLocaleString()}/${loadingProgress.total.toLocaleString()}`
-                : 'Loading...'}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Main Layout */}
-      <div className="main-layout">
-        {/* Sidebar Filters */}
-        <div className="sidebar-filters">
-          {/* Search Section */}
-          <div className="search-section">
-            <input
-              type="text"
-              placeholder="Search restaurants..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="search-input"
-            />
-          </div>
-
-          {/* Quick Filters */}
-          <div className="quick-filters">
-            {quickFilters.map(filter => (
-              <button
-                key={filter.id}
-                className={`quick-filter ${isQuickFilterActive(filter.id) ? 'active' : ''}`}
-                onClick={() => handleQuickFilter(filter.id)}
-              >
-                <span className="filter-icon">{filter.icon}</span>
-                {filter.label}
-              </button>
-            ))}
-          </div>
-
-          {/* Filter Actions */}
-          <div className="filter-actions">
-            <button
-              className="advanced-filters-btn"
-              onClick={() => setShowFilterModal(true)}
-            >
-              ⚙️ Filters
-              {(selectedPriceLevel !== "all" || minRating > 0 || selectedCuisine !== "all" ||
-                deliveryFilter !== "all" || openNowFilter) && (
-                <span className="filter-count">
-                  {[selectedPriceLevel !== "all", minRating > 0, selectedCuisine !== "all",
-                    deliveryFilter !== "all", openNowFilter].filter(Boolean).length}
-                </span>
-              )}
-            </button>
-            <button className="reset-btn" onClick={resetFilters}>
-              🔄 Reset
-            </button>
-          </div>
-
-          {locationError && (
-            <div className="alert alert-warning">
-              ⚠️ {locationError}
-            </div>
-          )}
-        </div>
-
-        {/* Main Content Area */}
-        <div className="main-content">
-          {/* View Toggle Bar */}
-          <div className="view-toggle-bar">
-            <div className="view-buttons">
-              <button
-                className={`view-btn ${activeView === 'map' ? 'active' : ''}`}
-                onClick={() => setActiveView('map')}
-              >
-                Map View
-              </button>
-              <button
-                className={`view-btn ${activeView === 'list' ? 'active' : ''}`}
-                onClick={() => setActiveView('list')}
-              >
-                List View
-              </button>
-            </div>
-          </div>
-
-          {/* Map Container - Show when map view is active */}
-          {activeView === 'map' && (
-            <div className="map-container" style={{ width: '100%', height: '100%' }}>
-              {/* Google Maps - loads immediately with async loading for better performance */}
-              <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-                <Map
-                  style={mapContainerStyle}
-                  defaultCenter={defaultCenter}
-                  center={mapCenter}
-                  zoom={mapZoom}
-                  mapId={MAP_ID}
-                  gestureHandling="greedy"
-                  onCameraChanged={(ev) => {
-                    setMapCenter(ev.detail.center);
-                    setMapZoom(ev.detail.zoom);
+            <div className="loading-indicator-content">
+              <div className="loading-indicator-progress">
+                <div
+                  className="loading-indicator-fill"
+                  style={{
+                    width: loadingProgress.total > 0
+                      ? `${Math.min((loadingProgress.loaded / loadingProgress.total) * 100, 100)}%`
+                      : loadingProgress.phase === 'initial' ? '30%' : '100%'
                   }}
-                  onTilesLoaded={() => {
-                    setIsMapLoaded(true);
-                    if (!userLocation) getUserLocation();
-                  }}
-                >
-                  {/* Map Bounds Tracker for SuperCluster */}
-                  <MapBoundsTracker onBoundsChange={handleBoundsChange} />
+                />
+              </div>
+              <span className="loading-indicator-text">
+                {loadingProgress.total > 0
+                  ? `${loadingProgress.loaded.toLocaleString()}/${loadingProgress.total.toLocaleString()}`
+                  : 'Loading...'}
+              </span>
+            </div>
+          </div>
+        )}
 
-                  {/* SuperCluster-based Restaurant Markers - handles 18k+ points efficiently */}
-                  <ClusteredMarkers
-                    restaurants={filteredRestaurants}
-                    onMarkerClick={setSelectedRestaurant}
-                    getMarkerColor={getMarkerColor}
-                    bounds={mapBounds}
-                    zoom={mapZoom}
-                  />
+        {/* Main Layout */}
+        <div className="main-layout">
+          {/* Sidebar Filters */}
+          <div className="sidebar-filters">
+            {/* Search Section */}
+            <div className="search-section">
+              <div className="search-input-wrapper">
+                <SearchIcon />
+                <input
+                  type="text"
+                  placeholder="Ask about food..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
+                />
+              </div>
+            </div>
 
-                  {/* User Location Marker */}
-                  {userLocation && (
-                    <AdvancedMarker
-                      position={{ lat: userLocation.lat, lng: userLocation.lng }}
-                      title="Your Location"
-                    >
-                      <div className="user-location-marker">
-                        <div className="pulse-ring"></div>
-                        <div className="user-dot"></div>
-                      </div>
-                    </AdvancedMarker>
-                  )}
-
-                  {/* Info Window for Selected Restaurant */}
-                  {selectedRestaurant && selectedRestaurant.lat && selectedRestaurant.lng && (
-                    <InfoWindow
-                      position={{ lat: selectedRestaurant.lat, lng: selectedRestaurant.lng }}
-                      onCloseClick={() => setSelectedRestaurant(null)}
-                    >
-                      <div className="info-window">
-                        <h3>{selectedRestaurant.name}</h3>
-                        <p>{selectedRestaurant.address}</p>
-                        {selectedRestaurant.rating && (
-                          <p>⭐ {selectedRestaurant.rating} ({selectedRestaurant.userRatingCount || 0} reviews)</p>
-                        )}
-                        {selectedRestaurant.priceLevelNum && (
-                          <p>{getPriceLevelSymbol(selectedRestaurant.priceLevelNum)}</p>
-                        )}
-                        {selectedRestaurant.googleMapsUri && (
-                          <a href={selectedRestaurant.googleMapsUri} target="_blank" rel="noopener noreferrer">
-                            View on Google Maps →
-                          </a>
-                        )}
-                      </div>
-                    </InfoWindow>
-                  )}
-                </Map>
-              </APIProvider>
-
-              {userLocation && (
+            {/* Quick Filters - Feature Cards Style */}
+            <div className="quick-filters">
+              {quickFilters.map(filter => (
                 <button
-                  className="locate-me-btn"
-                  onClick={() => {
-                    setMapCenter({ lat: userLocation.lat, lng: userLocation.lng });
-                    setMapZoom(14);
-                  }}
-                  title="Center on my location"
+                  key={filter.id}
+                  className={`quick-filter ${isQuickFilterActive(filter.id) ? 'active' : ''}`}
+                  onClick={() => handleQuickFilter(filter.id)}
                 >
-                  📍
+                  <span className="filter-icon">{filter.icon}</span>
+                  <span className="filter-label">{filter.label}</span>
                 </button>
-              )}
+              ))}
             </div>
-          )}
 
-          {/* List Container - Show when list view is active */}
-          {activeView === 'list' && (
-            <div className="list-container">
-              {loading ? (
-                <div className="loading-state">
-                  <div className="spinner"></div>
-                  <p>Loading delicious places...</p>
-                </div>
-              ) : filteredRestaurants.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">🍽️</div>
-                  <h3>No restaurants found</h3>
-                  <p>Try adjusting your filters or search in a different area</p>
-                  <button className="primary-btn" onClick={resetFilters}>
-                    Reset Filters
+            {/* Filter Actions */}
+            <div className="filter-actions">
+              <button
+                className="advanced-filters-btn"
+                onClick={() => setShowFilterModal(true)}
+              >
+                <FilterIcon />
+                <span>Advanced Filters</span>
+                {getActiveFilterCount() > 0 && (
+                  <span className="filter-count">{getActiveFilterCount()}</span>
+                )}
+              </button>
+              <button className="reset-btn" onClick={resetFilters}>
+                <RefreshIcon />
+                <span>Reset All</span>
+              </button>
+            </div>
+
+            {locationError && (
+              <div className="alert alert-warning">
+                <WarningIcon />
+                <span>{locationError}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Main Content Area */}
+          <div className="main-content">
+            {/* View Toggle Bar */}
+            <div className="view-toggle-bar">
+              <div className="view-buttons">
+                <button
+                  className={`view-btn ${activeView === 'map' ? 'active' : ''}`}
+                  onClick={() => setActiveView('map')}
+                >
+                  Map View
+                </button>
+                <button
+                  className={`view-btn ${activeView === 'list' ? 'active' : ''}`}
+                  onClick={() => setActiveView('list')}
+                >
+                  List View
+                </button>
+              </div>
+            </div>
+
+            {/* Map Container */}
+            {activeView === 'map' && (
+              <div className="map-container">
+                <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+                  <Map
+                    style={mapContainerStyle}
+                    defaultCenter={defaultCenter}
+                    center={mapCenter}
+                    zoom={mapZoom}
+                    mapId={MAP_ID}
+                    gestureHandling="greedy"
+                    onCameraChanged={(ev) => {
+                      setMapCenter(ev.detail.center);
+                      setMapZoom(ev.detail.zoom);
+                    }}
+                    onTilesLoaded={() => {
+                      setIsMapLoaded(true);
+                      if (!userLocation) getUserLocation();
+                    }}
+                  >
+                    <MapBoundsTracker onBoundsChange={handleBoundsChange} />
+
+                    <ClusteredMarkers
+                      restaurants={filteredRestaurants}
+                      onMarkerClick={setSelectedRestaurant}
+                      getMarkerColor={getMarkerColor}
+                      bounds={mapBounds}
+                      zoom={mapZoom}
+                    />
+
+                    {userLocation && (
+                      <AdvancedMarker
+                        position={{ lat: userLocation.lat, lng: userLocation.lng }}
+                        title="Your Location"
+                      >
+                        <div className="user-location-marker">
+                          <div className="pulse-ring"></div>
+                          <div className="user-dot"></div>
+                        </div>
+                      </AdvancedMarker>
+                    )}
+
+                    {selectedRestaurant && selectedRestaurant.lat && selectedRestaurant.lng && (
+                      <InfoWindow
+                        position={{ lat: selectedRestaurant.lat, lng: selectedRestaurant.lng }}
+                        onCloseClick={() => setSelectedRestaurant(null)}
+                      >
+                        <div className="info-window">
+                          <h3>{selectedRestaurant.name}</h3>
+                          <p className="info-address">{selectedRestaurant.address}</p>
+                          {selectedRestaurant.rating && (
+                            <p className="info-rating">
+                              <StarIcon filled={true} />
+                              <span>{selectedRestaurant.rating} ({selectedRestaurant.userRatingCount || 0} reviews)</span>
+                            </p>
+                          )}
+                          {selectedRestaurant.priceLevelNum && (
+                            <p className="info-price">{getPriceLevelSymbol(selectedRestaurant.priceLevelNum)}</p>
+                          )}
+                          {selectedRestaurant.googleMapsUri && (
+                            <a href={selectedRestaurant.googleMapsUri} target="_blank" rel="noopener noreferrer" className="info-link">
+                              <span>View on Google Maps</span>
+                              <ExternalLinkIcon />
+                            </a>
+                          )}
+                        </div>
+                      </InfoWindow>
+                    )}
+                  </Map>
+                </APIProvider>
+
+                {userLocation && (
+                  <button
+                    className="locate-me-btn"
+                    onClick={() => {
+                      setMapCenter({ lat: userLocation.lat, lng: userLocation.lng });
+                      setMapZoom(14);
+                    }}
+                    title="Center on my location"
+                  >
+                    <LocationIcon />
                   </button>
-                </div>
-              ) : (
-                <>
-                <div className="restaurant-grid">
-                  {paginatedRestaurants.map((restaurant, index) => (
-                    <div
-                      key={restaurant.id || index}
-                      className="restaurant-card"
-                      onClick={() => handleRestaurantClick(restaurant)}
-                    >
-                      {/* Card Image */}
-                      <div className="card-image">
-                        <img
-                          src={restaurant.image || getRestaurantImage(restaurant.name)}
-                          alt={restaurant.name}
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "https://img.icons8.com/color/200/restaurant.png";
-                          }}
-                        />
-                        {restaurant.rating && restaurant.rating >= 4.5 && (
-                          <span className="promo-badge">
-                            <span className="promo-title">TOP RATED</span>
-                            <span className="promo-subtitle">⭐ {restaurant.rating}</span>
-                          </span>
-                        )}
-                      </div>
+                )}
+              </div>
+            )}
 
-                      <div className="card-content">
-                        <h3 className="restaurant-name">{restaurant.name}</h3>
-
-                        <div className="restaurant-meta">
-                          <span className="cuisine-type">
-                            {restaurant.cuisine || restaurant.types?.[0] || 'Restaurant'}
-                          </span>
-                          {restaurant.priceLevelNum && (
-                            <span className="price-level">
-                              {getPriceLevelSymbol(restaurant.priceLevelNum)}
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="restaurant-address">{restaurant.address}</p>
-
-                        {restaurant.rating && (
-                          <div className="rating-info">
-                            {renderStars(restaurant.rating)}
-                            <span className="rating-text">
-                              {restaurant.rating} ({restaurant.userRatingCount || 0})
-                            </span>
-                          </div>
-                        )}
-
-                        {restaurant.distance !== undefined && userLocation && (
-                          <div className="distance-info">
-                            📍 {restaurant.distance.toFixed(1)} km away
-                          </div>
-                        )}
-
-                        <div className="service-badges">
-                          {restaurant.hasOnlineDelivery && (
-                            <span className="badge delivery">Delivery</span>
-                          )}
-                          {restaurant.takeaway && (
-                            <span className="badge pickup">Pickup</span>
-                          )}
-                          {restaurant.hasTableBooking && (
-                            <span className="badge reservation">Reserve</span>
-                          )}
-                        </div>
-                      </div>
+            {/* List Container */}
+            {activeView === 'list' && (
+              <div className="list-container">
+                {loading ? (
+                  <div className="loading-state">
+                    <div className="spinner"></div>
+                    <p>Loading delicious places...</p>
+                  </div>
+                ) : filteredRestaurants.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">
+                      <UtensilsIcon />
                     </div>
-                  ))}
-                </div>
-
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="pagination-controls">
-                    <button
-                      className="pagination-btn"
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                    >
-                      ← Previous
-                    </button>
-
-                    <div className="pagination-info">
-                      <span>Page {currentPage} of {totalPages}</span>
-                      <span className="pagination-count">
-                        ({filteredRestaurants.length} restaurants)
-                      </span>
-                    </div>
-
-                    <button
-                      className="pagination-btn"
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next →
+                    <h3>No restaurants found</h3>
+                    <p>Try adjusting your filters or search in a different area</p>
+                    <button className="primary-btn" onClick={resetFilters}>
+                      Reset Filters
                     </button>
                   </div>
+                ) : (
+                  <>
+                    <div className="restaurant-grid">
+                      {paginatedRestaurants.map((restaurant, index) => (
+                        <div
+                          key={restaurant.id || index}
+                          className="restaurant-card"
+                          onClick={() => handleRestaurantClick(restaurant)}
+                        >
+                          <div className="card-image">
+                            <img
+                              src={restaurant.image || getRestaurantImage(restaurant.name)}
+                              alt={restaurant.name}
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "https://img.icons8.com/color/200/restaurant.png";
+                              }}
+                            />
+                            {restaurant.rating && restaurant.rating >= 4.5 && (
+                              <span className="promo-badge">
+                                <span className="promo-title">TOP RATED</span>
+                                <span className="promo-subtitle">{restaurant.rating} stars</span>
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="card-content">
+                            <h3 className="restaurant-name">{restaurant.name}</h3>
+
+                            <div className="restaurant-meta">
+                              <span className="cuisine-type">
+                                {restaurant.cuisine || restaurant.types?.[0] || 'Restaurant'}
+                              </span>
+                              {restaurant.priceLevelNum && (
+                                <span className="price-level">
+                                  {getPriceLevelSymbol(restaurant.priceLevelNum)}
+                                </span>
+                              )}
+                            </div>
+
+                            <p className="restaurant-address">{restaurant.address}</p>
+
+                            {restaurant.rating && (
+                              <div className="rating-info">
+                                <div className="stars-container">
+                                  {renderStars(restaurant.rating)}
+                                </div>
+                                <span className="rating-text">
+                                  {restaurant.rating} ({restaurant.userRatingCount || 0})
+                                </span>
+                              </div>
+                            )}
+
+                            {restaurant.distance !== undefined && userLocation && (
+                              <div className="distance-info">
+                                <MapPinIcon />
+                                <span>{restaurant.distance.toFixed(1)} km away</span>
+                              </div>
+                            )}
+
+                            <div className="service-badges">
+                              {restaurant.hasOnlineDelivery && (
+                                <span className="badge delivery">Delivery</span>
+                              )}
+                              {restaurant.takeaway && (
+                                <span className="badge pickup">Pickup</span>
+                              )}
+                              {restaurant.hasTableBooking && (
+                                <span className="badge reservation">Reserve</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                      <div className="pagination-controls">
+                        <button
+                          className="pagination-btn"
+                          onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                          disabled={currentPage === 1}
+                        >
+                          Previous
+                        </button>
+
+                        <div className="pagination-info">
+                          <span>Page {currentPage} of {totalPages}</span>
+                          <span className="pagination-count">
+                            ({filteredRestaurants.length} restaurants)
+                          </span>
+                        </div>
+
+                        <button
+                          className="pagination-btn"
+                          onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                          disabled={currentPage === totalPages}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
-                </>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Filter Modal */}
-      {showFilterModal && (
-        <div className="modal-overlay" onClick={() => setShowFilterModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Advanced Filters</h2>
-              <button className="modal-close" onClick={() => setShowFilterModal(false)}>
-                ✕
-              </button>
-            </div>
-
-            <div className="modal-body">
-              {/* Cuisine Type Filter */}
-              <div className="filter-section">
-                <h3>🍜 Cuisine Type</h3>
-                <select
-                  value={selectedCuisine}
-                  onChange={(e) => setSelectedCuisine(e.target.value)}
-                  className="modal-select"
-                >
-                  <option value="all">All Cuisines</option>
-                  <optgroup label="Popular">
-                    <option value="filipino">Filipino</option>
-                    <option value="korean">Korean</option>
-                    <option value="japanese">Japanese</option>
-                    <option value="chinese">Chinese</option>
-                    <option value="american">American</option>
-                    <option value="italian">Italian</option>
-                    <option value="mexican">Mexican</option>
-                    <option value="indian">Indian</option>
-                  </optgroup>
-                  <optgroup label="All Available">
-                    {availableCuisines.map(cuisine => (
-                      <option key={cuisine} value={cuisine.toLowerCase()}>
-                        {cuisine}
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
+        {/* Filter Modal - Dashboard Style */}
+        {showFilterModal && (
+          <div className="modal-overlay" onClick={() => setShowFilterModal(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>Advanced Filters</h2>
+                <button className="modal-close" onClick={() => setShowFilterModal(false)}>
+                  <CloseIcon />
+                </button>
               </div>
 
-              {/* Price Range Filter */}
-              <div className="filter-section">
-                <h3>💰 Price Range</h3>
-                <select
-                  value={selectedPriceLevel}
-                  onChange={(e) => setSelectedPriceLevel(e.target.value)}
-                  className="modal-select"
-                >
-                  <option value="all">All Prices</option>
-                  <option value="1">₱ - Budget Friendly</option>
-                  <option value="2">₱₱ - Moderate</option>
-                  <option value="3">₱₱₱ - Premium</option>
-                  <option value="4">₱₱₱₱ - Luxury</option>
-                </select>
-              </div>
-
-              {/* Minimum Rating Filter */}
-              <div className="filter-section">
-                <h3>⭐ Minimum Rating</h3>
-                <select
-                  value={minRating}
-                  onChange={(e) => setMinRating(parseFloat(e.target.value))}
-                  className="modal-select"
-                >
-                  <option value="0">All Ratings</option>
-                  <option value="3">3+ Stars</option>
-                  <option value="3.5">3.5+ Stars</option>
-                  <option value="4">4+ Stars</option>
-                  <option value="4.5">4.5+ Stars</option>
-                </select>
-              </div>
-
-              {/* Service Type Filter */}
-              <div className="filter-section">
-                <h3>🚚 Service Type</h3>
-                <select
-                  value={deliveryFilter}
-                  onChange={(e) => setDeliveryFilter(e.target.value)}
-                  className="modal-select"
-                >
-                  <option value="all">All Services</option>
-                  <option value="delivery">Delivery Available</option>
-                  <option value="pickup">Pickup/Takeout Available</option>
-                  <option value="dine-in">Dine-in Only</option>
-                </select>
-              </div>
-
-              {/* Distance Filter */}
-              {userLocation && (
+              <div className="modal-body">
+                {/* Cuisine Type Filter */}
                 <div className="filter-section">
-                  <h3>📍 Distance</h3>
+                  <h3>Cuisine Type</h3>
+                  <div className="select-wrapper">
+                    <select
+                      value={selectedCuisine}
+                      onChange={(e) => setSelectedCuisine(e.target.value)}
+                      className="modal-select"
+                    >
+                      <option value="all">All Cuisines</option>
+                      <optgroup label="Popular">
+                        <option value="filipino">Filipino</option>
+                        <option value="korean">Korean</option>
+                        <option value="japanese">Japanese</option>
+                        <option value="chinese">Chinese</option>
+                        <option value="american">American</option>
+                        <option value="italian">Italian</option>
+                        <option value="mexican">Mexican</option>
+                        <option value="indian">Indian</option>
+                      </optgroup>
+                      <optgroup label="All Available">
+                        {availableCuisines.map(cuisine => (
+                          <option key={cuisine} value={cuisine.toLowerCase()}>
+                            {cuisine}
+                          </option>
+                        ))}
+                      </optgroup>
+                    </select>
+                    <ChevronDownIcon />
+                  </div>
+                </div>
+
+                {/* Price Range Filter */}
+                <div className="filter-section">
+                  <h3>Price Range</h3>
+                  <div className="select-wrapper">
+                    <select
+                      value={selectedPriceLevel}
+                      onChange={(e) => setSelectedPriceLevel(e.target.value)}
+                      className="modal-select"
+                    >
+                      <option value="all">All Prices</option>
+                      <option value="1">₱ - Budget Friendly</option>
+                      <option value="2">₱₱ - Moderate</option>
+                      <option value="3">₱₱₱ - Premium</option>
+                      <option value="4">₱₱₱₱ - Luxury</option>
+                    </select>
+                    <ChevronDownIcon />
+                  </div>
+                </div>
+
+                {/* Minimum Rating Filter */}
+                <div className="filter-section">
+                  <h3>Minimum Rating</h3>
+                  <div className="select-wrapper">
+                    <select
+                      value={minRating}
+                      onChange={(e) => setMinRating(parseFloat(e.target.value))}
+                      className="modal-select"
+                    >
+                      <option value="0">All Ratings</option>
+                      <option value="3">3+ Stars</option>
+                      <option value="3.5">3.5+ Stars</option>
+                      <option value="4">4+ Stars</option>
+                      <option value="4.5">4.5+ Stars</option>
+                    </select>
+                    <ChevronDownIcon />
+                  </div>
+                </div>
+
+                {/* Service Type Filter */}
+                <div className="filter-section">
+                  <h3>Service Type</h3>
+                  <div className="select-wrapper">
+                    <select
+                      value={deliveryFilter}
+                      onChange={(e) => setDeliveryFilter(e.target.value)}
+                      className="modal-select"
+                    >
+                      <option value="all">All Services</option>
+                      <option value="delivery">Delivery Available</option>
+                      <option value="pickup">Pickup/Takeout Available</option>
+                      <option value="dine-in">Dine-in Only</option>
+                    </select>
+                    <ChevronDownIcon />
+                  </div>
+                </div>
+
+                {/* Distance Filter */}
+                {userLocation && (
+                  <div className="filter-section">
+                    <h3>Distance</h3>
+                    <label className="modal-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={showNearbyOnly}
+                        onChange={(e) => setShowNearbyOnly(e.target.checked)}
+                      />
+                      <span className="checkbox-custom"></span>
+                      <span>Show Nearby Only</span>
+                    </label>
+                    {showNearbyOnly && (
+                      <div className="modal-slider-container">
+                        <label className="slider-label">
+                          Maximum Distance: <strong>{searchRadius} km</strong>
+                        </label>
+                        <input
+                          type="range"
+                          min="1"
+                          max="20"
+                          step="0.5"
+                          value={searchRadius}
+                          onChange={(e) => setSearchRadius(parseFloat(e.target.value))}
+                          className="modal-slider"
+                        />
+                        <div className="slider-markers">
+                          <span>1 km</span>
+                          <span>10 km</span>
+                          <span>20 km</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Open Now Filter */}
+                <div className="filter-section">
+                  <h3>Operating Hours</h3>
                   <label className="modal-checkbox">
                     <input
                       type="checkbox"
-                      checked={showNearbyOnly}
-                      onChange={(e) => setShowNearbyOnly(e.target.checked)}
+                      checked={openNowFilter}
+                      onChange={(e) => setOpenNowFilter(e.target.checked)}
                     />
-                    <span>Show Nearby Only</span>
+                    <span className="checkbox-custom"></span>
+                    <span>Open Now</span>
                   </label>
-                  {showNearbyOnly && (
-                    <div className="modal-slider-container">
-                      <label className="slider-label">
-                        Maximum Distance: {searchRadius} km
-                      </label>
-                      <input
-                        type="range"
-                        min="1"
-                        max="20"
-                        step="0.5"
-                        value={searchRadius}
-                        onChange={(e) => setSearchRadius(parseFloat(e.target.value))}
-                        className="modal-slider"
-                      />
-                      <div className="slider-markers">
-                        <span>1 km</span>
-                        <span>10 km</span>
-                        <span>20 km</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
-              )}
+              </div>
 
-              {/* Open Now Filter */}
-              <div className="filter-section">
-                <h3>🕒 Operating Hours</h3>
-                <label className="modal-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={openNowFilter}
-                    onChange={(e) => setOpenNowFilter(e.target.checked)}
-                  />
-                  <span>Open Now</span>
-                </label>
+              <div className="modal-footer">
+                <button
+                  className="modal-btn secondary"
+                  onClick={() => {
+                    resetFilters();
+                    setShowFilterModal(false);
+                  }}
+                >
+                  Reset All
+                </button>
+                <button className="modal-btn primary" onClick={() => setShowFilterModal(false)}>
+                  Apply Filters
+                </button>
               </div>
             </div>
-
-            <div className="modal-footer">
-              <button
-                className="modal-btn secondary"
-                onClick={() => {
-                  resetFilters();
-                  setShowFilterModal(false);
-                }}
-              >
-                Reset All
-              </button>
-              <button className="modal-btn primary" onClick={() => setShowFilterModal(false)}>
-                Apply Filters
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        )}
       </div>
     </>
   );

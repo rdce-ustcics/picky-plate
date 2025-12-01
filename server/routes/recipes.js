@@ -2,6 +2,7 @@
 const express = require("express");
 const Recipe = require("../models/Recipe");
 const { protect } = require("../middleware/auth");
+const { analyzeImage, quickSafetyCheck } = require("../services/imageModeration");
 
 const router = express.Router();
 const RecipeReport = require('../models/RecipeReport');
@@ -191,6 +192,119 @@ router.get("/:id", async (req, res) => {
   } catch (e) {
     // console.error("get_recipe_error:", e);
     res.status(500).json({ success: false, error: "get_failed" });
+  }
+});
+
+/**
+ * POST /api/recipes/validate-image
+ * Validate image before recipe submission using Cloud Vision API
+ * Checks for inappropriate content and food relevance
+ */
+router.post("/validate-image", protect, async (req, res) => {
+  try {
+    const { image } = req.body;
+
+    if (!image) {
+      return res.status(400).json({
+        success: false,
+        approved: true, // Allow recipes without images
+        message: "No image provided - recipes without images are allowed"
+      });
+    }
+
+    // Skip validation for very small images (likely placeholder or error)
+    if (image.length < 1000) {
+      return res.status(400).json({
+        success: false,
+        approved: false,
+        message: "Image appears to be invalid or too small"
+      });
+    }
+
+    // Check if Cloud Vision is configured
+    if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GOOGLE_CLOUD_PROJECT) {
+      // If not configured, allow all images (fallback mode)
+      console.warn("Cloud Vision not configured - skipping image moderation");
+      return res.json({
+        success: true,
+        approved: true,
+        message: "Image validation skipped (service not configured)",
+        skipped: true
+      });
+    }
+
+    // Analyze the image
+    const result = await analyzeImage(image);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        approved: false,
+        message: result.message || "Image analysis failed"
+      });
+    }
+
+    res.json({
+      success: true,
+      approved: result.approved,
+      message: result.message,
+      details: {
+        isInappropriate: result.isInappropriate,
+        inappropriateFlags: result.inappropriateFlags,
+        isFoodRelated: result.isFoodRelated,
+        foodLabels: result.foodLabels,
+        detectedLabels: result.allLabels
+      }
+    });
+
+  } catch (error) {
+    console.error("Image validation error:", error);
+    res.status(500).json({
+      success: false,
+      approved: false,
+      message: "Failed to validate image. Please try again."
+    });
+  }
+});
+
+/**
+ * POST /api/recipes/quick-safety-check
+ * Quick safety check - only SafeSearch (faster, cheaper)
+ */
+router.post("/quick-safety-check", protect, async (req, res) => {
+  try {
+    const { image } = req.body;
+
+    if (!image) {
+      return res.json({ success: true, safe: true, message: "No image to check" });
+    }
+
+    // Check if Cloud Vision is configured
+    if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GOOGLE_CLOUD_PROJECT) {
+      return res.json({
+        success: true,
+        safe: true,
+        message: "Safety check skipped (service not configured)",
+        skipped: true
+      });
+    }
+
+    const result = await quickSafetyCheck(image);
+
+    res.json({
+      success: result.success,
+      safe: result.safe,
+      message: result.safe ? "Image passed safety check" : "Image flagged for inappropriate content",
+      details: result.safeSearch
+    });
+
+  } catch (error) {
+    console.error("Quick safety check error:", error);
+    res.status(500).json({
+      success: false,
+      safe: false,
+      message: "Safety check failed"
+    });
   }
 });
 
