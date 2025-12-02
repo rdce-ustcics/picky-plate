@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft, ChevronRight, Plus, Sparkles, DollarSign, X, CheckCircle2, BadgeCheck,
+  CalendarDays, UtensilsCrossed, ChefHat, Salad, Coffee, Apple, Trash2,
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { getCached, setCache, CACHE_KEYS, CACHE_TTL } from "../utils/cache";
@@ -33,7 +34,6 @@ function ordinal(n){ return `${n}${["th","st","nd","rd"][n%10>3?0:n%100-20? n%10
 function uniqueByName(arr){ const s=new Set(); return arr.filter(x=>{ const k=String(x?.name||"").toLowerCase().trim(); if(!k||s.has(k)) return false; s.add(k); return true; }); }
 const SLOT_ORDER={ breakfast:0, lunch:1, dinner:2, other:3 };
 
-// Title Case helper (keeps spaces/dashes)
 function toTitle(s=""){
   return String(s)
     .toLowerCase()
@@ -42,7 +42,77 @@ function toTitle(s=""){
     .join("");
 }
 
-const MIN_YEAR=2025; const MIN_MONTH0=9; // blocks only past navigation
+const MIN_YEAR=2025; const MIN_MONTH0=9;
+
+// ---------- Decorative Food Icons (SVG) ----------
+const FoodDecorations = () => (
+  <div className="calendar-header-decorations">
+    {/* Dotted pattern overlay */}
+    <div className="header-dots-pattern" />
+    
+    {/* Corner ribbon accent */}
+    <div className="header-ribbon" />
+    
+    {/* Plate with utensils */}
+    <svg className="header-deco header-deco-1" viewBox="0 0 100 100" fill="currentColor">
+      <circle cx="50" cy="50" r="40" fill="rgba(255,255,255,0.3)" />
+      <circle cx="50" cy="50" r="32" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="2" />
+      <circle cx="50" cy="50" r="20" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+      {/* Fork */}
+      <path d="M20 25 L20 55 M16 25 L16 40 M20 25 L20 40 M24 25 L24 40" stroke="rgba(255,255,255,0.5)" strokeWidth="2" fill="none" strokeLinecap="round"/>
+      {/* Knife */}
+      <path d="M80 25 L80 55 M80 25 Q85 35 80 45" stroke="rgba(255,255,255,0.5)" strokeWidth="2" fill="none" strokeLinecap="round"/>
+    </svg>
+    
+    {/* Chef hat */}
+    <svg className="header-deco header-deco-2" viewBox="0 0 80 80" fill="currentColor">
+      <ellipse cx="40" cy="55" rx="25" ry="8" fill="rgba(255,255,255,0.3)" />
+      <path d="M20 55 L20 35 Q20 15 40 15 Q60 15 60 35 L60 55" fill="rgba(255,255,255,0.25)" />
+      <circle cx="25" cy="30" r="10" fill="rgba(255,255,255,0.2)" />
+      <circle cx="40" cy="22" r="12" fill="rgba(255,255,255,0.2)" />
+      <circle cx="55" cy="30" r="10" fill="rgba(255,255,255,0.2)" />
+    </svg>
+    
+    {/* Apple */}
+    <svg className="header-deco header-deco-3" viewBox="0 0 60 60" fill="currentColor">
+      <path d="M30 15 Q30 8 35 5" stroke="rgba(255,255,255,0.4)" strokeWidth="2" fill="none" strokeLinecap="round"/>
+      <ellipse cx="30" cy="35" rx="20" ry="22" fill="rgba(255,255,255,0.25)" />
+      <path d="M30 13 Q25 18 20 18 Q15 18 15 25" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1"/>
+    </svg>
+    
+    {/* Coffee cup */}
+    <svg className="header-deco header-deco-4" viewBox="0 0 50 50" fill="currentColor">
+      <path d="M10 15 L10 40 Q10 45 15 45 L30 45 Q35 45 35 40 L35 15 Z" fill="rgba(255,255,255,0.25)" />
+      <path d="M35 20 Q45 20 45 30 Q45 38 35 38" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="2"/>
+      {/* Steam */}
+      <path d="M18 10 Q20 5 18 2" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+      <path d="M25 8 Q27 3 25 0" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+    </svg>
+    
+    {/* Croissant */}
+    <svg className="header-deco header-deco-5" viewBox="0 0 50 50" fill="currentColor">
+      <path d="M5 30 Q15 15 25 25 Q35 15 45 30 Q35 40 25 32 Q15 40 5 30 Z" fill="rgba(255,255,255,0.25)" />
+      <path d="M15 27 Q25 22 35 27" stroke="rgba(255,255,255,0.3)" strokeWidth="1" fill="none"/>
+      <path d="M18 30 Q25 26 32 30" stroke="rgba(255,255,255,0.3)" strokeWidth="1" fill="none"/>
+    </svg>
+  </div>
+);
+
+// ---------- Wave SVG for bottom of header ----------
+const HeaderWave = () => (
+  <div className="calendar-header-wave">
+    <svg viewBox="0 0 1200 30" preserveAspectRatio="none">
+      <path 
+        d="M0,30 L0,15 Q150,0 300,15 T600,15 T900,15 T1200,15 L1200,30 Z" 
+        fill="rgba(254, 243, 199, 0.3)"
+      />
+      <path 
+        d="M0,30 L0,20 Q200,8 400,20 T800,20 T1200,20 L1200,30 Z" 
+        fill="rgba(255, 255, 255, 0.15)"
+      />
+    </svg>
+  </div>
+);
 
 // ---------- Cute cooking loader ----------
 function CookingLoader(){
@@ -64,31 +134,26 @@ function CookingLoader(){
 export default function Calendar(){
   const { isAuthenticated, authHeaders } = useAuth();
 
-  // ---------- Initial month ----------
   const now=new Date(); const currentMonth=new Date(now.getFullYear(), now.getMonth(), 1);
   const minMonth=new Date(2025,9,1);
   const [currentDate,setCurrentDate]=useState(currentMonth<minMonth?minMonth:currentMonth);
 
-  // ---------- Selection ----------
   const [selectedWeekStart,setSelectedWeekStart]=useState(null);
   const [selectedDay,setSelectedDay]=useState(null);
   const [hoveredDay,setHoveredDay]=useState(null);
   const [weekIndexInMonth,setWeekIndexInMonth]=useState(0);
 
-  // ---------- Data ----------
   const [mealData,setMealData]=useState({});
   const [showModal,setShowModal]=useState(false);
   const [modalDateKey,setModalDateKey]=useState("");
   const [modalDishes,setModalDishes]=useState([]);
 
-  // AI UI
   const [showAiModal,setShowAiModal]=useState(false);
   const [aiWeekStart,setAiWeekStart]=useState(null);
   const [aiSuggestions,setAiSuggestions]=useState([]);
   const [aiSaving,setAiSaving]=useState(false);
   const [aiLoading,setAiLoading]=useState(false);
 
-  // AI options
   const [showAiOptions,setShowAiOptions]=useState(false);
   const [aiMode,setAiMode]=useState("remainder");
   const [aiMonthBase,setAiMonthBase]=useState(()=> new Date(currentMonth));
@@ -101,7 +166,6 @@ export default function Calendar(){
   const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   const dayNamesShort=["S","M","T","W","T","F","S"];
 
-  // ---------- Calendar math ----------
   const firstDay=new Date(currentDate.getFullYear(), currentDate.getMonth(),1);
   const lastDay=new Date(currentDate.getFullYear(), currentDate.getMonth()+1,0);
   const startOffset=firstDay.getDay();
@@ -113,6 +177,7 @@ export default function Calendar(){
 
   const rows=Math.ceil(days.length/7);
   const today=new Date(); today.setHours(0,0,0,0);
+  const currentDayOfWeek = today.getDay();
 
   const isPastDay=(day)=>{ if(!day) return false; const dt=new Date(currentDate.getFullYear(), currentDate.getMonth(), day); dt.setHours(0,0,0,0); return dt<today; };
   const isToday=(day)=>{ if(!day) return false; const dt=new Date(currentDate.getFullYear(), currentDate.getMonth(), day); return isSameYMD(dt,today); };
@@ -121,7 +186,6 @@ export default function Calendar(){
   const previousMonth=()=>{ if(prevDisabled) return; const nm=new Date(currentDate.getFullYear(), currentDate.getMonth()-1,1); setCurrentDate(nm<minMonth?minMonth:nm); };
   const nextMonth=()=> setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth()+1,1));
 
-  // ---------- Week picker (viewer) ----------
   const weekStarts=useMemo(()=>weekStartsInMonth(currentDate),[currentDate]);
   useEffect(()=>{
     const w=weekStarts; if(!w.length) return;
@@ -135,7 +199,6 @@ export default function Calendar(){
     }
   },[currentDate]); // eslint-disable-line
 
-  // ---------- Fetch month data (with caching) ----------
   useEffect(()=>{
     if(!isAuthenticated) return;
     const y=currentDate.getFullYear(), m0=currentDate.getMonth();
@@ -212,7 +275,6 @@ export default function Calendar(){
     } catch(e){ alert("Error saving plan."); }
   };
 
-  // ---------- Week total ----------
   const weekStart=selectedWeekStart || new Date();
   const s=startOfWeek(weekStart), e=endOfWeek(weekStart);
   const weeklyTotal=useMemo(()=>{
@@ -231,7 +293,6 @@ export default function Calendar(){
 
   const handlePrint=()=> window.print();
 
-  // ---------- AI: Options → Fetch → Modal ----------
   const openAiOptionsModal=()=>{
     if(!isAuthenticated){ alert("Please log in to use AI."); return; }
     setAiSuggestions([]); setAiSaving(false); setAiWeekStart(null); setAiLoading(false);
@@ -394,7 +455,6 @@ export default function Calendar(){
     }
   };
 
-  // Check screen size for responsive day names
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   
   useEffect(() => {
@@ -403,62 +463,130 @@ export default function Calendar(){
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // ---------- UI ----------
+  // Check if viewing current month
+  const isCurrentMonth = currentDate.getFullYear() === today.getFullYear() && currentDate.getMonth() === today.getMonth();
+
   return (
     <div className="calendar-page">
       <main className="calendar-main">
         <div className="calendar-container">
-          {/* Header */}
+          {/* Creative Page Header */}
           <div className="calendar-page-header print-hide">
-            <h1 className="calendar-page-title">Calendar Meal Planner</h1>
-            <p className="calendar-page-subtitle">Plan your meals in advance and manage your budget effectively</p>
+            {/* Floating decorative food items */}
+            <svg className="page-header-floating page-header-floating-1" viewBox="0 0 60 60" fill="currentColor">
+              <ellipse cx="30" cy="35" rx="20" ry="22" fill="#d97706" />
+              <path d="M30 15 Q30 8 35 5" stroke="#d97706" strokeWidth="3" fill="none" strokeLinecap="round"/>
+            </svg>
+            <svg className="page-header-floating page-header-floating-2" viewBox="0 0 50 50" fill="currentColor">
+              <path d="M10 15 L10 40 Q10 45 15 45 L30 45 Q35 45 35 40 L35 15 Z" fill="#d97706" />
+              <path d="M35 20 Q45 20 45 30 Q45 38 35 38" fill="none" stroke="#d97706" strokeWidth="3"/>
+            </svg>
+            <svg className="page-header-floating page-header-floating-3" viewBox="0 0 50 50" fill="currentColor">
+              <path d="M5 30 Q15 15 25 25 Q35 15 45 30 Q35 40 25 32 Q15 40 5 30 Z" fill="#d97706" />
+            </svg>
+            
+            {/* Main content */}
+            <div className="calendar-page-header-content">
+              <div className="calendar-page-header-icon">
+                <CalendarDays />
+              </div>
+              <div className="calendar-page-header-text">
+                <h1 className="calendar-page-title">
+                  Calendar Meal Planner
+                  <span className="calendar-page-title-badge">
+                    <Sparkles /> Smart Planning
+                  </span>
+                </h1>
+                <p className="calendar-page-subtitle">Plan your meals in advance and manage your budget effectively</p>
+              </div>
+            </div>
+            
+            {/* Right side decorations */}
+            <div className="calendar-page-header-decor">
+              <div className="header-decor-item">
+                <ChefHat />
+              </div>
+              <div className="header-decor-item">
+                <Salad />
+              </div>
+              <div className="header-decor-item">
+                <Coffee />
+              </div>
+            </div>
+            
+            {/* Bottom divider */}
+            <div className="calendar-page-header-divider"></div>
           </div>
 
           {/* Calendar Card */}
           <div className="calendar-card print-wrap print-root">
-            {/* Calendar Header */}
+            {/* ===== CREATIVE CALENDAR HEADER ===== */}
             <div className="calendar-header">
-              <div className="calendar-header-top">
-                <h2 className="calendar-month-title">
-                  {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-                </h2>
-
-                <div className="calendar-nav-buttons print-hide">
-                  <button
-                    onClick={previousMonth}
-                    disabled={prevDisabled}
-                    className="calendar-nav-btn"
-                    title="Previous month"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={nextMonth}
-                    className="calendar-nav-btn"
-                    title="Next month"
-                  >
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-
-                  <button
-                    onClick={openAiOptionsModal}
-                    className="calendar-ai-btn"
-                    title="Generate meal suggestions"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    <span className="hidden sm:inline">AI Generate</span>
-                    <span className="sm:hidden">AI</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Day Names */}
-              <div className="calendar-day-names">
-                {(isMobile ? dayNamesShort : dayNames).map((d, i) => (
-                  <div key={i} className="calendar-day-name">
-                    {d}
+              {/* Decorative food elements */}
+              <FoodDecorations />
+              
+              {/* Wave pattern at bottom */}
+              <HeaderWave />
+              
+              {/* Main header content */}
+              <div className="calendar-header-content">
+                <div className="calendar-header-top">
+                  {/* Month title with icon */}
+                  <div className="calendar-month-wrapper">
+                    <div className="calendar-month-icon">
+                      <UtensilsCrossed />
+                    </div>
+                    <div className="calendar-month-text">
+                      <span className="calendar-month-label">Meal Plan</span>
+                      <h2 className="calendar-month-title">
+                        {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                      </h2>
+                    </div>
                   </div>
-                ))}
+
+                  {/* Navigation buttons */}
+                  <div className="calendar-nav-buttons print-hide">
+                    <button
+                      onClick={previousMonth}
+                      disabled={prevDisabled}
+                      className="calendar-nav-btn"
+                      title="Previous month"
+                    >
+                      <ChevronLeft />
+                    </button>
+                    <button
+                      onClick={nextMonth}
+                      className="calendar-nav-btn"
+                      title="Next month"
+                    >
+                      <ChevronRight />
+                    </button>
+
+                    <button
+                      onClick={openAiOptionsModal}
+                      className="calendar-ai-btn"
+                      title="Generate meal suggestions"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      <span className="hidden sm:inline">AI Generate</span>
+                      <span className="sm:hidden">AI</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Day Names with wrapper */}
+                <div className="calendar-day-names-wrapper">
+                  <div className="calendar-day-names">
+                    {(isMobile ? dayNamesShort : dayNames).map((d, i) => (
+                      <div 
+                        key={i} 
+                        className={`calendar-day-name ${i === 0 || i === 6 ? 'weekend' : ''} ${isCurrentMonth && i === currentDayOfWeek ? 'current-day' : ''}`}
+                      >
+                        {d}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -642,8 +770,8 @@ export default function Calendar(){
                     placeholder="₱0.00"
                   />
 
-                  <button onClick={()=>deleteDishRow(i)} className="calendar-dish-delete">
-                    Delete
+                  <button onClick={()=>deleteDishRow(i)} className="calendar-dish-delete" title="Delete dish">
+                    <Trash2 />
                   </button>
                 </div>
               ))}
@@ -823,8 +951,8 @@ export default function Calendar(){
                                 onChange={(e)=>updateAiDish(idx,j,"cost",e.target.value)}
                                 placeholder="₱0.00"
                               />
-                              <button onClick={()=>deleteAiDish(idx,j)} className="calendar-dish-delete">
-                                Delete
+                              <button onClick={()=>deleteAiDish(idx,j)} className="calendar-dish-delete" title="Delete dish">
+                                <Trash2 />
                               </button>
                             </div>
                           )) : (
