@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Edit, Trash2, X, Download, Camera } from "lucide-react";
+import { Plus, Edit, Trash2, X, Download, Camera, MapPin, Compass, ChevronDown } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import jsPDF from "jspdf";
 import LoadingModal from "../components/LoadingModal";
@@ -27,7 +27,7 @@ export default function Explorer() {
     img: "",
     ingredients: [""],
     instructions: [""],
-    recipe: [""] // Backward compatibility
+    recipe: [""]
   });
   const [imagePreview, setImagePreview] = useState(null);
 
@@ -40,7 +40,6 @@ export default function Explorer() {
         params.set("region", region);
       }
 
-      // Step 1: Fetch without images for instant display
       const res = await fetch(`${API_BASE}/api/cultural-recipes?${params}`);
       const data = await res.json();
 
@@ -55,14 +54,13 @@ export default function Explorer() {
           ingredients: r.ingredients || [],
           instructions: r.instructions || [],
           isActive: r.isActive,
-          imageLoading: true // Track individual image loading state
+          imageLoading: true
         }));
 
         setDishes(recipesWithPlaceholders);
         setError(null);
         setLoading(false);
 
-        // Step 2: Load images one by one
         loadImagesOneByOne(recipesWithPlaceholders);
       } else {
         setError("Failed to load recipes");
@@ -76,14 +74,12 @@ export default function Explorer() {
     }
   };
 
-  // Load images in parallel batches for faster progressive loading
   const loadImagesOneByOne = async (recipes) => {
-    const BATCH_SIZE = 10; // Load 10 images at once for speed
+    const BATCH_SIZE = 10;
 
     for (let i = 0; i < recipes.length; i += BATCH_SIZE) {
       const batch = recipes.slice(i, i + BATCH_SIZE);
 
-      // Load this batch in parallel
       await Promise.all(
         batch.map(async (recipe) => {
           try {
@@ -91,7 +87,6 @@ export default function Explorer() {
             const data = await res.json();
 
             if (res.ok && data.success) {
-              // Update this specific recipe with its image
               setDishes(prevDishes =>
                 prevDishes.map(dish =>
                   dish.id === recipe.id
@@ -105,7 +100,6 @@ export default function Explorer() {
               );
             }
           } catch (e) {
-            // Mark as done loading even if failed
             setDishes(prevDishes =>
               prevDishes.map(dish =>
                 dish.id === recipe.id
@@ -123,7 +117,6 @@ export default function Explorer() {
     fetchRecipes();
   }, [region]);
 
-  // ESC to close modals
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") {
@@ -135,7 +128,6 @@ export default function Explorer() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Fetch full recipe details when opening modal
   const fetchRecipeDetails = async (recipeId) => {
     try {
       const res = await fetch(`${API_BASE}/api/cultural-recipes/${recipeId}`);
@@ -165,33 +157,28 @@ export default function Explorer() {
     [region, dishes]
   );
 
-  // PDF Download function
   const downloadRecipeAsPDF = (dish) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 20;
     let y = 20;
 
-    // Title
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
     doc.text(dish.name, margin, y);
     y += 10;
 
-    // Region
     doc.setFontSize(12);
     doc.setFont("helvetica", "italic");
     doc.text(`Region: ${dish.region}`, margin, y);
     y += 15;
 
-    // Description
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
     const descLines = doc.splitTextToSize(dish.desc, pageWidth - 2 * margin);
     doc.text(descLines, margin, y);
     y += descLines.length * 6 + 10;
 
-    // Ingredients Section
     if (dish.ingredients && dish.ingredients.length > 0) {
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
@@ -205,7 +192,7 @@ export default function Explorer() {
           doc.addPage();
           y = 20;
         }
-        const ingredientText = `• ${ingredient}`;
+        const ingredientText = `- ${ingredient}`;
         const lines = doc.splitTextToSize(ingredientText, pageWidth - 2 * margin - 5);
         doc.text(lines, margin + 5, y);
         y += lines.length * 6;
@@ -213,7 +200,6 @@ export default function Explorer() {
       y += 10;
     }
 
-    // Instructions Section
     if (dish.instructions && dish.instructions.length > 0) {
       if (y > 250) {
         doc.addPage();
@@ -239,7 +225,6 @@ export default function Explorer() {
       });
     }
 
-    // Fallback to old recipe format if new fields don't exist
     if ((!dish.ingredients || dish.ingredients.length === 0) &&
         (!dish.instructions || dish.instructions.length === 0) &&
         dish.recipe && dish.recipe.length > 0) {
@@ -255,19 +240,17 @@ export default function Explorer() {
           doc.addPage();
           y = 20;
         }
-        const stepText = `• ${step}`;
+        const stepText = `- ${step}`;
         const lines = doc.splitTextToSize(stepText, pageWidth - 2 * margin - 5);
         doc.text(lines, margin + 5, y);
         y += lines.length * 6;
       });
     }
 
-    // Save the PDF
     const fileName = `${dish.name.replace(/\s+/g, '_')}_Recipe.pdf`;
     doc.save(fileName);
   };
 
-  // Image upload handler
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -280,7 +263,6 @@ export default function Explorer() {
     }
   };
 
-  // Admin functions
   const openAddForm = () => {
     setEditingRecipe(null);
     setImagePreview(null);
@@ -291,13 +273,12 @@ export default function Explorer() {
       img: "",
       ingredients: [""],
       instructions: [""],
-      recipe: [""] // Backward compatibility
+      recipe: [""]
     });
     setShowEditForm(true);
   };
 
   const openEditForm = async (dish) => {
-    // Fetch full recipe details to ensure we have all fields including image
     setLoading(true);
     const fullRecipe = await fetchRecipeDetails(dish.id);
     setLoading(false);
@@ -316,7 +297,7 @@ export default function Explorer() {
       img: fullRecipe.img || "",
       ingredients: (fullRecipe.ingredients && fullRecipe.ingredients.length > 0) ? fullRecipe.ingredients : [""],
       instructions: (fullRecipe.instructions && fullRecipe.instructions.length > 0) ? fullRecipe.instructions : [""],
-      recipe: (fullRecipe.recipe && fullRecipe.recipe.length > 0) ? fullRecipe.recipe : [""] // Backward compatibility
+      recipe: (fullRecipe.recipe && fullRecipe.recipe.length > 0) ? fullRecipe.recipe : [""]
     });
     setShowEditForm(true);
   };
@@ -332,7 +313,7 @@ export default function Explorer() {
       img: "",
       ingredients: [""],
       instructions: [""],
-      recipe: [""] // Backward compatibility
+      recipe: [""]
     });
   };
 
@@ -340,7 +321,6 @@ export default function Explorer() {
     setRecipeForm(prev => ({ ...prev, [field]: value }));
   };
 
-  // Handlers for ingredients
   const handleIngredientChange = (index, value) => {
     const newIngredients = [...recipeForm.ingredients];
     newIngredients[index] = value;
@@ -358,7 +338,6 @@ export default function Explorer() {
     }));
   };
 
-  // Handlers for instructions
   const handleInstructionChange = (index, value) => {
     const newInstructions = [...recipeForm.instructions];
     newInstructions[index] = value;
@@ -376,7 +355,6 @@ export default function Explorer() {
     }));
   };
 
-  // Legacy recipe handlers (for backward compatibility)
   const handleRecipeItemChange = (index, value) => {
     const newRecipe = [...recipeForm.recipe];
     newRecipe[index] = value;
@@ -400,7 +378,6 @@ export default function Explorer() {
       return;
     }
 
-    // Check authentication
     if (!isAuthenticated) {
       alert("You must be logged in to create cultural recipes");
       return;
@@ -420,7 +397,7 @@ export default function Explorer() {
         ...recipeForm,
         ingredients: cleanIngredients,
         instructions: cleanInstructions,
-        recipe: cleanRecipe // Backward compatibility
+        recipe: cleanRecipe
       };
 
       const headers = {
@@ -485,23 +462,64 @@ export default function Explorer() {
       {loading && <LoadingModal message="Loading cultural recipes..." />}
 
       <div className="explorer">
-        <div className="explorer-header">
-        <h1>Explore Filipino Cuisine</h1>
-        <div className="explorer-header-actions">
-          <select value={region} onChange={(e) => setRegion(e.target.value)}>
-            <option value="All">All Regions</option>
-            <option value="Luzon">Luzon</option>
-            <option value="Visayas">Visayas</option>
-            <option value="Mindanao">Mindanao</option>
-          </select>
-          {isAdmin && (
-            <button className="btn-admin-add" onClick={openAddForm}>
-              <Plus className="icon-sm" />
-              Add Recipe
-            </button>
-          )}
-        </div>
-      </div>
+        {/* New Unique Header */}
+        <header className="explorer-header-v2">
+          {/* Decorative background elements */}
+          <div className="explorer-header-bg">
+            <div className="header-pattern"></div>
+            <div className="header-glow header-glow-1"></div>
+            <div className="header-glow header-glow-2"></div>
+          </div>
+
+          {/* Left decorative border */}
+          <div className="header-accent-bar"></div>
+
+          <div className="explorer-header-content">
+            {/* Title Section */}
+            <div className="explorer-title-section">
+              <div className="explorer-icon-badge">
+                <Compass className="explorer-compass-icon" />
+              </div>
+              <div className="explorer-title-text">
+                <h1>Explore Filipino Cuisine</h1>
+                <p className="explorer-subtitle">
+                  <MapPin className="subtitle-icon" />
+                  <span>Discover authentic recipes from across the Philippines</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Actions Section */}
+            <div className="explorer-header-actions">
+              {/* Region Selector */}
+              <div className="region-selector">
+                <MapPin className="region-icon" />
+                <select value={region} onChange={(e) => setRegion(e.target.value)}>
+                  <option value="All">All Regions</option>
+                  <option value="Luzon">Luzon</option>
+                  <option value="Visayas">Visayas</option>
+                  <option value="Mindanao">Mindanao</option>
+                </select>
+                <ChevronDown className="region-chevron" />
+              </div>
+
+              {/* Admin Add Button */}
+              {isAdmin && (
+                <button className="btn-admin-add" onClick={openAddForm}>
+                  <Plus className="icon-sm" />
+                  <span>Add Recipe</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom wave decoration */}
+          <div className="header-wave">
+            <svg viewBox="0 0 1440 40" preserveAspectRatio="none">
+              <path d="M0,20 C240,40 480,0 720,20 C960,40 1200,0 1440,20 L1440,40 L0,40 Z" fill="#fffbeb"/>
+            </svg>
+          </div>
+        </header>
 
       {loading ? (
         <div className="explorer-loading">Loading cultural recipes...</div>
@@ -615,13 +633,12 @@ export default function Explorer() {
             <div className="modal-header">
               <h2 id="recipe-title">{modalDish.name}</h2>
               <button className="icon-btn" onClick={() => setModalDish(null)} aria-label="Close">
-                ×
+                X
               </button>
             </div>
             <img className="modal-img" src={modalDish.img} alt={modalDish.name} />
             <p className="modal-desc">{modalDish.desc}</p>
 
-            {/* Ingredients Section */}
             {modalDish.ingredients && modalDish.ingredients.length > 0 && (
               <div className="recipe-box">
                 <h3>Ingredients</h3>
@@ -633,7 +650,6 @@ export default function Explorer() {
               </div>
             )}
 
-            {/* Instructions Section - NOW WITH NUMBERED STEPS */}
             {modalDish.instructions && modalDish.instructions.length > 0 && (
               <div className="recipe-box instructions-box">
                 <h3>Instructions</h3>
@@ -648,7 +664,6 @@ export default function Explorer() {
               </div>
             )}
 
-            {/* Fallback to old recipe array if new fields aren't available */}
             {(!modalDish.ingredients || modalDish.ingredients.length === 0) &&
              (!modalDish.instructions || modalDish.instructions.length === 0) &&
              modalDish.recipe && modalDish.recipe.length > 0 && (
@@ -700,7 +715,7 @@ export default function Explorer() {
             <div className="modal-header">
               <h2>{editingRecipe ? "Edit Cultural Recipe" : "Add Cultural Recipe"}</h2>
               <button className="icon-btn" onClick={closeEditForm} aria-label="Close">
-                ×
+                X
               </button>
             </div>
 
@@ -737,7 +752,6 @@ export default function Explorer() {
                 </select>
               </div>
 
-              {/* Image Upload Section - matches UploadRecipe.js style */}
               <div className="form-group">
                 <label>Recipe Photo</label>
                 <input
@@ -789,7 +803,6 @@ export default function Explorer() {
                 </label>
               </div>
 
-              {/* Ingredients Section */}
               <div className="form-group">
                 <div className="form-group-header">
                   <label>Ingredients</label>
@@ -820,7 +833,6 @@ export default function Explorer() {
                 </div>
               </div>
 
-              {/* Instructions Section */}
               <div className="form-group">
                 <div className="form-group-header">
                   <label>Cooking Instructions</label>

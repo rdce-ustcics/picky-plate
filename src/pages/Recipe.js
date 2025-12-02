@@ -1288,6 +1288,13 @@ export default function CommunityRecipes() {
       <div className="community-recipes-page">
         {/* Header */}
         <div className="cr-header">
+          {/* Floating decoration circles */}
+          <div className="cr-header-decoration cr-header-decoration-1"></div>
+          <div className="cr-header-decoration cr-header-decoration-2"></div>
+          <div className="cr-header-decoration cr-header-decoration-3"></div>
+          <div className="cr-header-decoration cr-header-decoration-4"></div>
+          <div className="cr-header-decoration cr-header-decoration-15"></div>
+
           <div className="cr-header-content">
             <div>
               <h1 className="cr-title">Community Recipes</h1>

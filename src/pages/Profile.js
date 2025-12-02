@@ -6,7 +6,7 @@ import './Profile.css';
 
 export default function Profile() {
   // API base configuration (matching Dashboard)
-const API = process.env.REACT_APP_API_URL || "http://localhost:4000";
+  const API = process.env.REACT_APP_API_URL || "http://localhost:4000";
   const { authHeaders } = useAuth();
 
   // ---- Identify active user ----
@@ -77,11 +77,10 @@ const API = process.env.REACT_APP_API_URL || "http://localhost:4000";
   const display = (id) => pretty[id] || id;
 
   // ---- IMAGE MAP: option id -> /public/images/* ----
-  // Path matches images folder in /public/images/
-const imageBasePath = `${process.env.PUBLIC_URL}/images`;
+  const imageBasePath = `${process.env.PUBLIC_URL}/images`;
 
   const prefImageMap = {
-    // Cuisines - UPDATED TO MATCH YOUR FILES
+    // Cuisines
     filipino:       `${imageBasePath}/adobo.png`,
     japanese:       `${imageBasePath}/sushi.jpg`,
     italian:        `${imageBasePath}/pasta.jpg`,
@@ -151,22 +150,22 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
   const [diets, setDiets] = useState([]);
   const [kiddieMeal, setKiddieMeal] = useState(false);
 
-  // Kids preferences - SIMPLIFIED VERSION
+  // Kids preferences
   const [kids, setKids] = useState([]);
   const [loadingKids, setLoadingKids] = useState(false);
 
-  // Kid wizard state - SIMPLIFIED
+  // Kid wizard state
   const [showKidWizard, setShowKidWizard] = useState(false);
-  const [kidStep, setKidStep] = useState(0); // 0 = basic info, 1 = eating style, 2 = allergens
+  const [kidStep, setKidStep] = useState(0);
 
   const [editingKidId, setEditingKidId] = useState(null);
   const [kidName, setKidName] = useState('');
   const [kidAge, setKidAge] = useState('');
-  const [kidEatingStyle, setKidEatingStyle] = useState(''); // picky, adventurous, normal
-  const [kidFavoriteFoods, setKidFavoriteFoods] = useState(''); // free text
-  const [kidWontEat, setKidWontEat] = useState(''); // free text
+  const [kidEatingStyle, setKidEatingStyle] = useState('');
+  const [kidFavoriteFoods, setKidFavoriteFoods] = useState('');
+  const [kidWontEat, setKidWontEat] = useState('');
   const [kidAllergens, setKidAllergens] = useState([]);
-  const [kidNotes, setKidNotes] = useState(''); // any other notes
+  const [kidNotes, setKidNotes] = useState('');
 
   const [savingKid, setSavingKid] = useState(false);
 
@@ -175,9 +174,46 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   
-  // Preferences wizard (replaces simple modal)
+  // ---- Custom Alert Modal State ----
+  const [alertModal, setAlertModal] = useState({
+    show: false,
+    type: 'info', // 'info', 'success', 'error', 'confirm'
+    title: '',
+    message: '',
+    onConfirm: null,
+    onCancel: null,
+  });
+
+  // Custom alert function to replace browser alert
+  const showAlert = (title, message, type = 'info') => {
+    setAlertModal({
+      show: true,
+      type,
+      title,
+      message,
+      onConfirm: () => setAlertModal(prev => ({ ...prev, show: false })),
+      onCancel: null,
+    });
+  };
+
+  // Custom confirm function to replace browser confirm
+  const showConfirm = (title, message, onConfirm, type = 'confirm') => {
+    setAlertModal({
+      show: true,
+      type,
+      title,
+      message,
+      onConfirm: () => {
+        setAlertModal(prev => ({ ...prev, show: false }));
+        if (onConfirm) onConfirm();
+      },
+      onCancel: () => setAlertModal(prev => ({ ...prev, show: false })),
+    });
+  };
+
+  // Preferences wizard
   const [showPrefsWizard, setShowPrefsWizard] = useState(false);
-  const [prefsStep, setPrefsStep] = useState(1); // 1..5 for different sections
+  const [prefsStep, setPrefsStep] = useState(1);
 
   const openPrefsWizard = (startStep = 1) => {
     setPrefsStep(startStep);
@@ -210,7 +246,7 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
       try {
         const res = await fetch(`${API}/api/preferences/me`, {
           headers: {
-            ...authHeaders(),   // ✅ adds Authorization: Bearer <token>
+            ...authHeaders(),
           }
         });
         if (!res.ok) throw new Error('Failed to load preferences');
@@ -264,7 +300,6 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
         if (!cancelled && data.success) {
           const kidsData = Array.isArray(data.kids) ? data.kids : [];
           setKids(kidsData);
-          // Cache the kids preferences
           setCache(CACHE_KEYS.KIDS_PREFERENCES, kidsData, CACHE_TTL.KIDS_PREFERENCES);
         }
       } catch (err) {
@@ -282,14 +317,12 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
 
   // ---- Toggle preference ----
   const togglePreference = (id) => {
-    // Remove from all arrays first
     setLikes(prev => prev.filter(v => v !== id));
     setDislikes(prev => prev.filter(v => v !== id));
     setFavorites(prev => prev.filter(v => v !== id));
     setAllergens(prev => prev.filter(v => v !== id));
     setDiets(prev => prev.filter(v => v !== id));
 
-    // If not currently selected anywhere, add to appropriate list
     if (!allSelectedPreferences.includes(id)) {
       if (cuisineOptions.includes(id)) setLikes(prev => [...prev, id]);
       else if (dislikeOptions.includes(id)) setDislikes(prev => [...prev, id]);
@@ -304,14 +337,13 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
     setSaving(true);
     setError('');
     try {
-      // 1) Save preferences to backend
       const payload = {
-        likes,        // cuisines
-        dislikes,     // foods to avoid
-        diets,        // dietary restrictions
-        allergens,    // allergen restrictions
-        favorites,    // favorite dishes
-        kiddieMeal,   // kiddie meal mode
+        likes,
+        dislikes,
+        diets,
+        allergens,
+        favorites,
+        kiddieMeal,
         onboardingDone: true
       };
 
@@ -319,7 +351,7 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...authHeaders(),   // ✅ adds Authorization: Bearer <token>
+          ...authHeaders(),
         },
         body: JSON.stringify(payload)
       });
@@ -328,26 +360,25 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
         throw new Error(t || 'Save failed');
       }
 
-      // 2) Save profile fields locally (name/phone)
       try {
         localStorage.setItem('pap:activeUserName', name || nameFromEmail(activeUserId));
         localStorage.setItem('pap:profile:phone', phone || '+63');
       } catch {}
 
-      // 3) Update the preferences cache with new values
       setCache(CACHE_KEYS.USER_PREFERENCES, {
         likes, dislikes, diets, allergens, favorites, kiddieMeal
       }, CACHE_TTL.USER_PREFERENCES);
 
-      alert('Profile saved successfully!');
+      showAlert('Success!', 'Profile saved successfully!', 'success');
     } catch (e) {
       setError(e.message || 'Save error');
+      showAlert('Error', e.message || 'Failed to save profile', 'error');
     } finally {
       setSaving(false);
     }
   };
 
-  // ---- Kid wizard functions - SIMPLIFIED ----
+  // ---- Kid wizard functions ----
   const openKidWizard = (kid = null) => {
     if (kid) {
       setEditingKidId(kid.kidId);
@@ -407,21 +438,54 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
         throw new Error(data.message || 'Failed to save kid');
       }
 
-      // Update kids list locally and cache
       setKids((prev) => {
         const without = prev.filter((k) => k.kidId !== data.kid.kidId);
         const updatedKids = [...without, data.kid];
-        // Update the cache
         setCache(CACHE_KEYS.KIDS_PREFERENCES, updatedKids, CACHE_TTL.KIDS_PREFERENCES);
         return updatedKids;
       });
 
       setShowKidWizard(false);
+      showAlert('Success!', `${kidName}'s preferences saved!`, 'success');
     } catch (err) {
-      alert(err.message || 'Failed to save kid');
+      showAlert('Error', err.message || 'Failed to save kid', 'error');
     } finally {
       setSavingKid(false);
     }
+  };
+
+  // ---- Delete Kid Function ----
+  const deleteKid = async (kid) => {
+    showConfirm(
+      'Delete Kid Profile',
+      `Are you sure you want to delete ${kid.name}'s profile? This action cannot be undone.`,
+      async () => {
+        try {
+          const res = await fetch(`${API}/api/preferences/kids/${kid.kidId}`, {
+            method: 'DELETE',
+            headers: {
+              ...authHeaders(),
+            },
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            throw new Error(data.message || 'Failed to delete kid');
+          }
+
+          setKids((prev) => {
+            const updatedKids = prev.filter((k) => k.kidId !== kid.kidId);
+            setCache(CACHE_KEYS.KIDS_PREFERENCES, updatedKids, CACHE_TTL.KIDS_PREFERENCES);
+            return updatedKids;
+          });
+
+          showAlert('Deleted!', `${kid.name}'s profile has been removed.`, 'success');
+        } catch (err) {
+          showAlert('Error', err.message || 'Failed to delete kid', 'error');
+        }
+      },
+      'confirm'
+    );
   };
 
   // ---- Helper to render an image card in the prefs wizard ----
@@ -443,9 +507,87 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
     </button>
   );
 
+  // ---- Custom Alert Modal Component ----
+  const AlertModal = () => {
+    if (!alertModal.show) return null;
+
+    const getIcon = () => {
+      switch (alertModal.type) {
+        case 'success':
+          return (
+            <div className="alert-icon alert-icon-success">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+          );
+        case 'error':
+          return (
+            <div className="alert-icon alert-icon-error">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </div>
+          );
+        case 'confirm':
+          return (
+            <div className="alert-icon alert-icon-confirm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+          );
+        default:
+          return (
+            <div className="alert-icon alert-icon-info">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+            </div>
+          );
+      }
+    };
+
+    return (
+      <div className="custom-alert-overlay" onClick={(e) => {
+        if (e.target === e.currentTarget && alertModal.onCancel) {
+          alertModal.onCancel();
+        }
+      }}>
+        <div className={`custom-alert-container custom-alert-${alertModal.type}`}>
+          {getIcon()}
+          <h3 className="custom-alert-title">{alertModal.title}</h3>
+          <p className="custom-alert-message">{alertModal.message}</p>
+          <div className="custom-alert-buttons">
+            {alertModal.onCancel && (
+              <button
+                className="custom-alert-btn custom-alert-btn-cancel"
+                onClick={alertModal.onCancel}
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              className={`custom-alert-btn custom-alert-btn-confirm ${alertModal.type === 'confirm' ? 'custom-alert-btn-danger' : ''}`}
+              onClick={alertModal.onConfirm}
+            >
+              {alertModal.type === 'confirm' ? 'Delete' : 'OK'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       {loading && <LoadingModal message="Loading your preferences..." />}
+      
+      {/* Custom Alert Modal */}
+      <AlertModal />
 
       <div className="profile-page">
         {/* Header Banner */}
@@ -517,7 +659,7 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
 
-            <button className="logout-button" onClick={() => alert('Hook your logout logic here')}>
+            <button className="logout-button" onClick={() => showAlert('Logout', 'Hook your logout logic here', 'info')}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
               </svg>
@@ -555,13 +697,13 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
                   <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
                 </svg>
                 <span className="info-text">••••••••</span>
-                <button className="change-password-btn" onClick={() => alert('Hook your change password flow here')}>
+                <button className="change-password-btn" onClick={() => showAlert('Change Password', 'Hook your change password flow here', 'info')}>
                   Change Password
                 </button>
               </div>
             </div>
 
-            {/* Kids Preferences Section - SIMPLIFIED */}
+            {/* Kids Preferences Section */}
             <div className="kids-preferences-card">
               <h3 className="kids-title">Kids' Meal Preferences</h3>
 
@@ -593,12 +735,26 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
                             </span>
                           )}
                         </div>
-                        <button
-                          className="kids-edit-btn"
-                          onClick={() => openKidWizard(kid)}
-                        >
-                          Edit
-                        </button>
+                        <div className="kids-actions">
+                          <button
+                            className="kids-edit-btn"
+                            onClick={() => openKidWizard(kid)}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="kids-delete-btn"
+                            onClick={() => deleteKid(kid)}
+                            title="Delete"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              <line x1="10" y1="11" x2="10" y2="17"></line>
+                              <line x1="14" y1="11" x2="14" y2="17"></line>
+                            </svg>
+                          </button>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -757,11 +913,10 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
               </div>
             </div>
 
-            {/* Edit Preferences Wizard (IMAGE MODAL) */}
+            {/* Edit Preferences Wizard */}
             {showPrefsWizard && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-shifted">
                 <div className="modal-container">
-                  {/* Header */}
                   <div className="modal-header">
                     <h2 className="modal-title">
                       {prefsStep === 1 && "Edit Favorite Cuisines"}
@@ -779,7 +934,6 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
                     </p>
                   </div>
 
-                  {/* Body */}
                   <div className="modal-body">
                     <div className="modal-options-grid">
                       {prefsStep === 1 &&
@@ -809,7 +963,6 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
                     </div>
                   </div>
 
-                  {/* Footer buttons */}
                   <div className="modal-footer">
                     <button
                       type="button"
@@ -833,11 +986,10 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
               </div>
             )}
 
-            {/* Kid Preferences Wizard - SIMPLIFIED VERSION */}
+            {/* Kid Preferences Wizard */}
             {showKidWizard && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 modal-shifted">
                 <div className="modal-container modal-kid">
-                  {/* Header */}
                   <div className="modal-header">
                     <h2 className="modal-title">
                       {editingKidId ? `Edit ${kidName}'s Preferences` : "Add Kid's Meal Preferences"}
@@ -848,7 +1000,6 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
                       {kidStep === 2 && "Any allergies we should know about?"}
                     </p>
 
-                    {/* Steps 0–2 indicator */}
                     <div className="modal-steps">
                       {[0, 1, 2].map((step) => (
                         <div
@@ -859,7 +1010,6 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
                     </div>
                   </div>
 
-                  {/* Body */}
                   <div className="modal-body">
                     {/* Step 0: Basic Info */}
                     {kidStep === 0 && (
@@ -982,7 +1132,7 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
                       </div>
                     )}
 
-                    {/* Step 2: Allergens (Critical) */}
+                    {/* Step 2: Allergens */}
                     {kidStep === 2 && (
                       <div className="modal-form-section">
                         <div>
@@ -1018,7 +1168,6 @@ const imageBasePath = `${process.env.PUBLIC_URL}/images`;
                     )}
                   </div>
 
-                  {/* Footer */}
                   <div className="modal-footer">
                     <button
                       type="button"

@@ -65,19 +65,196 @@
 .cr-header {
   background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   z-index: 10;
+  padding-bottom: 40px;
 }
 
+/* Wave bottom using pseudo-element with inline SVG */
+.cr-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 40' preserveAspectRatio='none'%3E%3Cpath d='M0,20 C240,40 480,0 720,20 C960,40 1200,0 1440,20 L1440,40 L0,40 Z' fill='%23FEF3C7'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  z-index: 5;
+}
+
+/* Decorative Circles - Using pseudo-elements */
 .cr-header::before {
   content: '';
   position: absolute;
-  top: -50%;
-  right: -20%;
-  width: 60%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  top: -80px;
+  right: -80px;
+  width: 300px;
+  height: 300px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
   pointer-events: none;
+  animation: float 6s ease-in-out infinite;
+  z-index: 0;
+}
+
+/* Additional decorative circles - REQUIRES adding divs to JSX */
+.cr-header-decoration {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Left side circles */
+.cr-header-decoration-1 {
+  top: 15px;
+  left: 8%;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.15);
+  animation: float 7s ease-in-out infinite;
+}
+
+.cr-header-decoration-2 {
+  bottom: 50px;
+  left: 15%;
+  width: 70px;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.2);
+  animation: float 5s ease-in-out infinite reverse;
+}
+
+/* Center-left circles */
+.cr-header-decoration-3 {
+  top: 20px;
+  left: 28%;
+  width: 80px;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.14);
+  animation: float 8s ease-in-out infinite;
+}
+
+.cr-header-decoration-4 {
+  bottom: 70px;
+  left: 35%;
+  width: 120px;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.1);
+  animation: float 6s ease-in-out infinite reverse;
+}
+
+/* Center circles */
+.cr-header-decoration-5 {
+  top: 10px;
+  left: 48%;
+  width: 90px;
+  height: 90px;
+  background: rgba(255, 255, 255, 0.16);
+  animation: float 5s ease-in-out infinite;
+}
+
+.cr-header-decoration-6 {
+  bottom: 40px;
+  left: 55%;
+  width: 140px;
+  height: 140px;
+  background: rgba(255, 255, 255, 0.08);
+  animation: float 9s ease-in-out infinite reverse;
+}
+
+.cr-header-decoration-7 {
+  top: 60px;
+  left: 42%;
+  width: 60px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.18);
+  animation: float 7s ease-in-out infinite;
+}
+
+/* Center-right circles */
+.cr-header-decoration-8 {
+  top: 25px;
+  right: 30%;
+  width: 85px;
+  height: 85px;
+  background: rgba(255, 255, 255, 0.12);
+  animation: float 6s ease-in-out infinite reverse;
+}
+
+.cr-header-decoration-9 {
+  bottom: 60px;
+  right: 25%;
+  width: 110px;
+  height: 110px;
+  background: rgba(255, 255, 255, 0.1);
+  animation: float 10s ease-in-out infinite;
+}
+
+/* Right side circles */
+.cr-header-decoration-10 {
+  top: 40px;
+  right: 12%;
+  width: 75px;
+  height: 75px;
+  background: rgba(255, 255, 255, 0.14);
+  animation: float 7s ease-in-out infinite reverse;
+}
+
+.cr-header-decoration-11 {
+  bottom: 45px;
+  right: 8%;
+  width: 55px;
+  height: 55px;
+  background: rgba(255, 255, 255, 0.2);
+  animation: float 5s ease-in-out infinite;
+}
+
+/* Small accent circles */
+.cr-header-decoration-12 {
+  top: 50px;
+  left: 22%;
+  width: 45px;
+  height: 45px;
+  background: rgba(255, 255, 255, 0.22);
+  animation: float 4s ease-in-out infinite reverse;
+}
+
+.cr-header-decoration-13 {
+  top: 35px;
+  right: 45%;
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.18);
+  animation: float 6s ease-in-out infinite;
+}
+
+.cr-header-decoration-14 {
+  bottom: 80px;
+  left: 10%;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  animation: float 5s ease-in-out infinite reverse;
+}
+
+.cr-header-decoration-15 {
+  top: 15px;
+  right: 20%;
+  width: 65px;
+  height: 65px;
+  background: rgba(255, 255, 255, 0.16);
+  animation: float 8s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(10deg);
+  }
 }
 
 .cr-header-content {
@@ -695,10 +872,10 @@
   height: 2.5rem;
   color: #d1a354;
   margin-bottom: 0.5rem;
-  animation: float 2s ease-in-out infinite;
+  animation: floatIcon 2s ease-in-out infinite;
 }
 
-@keyframes float {
+@keyframes floatIcon {
   0%, 100% {
     transform: translateY(0);
   }
@@ -1763,6 +1940,10 @@
    ======================================== */
 
 @media (min-width: 640px) {
+  .cr-header {
+    padding-bottom: 40px;
+  }
+
   .cr-header-content {
     padding: 2rem 1.5rem;
     display: flex;
@@ -1851,6 +2032,14 @@
   .cr-modal-info-grid {
     grid-template-columns: repeat(4, 1fr);
   }
+
+  /* Adjust circle sizes for tablet */
+  .cr-header::before {
+    width: 350px;
+    height: 350px;
+    top: -120px;
+    right: -120px;
+  }
 }
 
 /* ========================================
@@ -1915,6 +2104,35 @@
     transform: scale(1.02);
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
     border-color: #fbbf24;
+  }
+
+  /* Larger circles for desktop */
+  .cr-header::before {
+    width: 400px;
+    height: 400px;
+    top: -150px;
+    right: -150px;
+  }
+
+  /* Scale up some decoration circles on desktop */
+  .cr-header-decoration-1 {
+    width: 100px;
+    height: 100px;
+  }
+
+  .cr-header-decoration-4 {
+    width: 110px;
+    height: 110px;
+  }
+
+  .cr-header-decoration-6 {
+    width: 130px;
+    height: 130px;
+  }
+
+  .cr-header-decoration-9 {
+    width: 150px;
+    height: 150px;
   }
 }
 
@@ -1983,7 +2201,24 @@
   .cr-modal,
   .cr-advanced-panel,
   .cr-dropdown-menu,
-  .cr-report-content {
+  .cr-report-content,
+  .cr-header::before,
+  .cr-header-decoration,
+  .cr-header-decoration-1,
+  .cr-header-decoration-2,
+  .cr-header-decoration-3,
+  .cr-header-decoration-4,
+  .cr-header-decoration-5,
+  .cr-header-decoration-6,
+  .cr-header-decoration-7,
+  .cr-header-decoration-8,
+  .cr-header-decoration-9,
+  .cr-header-decoration-10,
+  .cr-header-decoration-11,
+  .cr-header-decoration-12,
+  .cr-header-decoration-13,
+  .cr-header-decoration-14,
+  .cr-header-decoration-15 {
     animation: none !important;
     transition: none !important;
   }
@@ -2034,6 +2269,14 @@
    ======================================== */
 
 @media (max-width: 640px) {
+  .cr-header {
+    padding-bottom: 35px;
+  }
+
+  .cr-header::after {
+    height: 35px;
+  }
+
   .cr-search-container {
     padding: 0 0.75rem;
   }
@@ -2091,6 +2334,38 @@
     border-radius: 1.5rem 1.5rem 0 0;
     max-height: 95vh;
     animation: modalSlideUp 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* Smaller circles for mobile */
+  .cr-header::before {
+    width: 200px;
+    height: 200px;
+    top: -80px;
+    right: -80px;
+  }
+
+  /* Hide most decoration circles on mobile, keep a few */
+  .cr-header-decoration-1,
+  .cr-header-decoration-2,
+  .cr-header-decoration-4,
+  .cr-header-decoration-6,
+  .cr-header-decoration-7,
+  .cr-header-decoration-8,
+  .cr-header-decoration-9,
+  .cr-header-decoration-10,
+  .cr-header-decoration-11,
+  .cr-header-decoration-12,
+  .cr-header-decoration-13,
+  .cr-header-decoration-14,
+  .cr-header-decoration-15 {
+    display: none;
+  }
+
+  .cr-header-decoration-3,
+  .cr-header-decoration-5 {
+    width: 40px;
+    height: 40px;
+    opacity: 0.7;
   }
 }
 

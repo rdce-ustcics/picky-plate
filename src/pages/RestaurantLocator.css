@@ -169,16 +169,48 @@ body {
 }
 
 /* ========================================
-   HEADER - Dashboard Style
+   HEADER - Unique Location Pin Theme (Golden)
    ======================================== */
 
 .app-header {
-  background: #ffe9a0;
+  background: linear-gradient(135deg, #b45309 0%, #d97706 25%, #f59e0b 50%, #fbbf24 75%, #fcd34d 100%);
   padding: var(--spacing-lg) 0;
+  padding-bottom: 55px;
   position: relative;
   z-index: 100;
   flex-shrink: 0;
-  border-bottom: 2px solid var(--pale-gold);
+  overflow: visible;
+}
+
+/* Subtle radial glows - no grid */
+.app-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(ellipse at 10% 20%, rgba(255, 255, 255, 0.2) 0%, transparent 30%),
+    radial-gradient(ellipse at 90% 80%, rgba(255, 255, 255, 0.15) 0%, transparent 25%),
+    radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 20%, rgba(255, 255, 255, 0.12) 0%, transparent 20%),
+    radial-gradient(ellipse at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 25%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Wave bottom */
+.app-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 45px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 45' preserveAspectRatio='none'%3E%3Cpath d='M0,20 C360,45 720,0 1080,25 C1260,38 1380,15 1440,20 L1440,45 L0,45 Z' fill='%23FEF3C7'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  z-index: 5;
 }
 
 .header-content {
@@ -188,73 +220,156 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+/* Floating location pin decorations */
+.header-content::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  background: 
+    /* Scattered glowing dots */
+    radial-gradient(circle at 5% 40%, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.35) 6px, transparent 6px),
+    radial-gradient(circle at 12% 70%, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.25) 4px, transparent 4px),
+    radial-gradient(circle at 20% 25%, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.2) 8px, transparent 8px),
+    radial-gradient(circle at 75% 65%, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.3) 5px, transparent 5px),
+    radial-gradient(circle at 85% 25%, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.2) 7px, transparent 7px),
+    radial-gradient(circle at 92% 55%, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.25) 4px, transparent 4px),
+    radial-gradient(circle at 60% 80%, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.15) 6px, transparent 6px),
+    radial-gradient(circle at 40% 15%, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.2) 5px, transparent 5px);
+  animation: floatDots 6s ease-in-out infinite;
+}
+
+@keyframes floatDots {
+  0%, 100% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(-8px); opacity: 0.7; }
+}
+
+/* Radar pulse for location discovery */
+.header-content::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 22%;
+  transform: translateY(-50%);
+  width: 90px;
+  height: 90px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  animation: locatePulse 2.5s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes locatePulse {
+  0% {
+    transform: translateY(-50%) scale(0.6);
+    opacity: 0.8;
+    border-width: 4px;
+  }
+  100% {
+    transform: translateY(-50%) scale(1.5);
+    opacity: 0;
+    border-width: 1px;
+  }
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
+  position: relative;
+  z-index: 3;
 }
 
 .logo-icon {
-  width: 56px;
-  height: 56px;
-  background: var(--primary-gold);
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.25);
   border-radius: var(--radius-xl);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-md);
+  box-shadow: 
+    0 8px 32px rgba(120, 53, 15, 0.25),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(8px);
+  animation: pinBounce 2.5s ease-in-out infinite;
+  position: relative;
+}
+
+
+
+@keyframes pinBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
 
 .logo-icon svg {
   width: 32px;
   height: 32px;
   color: white;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
 }
 
 .brand-text h1 {
-  color: #b87a00 ;
-  font-size: 2.5rem;
+  color: white;
+  font-size: 2.25rem;
   font-weight: 800;
   margin: 0;
   letter-spacing: -0.5px;
+  text-shadow: 0 2px 8px rgba(120, 53, 15, 0.3);
 }
 
 .brand-text p {
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.95);
   font-size: 0.95rem;
   margin: 0;
   font-weight: 600;
 }
 
 .header-stats {
-  background: var(--cta-gradient);
-  padding: var(--spacing-sm) var(--spacing-xl);
+  background: rgba(255, 255, 255, 0.2);
+  padding: var(--spacing-md) var(--spacing-xl);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  box-shadow: var(--shadow-md);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 
+    0 4px 24px rgba(120, 53, 15, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(8px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  z-index: 3;
 }
 
 .header-stats:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-3px);
+  box-shadow: 
+    0 8px 32px rgba(120, 53, 15, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .stat-value {
   color: white;
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 800;
   line-height: 1;
+  text-shadow: 0 2px 4px rgba(120, 53, 15, 0.2);
 }
 
 .stat-label {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.95);
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ========================================
@@ -1099,7 +1214,6 @@ body {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(146, 64, 14, 0.4);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -1508,6 +1622,28 @@ body {
   .quick-filter .filter-icon svg {
     width: 16px;
     height: 16px;
+  }
+
+  .brand-text h1 {
+    font-size: 1.75rem;
+  }
+
+  .logo-icon {
+    width: 52px;
+    height: 52px;
+  }
+
+  .logo-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .header-stats {
+    padding: var(--spacing-sm) var(--spacing-lg);
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
   }
 }
 

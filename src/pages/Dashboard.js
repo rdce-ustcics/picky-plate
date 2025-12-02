@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Heart, RefreshCw, Users, MessageSquare, Bot, ChefHat, Calendar, MapPin, Utensils, Sparkles, X, Star, Send, Settings, Flame, Salad, Coffee, Cake, Globe, Zap } from 'lucide-react';
+import { Heart, RefreshCw, Users, MessageSquare, Bot, ChefHat, Calendar, MapPin, Utensils, Sparkles, X, Star, Send, Settings, Flame, Salad, Coffee, Cake, Globe, Zap, Pizza, Sandwich } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import LoadingModal from '../components/LoadingModal';
 import { useAuth } from "../auth/AuthContext";
@@ -9,7 +9,6 @@ import './Dashboard.css';
 
 
 // Scattered Elements Component - Memoized to prevent re-renders
-// Element configurations moved inline to reduce CSS bundle size
 const scatteredConfig = [
   { w: 80, h: 80, top: '5%', left: '3%', delay: 0, rot: 15 },
   { w: 60, h: 60, top: '12%', right: '8%', delay: -3, rot: -20 },
@@ -70,6 +69,9 @@ const ScatteredElements = React.memo(() => {
     </div>
   );
 });
+
+
+
 
 
 export default function Dashboard() {
@@ -288,14 +290,14 @@ export default function Dashboard() {
   ];
 
   const foodFacts = useMemo(() => [
-    { emoji: '🍯', fact: 'Honey never spoils. Archaeologists found 3000-year-old honey in Egyptian tombs that was still edible!' },
-    { emoji: '🍫', fact: 'White chocolate isn\'t technically chocolate — it contains no cocoa solids, only cocoa butter.' },
-    { emoji: '🥕', fact: 'Carrots were originally purple! Orange carrots were developed in the 17th century Netherlands.' },
-    { emoji: '🍕', fact: 'The Hawaiian pizza was invented in Canada by a Greek immigrant. Talk about fusion!' },
-    { emoji: '🥜', fact: 'Peanuts aren\'t nuts — they\'re legumes that grow underground like beans.' },
-    { emoji: '🍌', fact: 'Bananas are berries, but strawberries aren\'t. Botanically speaking, that is!' },
-    { emoji: '🌶️', fact: 'The heat in chili peppers comes from capsaicin, which tricks your brain into feeling burning pain.' },
-    { emoji: '🧀', fact: 'There are over 1,800 different types of cheese in the world. Time to start tasting!' },
+    { icon: ChefHat, fact: 'Honey never spoils. Archaeologists found 3000-year-old honey in Egyptian tombs that was still edible!' },
+    { icon: Cake, fact: 'White chocolate is not technically chocolate - it contains no cocoa solids, only cocoa butter.' },
+    { icon: Salad, fact: 'Carrots were originally purple! Orange carrots were developed in the 17th century Netherlands.' },
+    { icon: Pizza, fact: 'The Hawaiian pizza was invented in Canada by a Greek immigrant. Talk about fusion!' },
+    { icon: Coffee, fact: 'Coffee beans are not beans - they are the pits of coffee cherries, a type of fruit.' },
+    { icon: Salad, fact: 'Bananas are berries, but strawberries are not. Botanically speaking, that is!' },
+    { icon: Flame, fact: 'The heat in chili peppers comes from capsaicin, which tricks your brain into feeling burning pain.' },
+    { icon: Utensils, fact: 'There are over 1,800 different types of cheese in the world. Time to start tasting!' },
   ], []);
 
   const handleMoodSelect = (mood) => {
@@ -311,7 +313,6 @@ export default function Dashboard() {
   };
 
   const fetchSurpriseRecipes = useCallback(async () => {
-    // Check cache first for faster initial load
     const cached = getCached(CACHE_KEYS.SURPRISE_RECIPES);
     if (cached && cached.length > 0) {
       setFoodItems(cached);
@@ -323,19 +324,16 @@ export default function Dashboard() {
       const data = await res.json();
       if (res.ok && data.success && data.recipes.length > 0) {
         setFoodItems(data.recipes);
-        // Cache for quick subsequent loads (short TTL for freshness)
         setCache(CACHE_KEYS.SURPRISE_RECIPES, data.recipes, CACHE_TTL.SURPRISE_RECIPES);
       } else {
         setFoodItems([]);
       }
     } catch (error) {
-      // console.error("Error fetching surprise recipes:", error);
       setFoodItems([]);
     }
   }, [API]);
 
   useEffect(() => {
-    // Set greeting once on mount based on time of day
     const hour = new Date().getHours();
     if (hour < 12) setGreeting('Good Morning');
     else if (hour < 18) setGreeting('Good Afternoon');
@@ -343,7 +341,6 @@ export default function Dashboard() {
 
     fetchSurpriseRecipes();
 
-    // Rotate food facts every 15 seconds (increased from 8s to reduce re-renders)
     const factTimer = setInterval(() => {
       setCurrentFactIndex((prev) => (prev + 1) % foodFacts.length);
     }, 15000);
@@ -368,7 +365,6 @@ export default function Dashboard() {
         setIsLiked(false);
       }
     } catch (error) {
-      // Fallback to cached items
       if (foodItems.length > 0) {
         const randomIndex = Math.floor(Math.random() * foodItems.length);
         setCurrentFood(foodItems[randomIndex]);
@@ -395,7 +391,6 @@ export default function Dashboard() {
           }
         }
       } catch (error) {
-        // console.error("Error fetching random recipe:", error);
         if (foodItems.length > 0) {
           const randomIndex = Math.floor(Math.random() * foodItems.length);
           setCurrentFood(foodItems[randomIndex]);
@@ -492,8 +487,8 @@ export default function Dashboard() {
               </div>
             </div>
             <div className="onboarding-footer">
-              <button onClick={handleSkip} className="onboarding-skip-btn" disabled={savingOnboarding}>{savingOnboarding ? "Saving…" : "Skip"}</button>
-              <button onClick={handleNext} className="onboarding-next-btn" disabled={savingOnboarding}>{currentStep === 4 ? (savingOnboarding ? "Saving…" : "Get Started") : "Next"}</button>
+              <button onClick={handleSkip} className="onboarding-skip-btn" disabled={savingOnboarding}>{savingOnboarding ? "Saving..." : "Skip"}</button>
+              <button onClick={handleNext} className="onboarding-next-btn" disabled={savingOnboarding}>{currentStep === 4 ? (savingOnboarding ? "Saving..." : "Get Started") : "Next"}</button>
             </div>
           </div>
         </div>
@@ -504,19 +499,63 @@ export default function Dashboard() {
         {/* Scattered Elements Background */}
         <ScatteredElements />
 
-        <header className="dashboard-header">
-          <div className="header-container">
-            <div className="header-content">
-              <div className="header-left">
-                <div className="header-logo-container"><Utensils className="header-logo-icon" /></div>
-                <div>
-                  <h1 className="header-title">Pick-A-Plate</h1>
-                  <p className="header-subtitle">Your personal food companion</p>
+        {/* Enhanced Header */}
+        <header className="dashboard-header-v2">
+          {/* Curved bottom */}
+          <div className="header-curve">
+            <svg viewBox="0 0 1440 60" preserveAspectRatio="none">
+              <path d="M0,0 C480,60 960,60 1440,0 L1440,60 L0,60 Z" fill="#fffbeb"/>
+            </svg>
+          </div>
+
+          <div className="header-container-v2">
+            <div className="header-content-v2">
+              {/* Brand */}
+              <div className="header-brand">
+                <div className="header-logo-wrapper">
+                  <div className="header-logo-v2">
+                    <div className="logo-plate">
+                      <Utensils className="logo-utensils-icon" />
+                    </div>
+                    <div className="logo-sparkle logo-sparkle-1">
+                      <Sparkles size={12} />
+                    </div>
+                    <div className="logo-sparkle logo-sparkle-2">
+                      <Sparkles size={12} />
+                    </div>
+                  </div>
+                </div>
+                <div className="header-text-group">
+                  <div className="header-title-row">
+                    <h1 className="header-title-v2">Pick-A-Plate</h1>
+                  </div>
+                  <p className="header-tagline">
+                    Your personal food companion
+                  </p>
                 </div>
               </div>
-              <div className="header-right">
-                {isAdmin && (<button onClick={openOnboardingPreview} className="admin-preview-btn" title="Preview Onboarding Modal"><Settings className="admin-preview-icon" /><span className="admin-preview-text">Preview Onboarding</span></button>)}
-                <div><p className="greeting-text">{greeting}!</p></div>
+
+              {/* Right side */}
+              <div className="header-actions">
+                {isAdmin && (
+                  <button 
+                    onClick={openOnboardingPreview} 
+                    className="admin-btn-v2"
+                    title="Preview Onboarding Modal"
+                  >
+                    <Settings className="admin-icon" />
+                    <span className="admin-text">Admin</span>
+                  </button>
+                )}
+                <div className="greeting-card">
+                  <div className="greeting-avatar">
+                    <Star className="greeting-avatar-icon" />
+                  </div>
+                  <div className="greeting-text-v2">
+                    <span className="greeting-label">{greeting}!</span>
+                    <span className="greeting-sub">Let's find something delicious</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -553,7 +592,6 @@ export default function Dashboard() {
 
             <div className="surprise-card">
               <div className="surprise-decoration"></div>
-              {/* Circle spots */}
               <div className="surprise-spot surprise-spot-1"></div>
               <div className="surprise-spot surprise-spot-2"></div>
               <div className="surprise-spot surprise-spot-3"></div>
@@ -591,10 +629,10 @@ export default function Dashboard() {
 
           <div className="footer-banner">
             <div className="footer-banner-decoration">
-              <div className="footer-emoji footer-emoji-pizza">🍕</div>
-              <div className="footer-emoji footer-emoji-burger">🍔</div>
-              <div className="footer-emoji footer-emoji-pepper">🌶️</div>
-              <div className="footer-emoji footer-emoji-salad">🥗</div>
+              <Pizza className="footer-icon footer-icon-1" />
+              <Sandwich className="footer-icon footer-icon-2" />
+              <Flame className="footer-icon footer-icon-3" />
+              <Salad className="footer-icon footer-icon-4" />
             </div>
             <div className="footer-banner-content">
               <h3 className="footer-banner-title">Ready to cook something amazing?</h3>
@@ -636,15 +674,21 @@ export default function Dashboard() {
                 <span className="food-facts-badge"><Star className="food-facts-badge-icon" />Did You Know?</span>
               </div>
               <div className="food-facts-content">
-                <div className="food-facts-emoji-wrapper"><span className="food-facts-emoji">{foodFacts[currentFactIndex].emoji}</span></div>
+                <div className="food-facts-icon-wrapper">
+                  {React.createElement(foodFacts[currentFactIndex].icon, { className: 'food-facts-icon' })}
+                </div>
                 <p className="food-facts-text">{foodFacts[currentFactIndex].fact}</p>
               </div>
               <div className="food-facts-nav">
-                <button onClick={prevFact} className="food-facts-nav-btn">←</button>
+                <button onClick={prevFact} className="food-facts-nav-btn">
+                  <ChefHat className="food-facts-nav-icon" style={{ transform: 'rotate(-90deg)' }} />
+                </button>
                 <div className="food-facts-dots">
                   {foodFacts.map((_, index) => (<span key={index} className={`food-facts-dot ${index === currentFactIndex ? 'food-facts-dot-active' : ''}`} onClick={() => setCurrentFactIndex(index)} />))}
                 </div>
-                <button onClick={nextFact} className="food-facts-nav-btn">→</button>
+                <button onClick={nextFact} className="food-facts-nav-btn">
+                  <ChefHat className="food-facts-nav-icon" style={{ transform: 'rotate(90deg)' }} />
+                </button>
               </div>
             </div>
           </div>
@@ -711,7 +755,7 @@ export default function Dashboard() {
               {currentFood.ingredients && currentFood.ingredients.length > 0 && (
                 <div className="recipe-modal-section">
                   <h3 className="recipe-modal-section-title"><Utensils className="recipe-modal-section-icon" />Ingredients</h3>
-                  <ul className="recipe-modal-ingredients-list">{currentFood.ingredients.map((ingredient, i) => (<li key={i} className="recipe-modal-ingredient-item"><span className="recipe-modal-ingredient-bullet">•</span><span className="recipe-modal-ingredient-text">{ingredient}</span></li>))}</ul>
+                  <ul className="recipe-modal-ingredients-list">{currentFood.ingredients.map((ingredient, i) => (<li key={i} className="recipe-modal-ingredient-item"><span className="recipe-modal-ingredient-bullet">-</span><span className="recipe-modal-ingredient-text">{ingredient}</span></li>))}</ul>
                 </div>
               )}
               {currentFood.instructions && currentFood.instructions.length > 0 && (
@@ -723,13 +767,13 @@ export default function Dashboard() {
               {(!currentFood.ingredients || currentFood.ingredients.length === 0) && (!currentFood.instructions || currentFood.instructions.length === 0) && currentFood.recipe && currentFood.recipe.length > 0 && (
                 <div className="recipe-modal-section">
                   <h3 className="recipe-modal-section-title"><ChefHat className="recipe-modal-section-icon" />Recipe</h3>
-                  <ul className="recipe-modal-recipe-list">{currentFood.recipe.map((step, i) => (<li key={i} className="recipe-modal-recipe-item"><span className="recipe-modal-recipe-bullet">•</span><span className="recipe-modal-recipe-text">{step}</span></li>))}</ul>
+                  <ul className="recipe-modal-recipe-list">{currentFood.recipe.map((step, i) => (<li key={i} className="recipe-modal-recipe-item"><span className="recipe-modal-recipe-bullet">-</span><span className="recipe-modal-recipe-text">{step}</span></li>))}</ul>
                 </div>
               )}
               {currentFood.type === "community" && (
                 <div className="recipe-modal-tags-allergens">
                   {currentFood.tags && currentFood.tags.length > 0 && (<div><h4 className="recipe-modal-tags-title">Tags</h4><div className="recipe-modal-tags-container">{currentFood.tags.map((tag, i) => (<span key={i} className="recipe-modal-tag">#{tag}</span>))}</div></div>)}
-                  {currentFood.allergens && currentFood.allergens.length > 0 && (<div><h4 className="recipe-modal-allergens-title">Allergens</h4><div className="recipe-modal-allergens-container">{currentFood.allergens.map((allergen, i) => (<span key={i} className="recipe-modal-allergen">⚠️ {allergen}</span>))}</div></div>)}
+                  {currentFood.allergens && currentFood.allergens.length > 0 && (<div><h4 className="recipe-modal-allergens-title">Allergens</h4><div className="recipe-modal-allergens-container">{currentFood.allergens.map((allergen, i) => (<span key={i} className="recipe-modal-allergen">{allergen}</span>))}</div></div>)}
                 </div>
               )}
               {currentFood.notes && (<div className="recipe-modal-notes-section"><h4 className="recipe-modal-notes-title">Notes</h4><p className="recipe-modal-notes-text">{currentFood.notes}</p></div>)}
