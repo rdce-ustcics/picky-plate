@@ -1,17 +1,9 @@
 // server/services/imageModeration.js
-// Google Cloud Vision API integration for image moderation
+// Google Cloud Vision API integration for image moderation (using REST API with API Key)
 
-let vision = null;
-let client = null;
-
-// Try to load Cloud Vision - gracefully handle if not installed
-try {
-  vision = require('@google-cloud/vision');
-  client = new vision.ImageAnnotatorClient();
-  console.log('Cloud Vision API initialized successfully');
-} catch (err) {
-  console.warn('Cloud Vision API not available:', err.message);
-  console.warn('Image moderation will be skipped. Install with: npm install @google-cloud/vision');
+// Get API key at runtime (not at module load time)
+function getApiKey() {
+  return process.env.GOOGLE_CLOUD_VISION_API_KEY;
 }
 
 // SafeSearch likelihood levels (ordered from safe to unsafe)
@@ -36,7 +28,10 @@ const FOOD_RELATED_LABELS = [
   'baked goods', 'pastry', 'bread', 'soup', 'salad',
   'rice', 'noodles', 'pasta', 'pizza', 'burger',
   'sandwich', 'beverage', 'drink', 'plate', 'bowl',
-  'kitchen', 'restaurant', 'chef', 'culinary'
+  'kitchen', 'restaurant', 'chef', 'culinary',
+  'cake', 'cookie', 'chicken', 'beef', 'pork', 'fish',
+  'egg', 'cheese', 'sauce', 'curry', 'stew', 'grill',
+  'fry', 'bake', 'roast', 'steam', 'boil'
 ];
 
 // Minimum confidence score for label detection (0-1)
@@ -54,13 +49,58 @@ function isUnsafe(likelihood) {
 }
 
 /**
+ * Call Google Cloud Vision API
+ */
+async function callVisionAPI(imageBase64, features) {
+  const apiKey = getApiKey();
+  const url = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`;
+
+  console.log('[Vision API] Making request with features:', features.map(f => f.type).join(', '));
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      requests: [{
+        image: {
+          content: imageBase64
+        },
+        features: features
+      }]
+    })
+  });
+
+  const data = await response.json();
+
+  // Log the full response for debugging
+  console.log('[Vision API] Response status:', response.status);
+
+  if (!response.ok) {
+    console.error('[Vision API] Error response:', JSON.stringify(data, null, 2));
+    throw new Error(`Vision API error: ${response.status} - ${data.error?.message || 'Unknown error'}`);
+  }
+
+  if (data.responses && data.responses[0] && data.responses[0].error) {
+    console.error('[Vision API] Response error:', data.responses[0].error);
+    throw new Error(data.responses[0].error.message);
+  }
+
+  return data.responses[0];
+}
+
+/**
  * Analyze an image for inappropriate content and food relevance
  * @param {string} imageSource - Base64 image data or URL
  * @returns {Object} Analysis result
  */
 async function analyzeImage(imageSource) {
-  // Check if Cloud Vision is available
-  if (!client) {
+  const apiKey = getApiKey();
+
+  // Check if API key is available
+  if (!apiKey) {
+    console.warn('[Vision API] No API key configured - skipping moderation');
     return {
       success: true,
       approved: true,
@@ -69,29 +109,20 @@ async function analyzeImage(imageSource) {
     };
   }
 
-  try {
-    let imageRequest;
+  console.log('[Vision API] API key found, analyzing image...');
 
-    // Determine if it's base64 or URL
+  try {
+    // Extract base64 content (remove data:image/xxx;base64, prefix if present)
+    let base64Data = imageSource;
     if (imageSource.startsWith('data:image')) {
-      // Extract base64 content (remove data:image/xxx;base64, prefix)
-      const base64Data = imageSource.split(',')[1];
-      imageRequest = { image: { content: base64Data } };
-    } else if (imageSource.startsWith('http')) {
-      imageRequest = { image: { source: { imageUri: imageSource } } };
-    } else {
-      // Assume it's raw base64
-      imageRequest = { image: { content: imageSource } };
+      base64Data = imageSource.split(',')[1];
     }
 
-    // Perform both SafeSearch and Label detection in one request
-    const [result] = await client.annotateImage({
-      ...imageRequest,
-      features: [
-        { type: 'SAFE_SEARCH_DETECTION' },
-        { type: 'LABEL_DETECTION', maxResults: 20 }
-      ]
-    });
+    // Call Vision API with both SafeSearch and Label detection
+    const result = await callVisionAPI(base64Data, [
+      { type: 'SAFE_SEARCH_DETECTION' },
+      { type: 'LABEL_DETECTION', maxResults: 20 }
+    ]);
 
     // Process SafeSearch results
     const safeSearch = result.safeSearchAnnotation || {};
@@ -102,6 +133,8 @@ async function analyzeImage(imageSource) {
       spoof: safeSearch.spoof || 'UNKNOWN',
       medical: safeSearch.medical || 'UNKNOWN'
     };
+
+    console.log('[Vision API] SafeSearch results:', safeSearchResults);
 
     // Check for inappropriate content
     const inappropriateFlags = [];
@@ -122,6 +155,8 @@ async function analyzeImage(imageSource) {
       score: label.score
     }));
 
+    console.log('[Vision API] Detected labels:', detectedLabels.slice(0, 10).map(l => `${l.description} (${(l.score * 100).toFixed(1)}%)`));
+
     // Check for food-related content
     const foodLabels = detectedLabels.filter(label =>
       FOOD_RELATED_LABELS.some(foodTerm =>
@@ -132,8 +167,13 @@ async function analyzeImage(imageSource) {
 
     const isFoodRelated = foodLabels.length >= MIN_FOOD_LABELS;
 
+    console.log('[Vision API] Food labels found:', foodLabels.map(l => l.description));
+    console.log('[Vision API] Is food related:', isFoodRelated);
+
     // Build response
     const isApproved = inappropriateFlags.length === 0 && isFoodRelated;
+
+    console.log('[Vision API] Final decision - Approved:', isApproved);
 
     return {
       success: true,
@@ -148,12 +188,13 @@ async function analyzeImage(imageSource) {
     };
 
   } catch (error) {
-    console.error('Image moderation error:', error);
+    console.error('[Vision API] Error analyzing image:', error.message);
+    // Return NOT approved when there's an error - don't silently allow
     return {
       success: false,
       approved: false,
       error: error.message,
-      message: 'Failed to analyze image. Please try again.'
+      message: `Image analysis failed: ${error.message}`
     };
   }
 }
@@ -175,8 +216,10 @@ function generateMessage(inappropriateFlags, isFoodRelated) {
  * Quick check - only SafeSearch (faster, cheaper)
  */
 async function quickSafetyCheck(imageSource) {
-  // Check if Cloud Vision is available
-  if (!client) {
+  const apiKey = getApiKey();
+
+  // Check if API key is available
+  if (!apiKey) {
     return {
       success: true,
       safe: true,
@@ -186,18 +229,16 @@ async function quickSafetyCheck(imageSource) {
   }
 
   try {
-    let imageRequest;
-
+    // Extract base64 content
+    let base64Data = imageSource;
     if (imageSource.startsWith('data:image')) {
-      const base64Data = imageSource.split(',')[1];
-      imageRequest = { image: { content: base64Data } };
-    } else if (imageSource.startsWith('http')) {
-      imageRequest = { image: { source: { imageUri: imageSource } } };
-    } else {
-      imageRequest = { image: { content: imageSource } };
+      base64Data = imageSource.split(',')[1];
     }
 
-    const [result] = await client.safeSearchDetection(imageRequest);
+    const result = await callVisionAPI(base64Data, [
+      { type: 'SAFE_SEARCH_DETECTION' }
+    ]);
+
     const safeSearch = result.safeSearchAnnotation || {};
 
     const isUnsafeContent =
@@ -215,7 +256,7 @@ async function quickSafetyCheck(imageSource) {
       }
     };
   } catch (error) {
-    console.error('Quick safety check error:', error);
+    console.error('[Vision API] Quick safety check error:', error.message);
     return {
       success: false,
       safe: false,

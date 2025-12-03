@@ -222,7 +222,7 @@ router.post("/validate-image", protect, async (req, res) => {
     }
 
     // Check if Cloud Vision is configured
-    if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GOOGLE_CLOUD_PROJECT) {
+    if (!process.env.GOOGLE_CLOUD_VISION_API_KEY) {
       // If not configured, allow all images (fallback mode)
       console.warn("Cloud Vision not configured - skipping image moderation");
       return res.json({
@@ -280,7 +280,7 @@ router.post("/quick-safety-check", protect, async (req, res) => {
     }
 
     // Check if Cloud Vision is configured
-    if (!process.env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.GOOGLE_CLOUD_PROJECT) {
+    if (!process.env.GOOGLE_CLOUD_VISION_API_KEY) {
       return res.json({
         success: true,
         safe: true,
@@ -314,6 +314,13 @@ router.post("/quick-safety-check", protect, async (req, res) => {
  */
 router.post("/", protect, async (req, res) => {
   try {
+    // Debug log for auth issues
+    console.log('[Recipe Create] User authenticated:', {
+      userId: req.user?._id || req.user?.id,
+      email: req.user?.email,
+      name: req.user?.name
+    });
+
     const {
       title,
       image = "",

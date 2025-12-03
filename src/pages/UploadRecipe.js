@@ -229,19 +229,23 @@ export default function UploadRecipe() {
       });
 
       const data = await res.json();
+      console.log('[Upload] Server response:', { status: res.status, data });
+
       if (!res.ok || !data.success) {
         if (res.status === 401) {
           Swal.fire({
             icon: 'warning',
             title: 'Login required',
-            text: 'Please log in to upload a recipe.',
+            html: `<p>Please log in to upload a recipe.</p>
+                   <p class="text-sm text-gray-500 mt-2">${data?.message || 'Authentication required'}</p>`,
             confirmButtonColor: '#F59E0B'
           });
         } else {
           Swal.fire({
             icon: 'error',
             title: 'Upload failed',
-            text: data?.error || 'Something went wrong.',
+            html: `<p>${data?.error || data?.message || 'Something went wrong.'}</p>
+                   <p class="text-sm text-gray-500 mt-2">Status: ${res.status}</p>`,
             confirmButtonColor: '#F59E0B'
           });
         }

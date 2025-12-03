@@ -16,6 +16,7 @@ function getUserIdFromDecoded(decoded) {
 async function attachUserFromToken(req, res) {
   const token = getBearerToken(req);
   if (!token) {
+    console.log('[Auth] No token provided');
     return { ok: false, code: 401, msg: 'No token provided. Please login.' };
   }
 
@@ -23,16 +24,19 @@ async function attachUserFromToken(req, res) {
   try {
     decoded = jwt.verify(token, process.env.JWT_SECRET);
   } catch (e) {
+    console.log('[Auth] Token verification failed:', e.message);
     return { ok: false, code: 401, msg: 'Invalid or expired token. Please login again.' };
   }
 
   const userId = getUserIdFromDecoded(decoded);
   if (!userId) {
+    console.log('[Auth] No user ID in token payload:', decoded);
     return { ok: false, code: 401, msg: 'Bad token payload (no user id).' };
   }
 
   const user = await User.findById(userId).select('-password');
   if (!user) {
+    console.log('[Auth] User not found in database for ID:', userId);
     return { ok: false, code: 401, msg: 'User not found. Please login again.' };
   }
 
