@@ -2,11 +2,13 @@
 node_modules/
 **/.cache/
 
-# Environment variables - CRITICAL!
+# Environment variables - CRITICAL! Never commit secrets!
 .env
+.env.local
+.env.development
+.env.production
 .env.*
 !.env.example
-!.env.production
 
 # Build output
 build/
@@ -26,9 +28,3 @@ Thumbs.db
 
 # ESLint
 .eslintcache
-
-# Claude Code
-.claude/
-
-# Misc
-nul
