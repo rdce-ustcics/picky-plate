@@ -144,6 +144,12 @@ router.post('/kids', async (req, res) => {
       kidId, // optional for new kid
       name,
       age,
+      // New fields from frontend
+      eatingStyle = '',
+      favoriteFoods = '',
+      wontEat = '',
+      notes = '',
+      // Legacy/array fields
       likes = [],
       dislikes = [],
       diets = [],
@@ -167,11 +173,17 @@ router.post('/kids', async (req, res) => {
         kidId: finalKidId,
         name,
         age,
-        likes,
-        dislikes,
-        diets,
-        allergens,
-        favorites,
+        // New fields
+        eatingStyle: eatingStyle || '',
+        favoriteFoods: favoriteFoods || '',
+        wontEat: wontEat || '',
+        notes: notes || '',
+        // Legacy fields
+        likes: Array.isArray(likes) ? likes : [],
+        dislikes: Array.isArray(dislikes) ? dislikes : [],
+        diets: Array.isArray(diets) ? diets : [],
+        allergens: Array.isArray(allergens) ? allergens : [],
+        favorites: Array.isArray(favorites) ? favorites : [],
         kiddieMeal: kiddieMeal === true,
       },
       { new: true, upsert: true, setDefaultsOnInsert: true }

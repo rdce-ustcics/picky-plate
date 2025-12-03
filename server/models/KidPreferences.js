@@ -24,6 +24,31 @@ const kidPreferencesSchema = new mongoose.Schema(
       required: true,
     },
 
+    // Eating style (e.g., "picky eater", "adventurous", etc.)
+    eatingStyle: {
+      type: String,
+      default: '',
+    },
+
+    // What the kid loves to eat (free text)
+    favoriteFoods: {
+      type: String,
+      default: '',
+    },
+
+    // What the kid won't eat (free text)
+    wontEat: {
+      type: String,
+      default: '',
+    },
+
+    // Additional notes about the kid's eating habits
+    notes: {
+      type: String,
+      default: '',
+    },
+
+    // Legacy fields (kept for backwards compatibility)
     likes: {
       type: [String],
       default: [],
