@@ -2631,3 +2631,26 @@ body.modal-open {
 .cr-upload-modal .cr-instruction-number {
   box-shadow: 0 3px 8px rgba(251, 191, 36, 0.3);
 }
+
+/* ========================================
+   SWEETALERT ABOVE MODAL
+   ======================================== */
+
+/* Make SweetAlert appear above modals */
+.swal-above-modal {
+  z-index: 100000 !important;
+}
+
+.swal2-container.swal-above-modal {
+  z-index: 100000 !important;
+}
+
+/* Style the close button */
+.swal-above-modal .swal2-close {
+  color: #92400E !important;
+  font-size: 2rem !important;
+}
+
+.swal-above-modal .swal2-close:hover {
+  color: #B45309 !important;
+}

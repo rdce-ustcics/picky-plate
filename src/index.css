@@ -17,3 +17,30 @@ body{
 }
 h1{ margin:0; font-size:28px; }
 
+/* ========================================
+   SWEETALERT ABOVE MODALS (Global)
+   ======================================== */
+
+/* Make SweetAlert appear above all modals */
+.swal-above-modal {
+  z-index: 100000 !important;
+}
+
+.swal2-container.swal-above-modal {
+  z-index: 100000 !important;
+}
+
+/* Style the close button */
+.swal-above-modal .swal2-close {
+  color: #92400E !important;
+  font-size: 2rem !important;
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+}
+
+.swal-above-modal .swal2-close:hover {
+  color: #B45309 !important;
+  transform: none !important;
+}
+

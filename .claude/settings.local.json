@@ -40,7 +40,8 @@
       "Bash(cmd //c \"del test-performance.js\")",
       "Bash(cmd //c \"taskkill /PID 33308 /F\")",
       "Bash(cmd //c \"del test-optimized.js\")",
-      "Bash(cmd //c \"taskkill /PID 28344 /F\")"
+      "Bash(cmd //c \"taskkill /PID 28344 /F\")",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

@@ -153,6 +153,8 @@ export default function CommunityRecipes() {
     image: null
   });
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadImageValidating, setUploadImageValidating] = useState(false);
+  const [uploadImageValidation, setUploadImageValidation] = useState(null);
 
   // NEW: Favorites/Bookmarks (local storage for demo)
   const [favorites, setFavorites] = useState(() => {
@@ -1119,17 +1121,90 @@ export default function CommunityRecipes() {
       allergens: [],
       image: null
     });
+    setUploadImageValidating(false);
+    setUploadImageValidation(null);
   };
 
   const handleUploadFormChange = (field, value) => {
     setUploadForm(prev => ({ ...prev, [field]: value }));
   };
 
+  const validateUploadImage = async (imageData) => {
+    if (!imageData) return;
+
+    setUploadImageValidating(true);
+    setUploadImageValidation(null);
+
+    try {
+      const headers = { "Content-Type": "application/json", ...authHeaders() };
+
+      const res = await fetch(`${API_BASE}/api/recipes/validate-image`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ image: imageData }),
+      });
+
+      const data = await res.json();
+      console.log('[Upload Validation] Result:', data);
+
+      setUploadImageValidation({
+        approved: data.approved,
+        message: data.message,
+        details: data.details || {},
+        skipped: data.skipped
+      });
+
+      // Show alert if not approved
+      if (!data.approved && !data.skipped) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Image Not Approved',
+          html: `<p>${data.message}</p>
+                 ${data.details?.detectedLabels?.length > 0
+                   ? `<p class="text-sm text-gray-500 mt-2">Detected: ${data.details.detectedLabels.join(', ')}</p>`
+                   : ''}`,
+          showCloseButton: true,
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#F59E0B',
+          customClass: {
+            container: 'swal-above-modal'
+          }
+        });
+      }
+
+    } catch (err) {
+      console.error("Upload image validation error:", err);
+      setUploadImageValidation({
+        approved: true,
+        message: "Validation unavailable",
+        skipped: true
+      });
+    } finally {
+      setUploadImageValidating(false);
+    }
+  };
+
   const handleUploadImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        Swal.fire({
+          icon: 'error',
+          title: 'File Too Large',
+          text: 'Please upload an image smaller than 5MB',
+        });
+        return;
+      }
+
       const reader = new FileReader();
-      reader.onloadend = () => setUploadForm(prev => ({ ...prev, image: reader.result }));
+      reader.onloadend = () => {
+        const imageData = reader.result;
+        setUploadForm(prev => ({ ...prev, image: imageData }));
+        setUploadImageValidation(null);
+        // Trigger validation
+        validateUploadImage(imageData);
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -1201,6 +1276,16 @@ export default function CommunityRecipes() {
     if (!uploadForm.cookTime) errs.push("Cook time is required");
     if (!uploadForm.servings) errs.push("Serving size is required");
     if (!uploadForm.difficulty) errs.push("Difficulty is required");
+
+    // Check image validation if image exists
+    if (uploadForm.image && uploadImageValidation && !uploadImageValidation.approved && !uploadImageValidation.skipped) {
+      errs.push("Image not approved - please upload a valid food image");
+    }
+
+    // Check if image is still being validated
+    if (uploadForm.image && uploadImageValidating) {
+      errs.push("Please wait for image validation to complete");
+    }
 
     if (errs.length) {
       Swal.fire({
@@ -2195,9 +2280,26 @@ export default function CommunityRecipes() {
                 <label
                   htmlFor="upload-photo"
                   className="cr-upload-photo-box"
+                  style={{
+                    borderColor: uploadImageValidation?.approved === false && !uploadImageValidation?.skipped
+                      ? '#ef4444'
+                      : uploadImageValidation?.approved
+                        ? '#22c55e'
+                        : undefined
+                  }}
                 >
                   {uploadForm.image ? (
-                    <img src={uploadForm.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
+                    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                      <img src={uploadForm.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
+                      {uploadImageValidating && (
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ background: 'white', borderRadius: '8px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Loader className="w-5 h-5 animate-spin" style={{ color: '#F59E0B' }} />
+                            <span style={{ color: '#92400E', fontWeight: '500' }}>Validating...</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                       <Camera style={{ width: '48px', height: '48px', color: '#F59E0B', marginBottom: '8px' }} />
@@ -2206,6 +2308,21 @@ export default function CommunityRecipes() {
                     </div>
                   )}
                 </label>
+                {/* Validation status */}
+                {uploadImageValidation && !uploadImageValidating && (
+                  <p style={{
+                    marginTop: '8px',
+                    fontSize: '14px',
+                    color: uploadImageValidation.approved ? '#22c55e' : '#ef4444',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    {uploadImageValidation.approved
+                      ? (uploadImageValidation.skipped ? 'Image accepted' : 'Image approved - food detected!')
+                      : uploadImageValidation.message}
+                  </p>
+                )}
               </div>
 
               {/* Dish Name */}
@@ -2400,13 +2517,18 @@ export default function CommunityRecipes() {
               </button>
               <button
                 onClick={handleUploadSubmit}
-                disabled={uploadLoading}
-                className={`cr-modal-btn cr-modal-btn-primary ${uploadLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={uploadLoading || uploadImageValidating || (uploadForm.image && uploadImageValidation && !uploadImageValidation.approved && !uploadImageValidation.skipped)}
+                className={`cr-modal-btn cr-modal-btn-primary ${(uploadLoading || uploadImageValidating || (uploadForm.image && uploadImageValidation && !uploadImageValidation.approved && !uploadImageValidation.skipped)) ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {uploadLoading ? (
                   <>
                     <Loader className="w-4 h-4 animate-spin" />
                     Uploading...
+                  </>
+                ) : uploadImageValidating ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Validating Image...
                   </>
                 ) : (
                   <>

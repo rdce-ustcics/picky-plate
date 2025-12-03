@@ -112,7 +112,12 @@ export default function UploadRecipe() {
               ? `<p class="text-gray-500 mt-2 text-sm">Detected: ${data.details.detectedLabels.join(', ')}</p>`
               : ''}
           `,
-          confirmButtonColor: '#F59E0B'
+          showCloseButton: true,
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#F59E0B',
+          customClass: {
+            container: 'swal-above-modal'
+          }
         });
       }
 

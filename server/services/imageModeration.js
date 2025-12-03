@@ -20,25 +20,53 @@ const LIKELIHOOD_ORDER = [
 // POSSIBLE = 3, LIKELY = 4, VERY_LIKELY = 5
 const UNSAFE_THRESHOLD = 4; // LIKELY or VERY_LIKELY
 
-// Food-related labels to check for
+// STRICT food-related labels - actual food items only, not utensils/kitchen items
 const FOOD_RELATED_LABELS = [
-  'food', 'dish', 'meal', 'cuisine', 'recipe', 'cooking',
-  'ingredient', 'vegetable', 'fruit', 'meat', 'seafood',
-  'dessert', 'breakfast', 'lunch', 'dinner', 'snack',
-  'baked goods', 'pastry', 'bread', 'soup', 'salad',
-  'rice', 'noodles', 'pasta', 'pizza', 'burger',
-  'sandwich', 'beverage', 'drink', 'plate', 'bowl',
-  'kitchen', 'restaurant', 'chef', 'culinary',
-  'cake', 'cookie', 'chicken', 'beef', 'pork', 'fish',
-  'egg', 'cheese', 'sauce', 'curry', 'stew', 'grill',
-  'fry', 'bake', 'roast', 'steam', 'boil'
+  // General food terms
+  'food', 'dish', 'meal', 'cuisine', 'recipe',
+  // Proteins
+  'meat', 'seafood', 'chicken', 'beef', 'pork', 'fish', 'shrimp', 'crab', 'lobster',
+  'lamb', 'turkey', 'duck', 'bacon', 'sausage', 'ham', 'steak',
+  // Vegetables & Fruits
+  'vegetable', 'fruit', 'salad', 'tomato', 'potato', 'carrot', 'onion', 'garlic',
+  'lettuce', 'broccoli', 'spinach', 'corn', 'pepper', 'mushroom', 'avocado',
+  'apple', 'banana', 'orange', 'strawberry', 'grape', 'mango', 'pineapple',
+  // Grains & Carbs
+  'rice', 'noodles', 'pasta', 'bread', 'pizza', 'burger', 'sandwich', 'taco',
+  'spaghetti', 'ramen', 'pho', 'dumpling', 'spring roll', 'wrap',
+  // Prepared dishes
+  'soup', 'stew', 'curry', 'casserole', 'roast', 'stir fry',
+  // Dairy & Eggs
+  'egg', 'cheese', 'omelette', 'scrambled egg',
+  // Desserts & Baked goods
+  'dessert', 'cake', 'cookie', 'pastry', 'pie', 'donut', 'ice cream', 'pudding',
+  'brownie', 'muffin', 'cupcake', 'chocolate', 'candy',
+  // Meals
+  'breakfast', 'lunch', 'dinner', 'snack', 'appetizer',
+  // Sauces & Condiments
+  'sauce', 'gravy', 'dressing',
+  // Beverages (food-related)
+  'smoothie', 'milkshake',
+  // Specific dishes
+  'sushi', 'sashimi', 'tempura', 'fried rice', 'fried chicken',
+  'bbq', 'barbecue', 'grilled', 'baked'
+];
+
+// Labels that should NOT count as food (even if detected)
+const NON_FOOD_LABELS = [
+  'fork', 'spoon', 'knife', 'utensil', 'cutlery', 'tableware',
+  'plate', 'bowl', 'cup', 'glass', 'mug', 'bottle',
+  'kitchen', 'restaurant', 'chef', 'cooking', 'culinary',
+  'table', 'dining', 'menu', 'recipe book',
+  'cartoon', 'illustration', 'drawing', 'clipart', 'icon', 'logo',
+  'graphic', 'design', 'art', 'artwork', 'vector'
 ];
 
 // Minimum confidence score for label detection (0-1)
-const LABEL_CONFIDENCE_THRESHOLD = 0.5;
+const LABEL_CONFIDENCE_THRESHOLD = 0.6;
 
-// Minimum number of food-related labels required
-const MIN_FOOD_LABELS = 1;
+// Minimum number of food-related labels required (stricter)
+const MIN_FOOD_LABELS = 2;
 
 /**
  * Check if a likelihood level is considered unsafe
@@ -157,6 +185,14 @@ async function analyzeImage(imageSource) {
 
     console.log('[Vision API] Detected labels:', detectedLabels.slice(0, 10).map(l => `${l.description} (${(l.score * 100).toFixed(1)}%)`));
 
+    // Check if image contains non-food items (utensils, cartoons, etc.)
+    const hasNonFoodItems = detectedLabels.some(label =>
+      NON_FOOD_LABELS.some(nonFoodTerm =>
+        label.description.includes(nonFoodTerm) ||
+        nonFoodTerm.includes(label.description)
+      ) && label.score >= 0.5
+    );
+
     // Check for food-related content
     const foodLabels = detectedLabels.filter(label =>
       FOOD_RELATED_LABELS.some(foodTerm =>
@@ -165,7 +201,10 @@ async function analyzeImage(imageSource) {
       ) && label.score >= LABEL_CONFIDENCE_THRESHOLD
     );
 
-    const isFoodRelated = foodLabels.length >= MIN_FOOD_LABELS;
+    // Must have enough food labels AND not be primarily non-food (like utensils/cartoons)
+    const isFoodRelated = foodLabels.length >= MIN_FOOD_LABELS && !hasNonFoodItems;
+
+    console.log('[Vision API] Has non-food items:', hasNonFoodItems);
 
     console.log('[Vision API] Food labels found:', foodLabels.map(l => l.description));
     console.log('[Vision API] Is food related:', isFoodRelated);
@@ -182,9 +221,10 @@ async function analyzeImage(imageSource) {
       inappropriateFlags,
       isInappropriate: inappropriateFlags.length > 0,
       isFoodRelated,
+      hasNonFoodItems,
       foodLabels: foodLabels.map(l => l.description),
       allLabels: detectedLabels.slice(0, 10).map(l => l.description),
-      message: generateMessage(inappropriateFlags, isFoodRelated)
+      message: generateMessage(inappropriateFlags, isFoodRelated, hasNonFoodItems)
     };
 
   } catch (error) {
@@ -202,9 +242,12 @@ async function analyzeImage(imageSource) {
 /**
  * Generate user-friendly message based on analysis
  */
-function generateMessage(inappropriateFlags, isFoodRelated) {
+function generateMessage(inappropriateFlags, isFoodRelated, hasNonFoodItems) {
   if (inappropriateFlags.length > 0) {
     return `Image rejected: Contains ${inappropriateFlags.join(', ')}. Please upload an appropriate food image.`;
+  }
+  if (hasNonFoodItems) {
+    return 'Image rejected: This appears to be a cartoon, illustration, or shows utensils/kitchenware instead of actual food. Please upload a real photo of your dish.';
   }
   if (!isFoodRelated) {
     return 'Image rejected: This doesn\'t appear to be a food-related image. Please upload a photo of your dish.';
