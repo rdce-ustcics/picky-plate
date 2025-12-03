@@ -17,7 +17,6 @@ router.get("/admin/all", requireAdmin, async (req, res) => {
 
     res.json({ success: true, recipes });
   } catch (e) {
-    // console.error("admin_cultural_recipes_error:", e);
     res.status(500).json({ success: false, error: "Failed to fetch cultural recipes" });
   }
 });
@@ -50,7 +49,6 @@ router.get("/", async (req, res) => {
 
     res.json({ success: true, recipes });
   } catch (e) {
-    // console.error("cultural_recipes_list_error:", e);
     res.status(500).json({ success: false, error: "Failed to fetch cultural recipes" });
   }
 });
@@ -68,7 +66,6 @@ router.get("/:id", async (req, res) => {
 
     res.json({ success: true, recipe });
   } catch (e) {
-    // console.error("get_cultural_recipe_error:", e);
     res.status(500).json({ success: false, error: "Failed to fetch recipe" });
   }
 });
@@ -101,7 +98,6 @@ router.post("/", requireAdmin, async (req, res) => {
 
     res.status(201).json({ success: true, recipe: culturalRecipe });
   } catch (e) {
-    // console.error("create_cultural_recipe_error:", e);
     res.status(500).json({ success: false, error: "Failed to create cultural recipe" });
   }
 });
@@ -132,7 +128,6 @@ router.put("/:id", requireAdmin, async (req, res) => {
 
     res.json({ success: true, recipe: culturalRecipe });
   } catch (e) {
-    // console.error("update_cultural_recipe_error:", e);
     res.status(500).json({ success: false, error: "Failed to update cultural recipe" });
   }
 });
@@ -153,7 +148,6 @@ router.delete("/:id", requireAdmin, async (req, res) => {
 
     res.json({ success: true, message: "Cultural recipe deleted successfully" });
   } catch (e) {
-    // console.error("delete_cultural_recipe_error:", e);
     res.status(500).json({ success: false, error: "Failed to delete cultural recipe" });
   }
 });

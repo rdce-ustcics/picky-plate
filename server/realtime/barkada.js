@@ -1,5 +1,5 @@
 const { nanoid } = require('nanoid');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const aiRecommender = require('./aiRecommender');
 const UserPreferences = require('../models/UserPreferences');
 

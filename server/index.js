@@ -64,16 +64,14 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, nodeEnv: process.env.
 try {
   const devRouter = require('./routes/dev');
   app.use('/dev', devRouter);
-  // console.log('[dev] routes mounted at /dev (forced)');
 } catch (e) {
-  // console.warn('[dev] routes not mounted:', e?.message);
+  // ignore if dev routes not present
 }
 
 // Optional dev utilities (SMTP test, etc.)
 if (process.env.NODE_ENV !== 'production') {
   try {
     app.use('/api/dev', require('./routes/dev'));
-    // console.log('[dev] routes mounted at /dev');
   } catch { /* ignore if not present */ }
 }
 
@@ -107,12 +105,9 @@ connectDB()
     app.use('/api/admin', require('./routes/admin'));
 
     const port = process.env.PORT || 4000;
-    server.listen(port, () => {
-      // console.log(`🚀 API + Socket.IO running on http://localhost:${port}`);
-    });
+    server.listen(port);
   })
-  .catch((err) => {
-    // console.error('❌ Failed to connect MongoDB:', err);
+  .catch(() => {
     process.exit(1);
   });
 
@@ -121,7 +116,6 @@ connectDB()
 // ──────────────────────────────────────────────────────────────
 /* eslint-disable no-unused-vars */
 app.use((err, req, res, next) => {
-  // console.error(err.stack);
   res.status(500).json({
     success: false,
     message: 'Something went wrong!',

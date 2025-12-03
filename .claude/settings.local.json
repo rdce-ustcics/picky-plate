@@ -41,7 +41,8 @@
       "Bash(cmd //c \"taskkill /PID 33308 /F\")",
       "Bash(cmd //c \"del test-optimized.js\")",
       "Bash(cmd //c \"taskkill /PID 28344 /F\")",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(powershell -Command:*)"
     ],
     "deny": [],
     "ask": []

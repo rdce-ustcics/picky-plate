@@ -20,7 +20,6 @@ router.get('/flagged-recipes', requireAdmin, async (req, res) => {
 
     res.json({ success: true, recipes });
   } catch (e) {
-    // console.error('Error fetching flagged recipes:', e);
     res.status(500).json({ success: false, error: 'Failed to fetch flagged recipes' });
   }
 });
@@ -41,7 +40,6 @@ router.post('/approve-recipe/:id', requireAdmin, async (req, res) => {
 
     res.json({ success: true, message: 'Recipe approved successfully', recipe });
   } catch (e) {
-    // console.error('Error approving recipe:', e);
     res.status(500).json({ success: false, error: 'Failed to approve recipe' });
   }
 });
@@ -64,7 +62,6 @@ router.delete('/reject-recipe/:id', requireAdmin, async (req, res) => {
 
     res.json({ success: true, message: 'Recipe rejected and removed from public view' });
   } catch (e) {
-    // console.error('Error rejecting recipe:', e);
     res.status(500).json({ success: false, error: 'Failed to reject recipe' });
   }
 });
@@ -81,7 +78,6 @@ router.get('/review-recipes', requireAdmin, async (req, res) => {
       .lean();
     res.json({ success: true, recipes });
   } catch (e) {
-    // console.error('Error fetching review recipes:', e);
     res.status(500).json({ success: false, error: 'Failed to fetch recipes for review' });
   }
 });
@@ -102,7 +98,7 @@ router.post('/recipes/:id/reinstate', requireAdmin, async (req, res) => {
           flaggedBy: null,
         },
       },
-      { new: true, runValidators: true } // ⬅️ ensure enum + schema apply
+      { new: true, runValidators: true }
     );
 
     if (!recipe) {
@@ -111,7 +107,6 @@ router.post('/recipes/:id/reinstate', requireAdmin, async (req, res) => {
 
     return res.json({ success: true, message: 'Recipe reinstated (state: active)', recipe });
   } catch (e) {
-    // console.error('Error reinstating recipe:', e);
     return res.status(500).json({ success: false, error: 'Failed to reinstate recipe' });
   }
 });
@@ -122,13 +117,12 @@ router.post('/recipes/:id/reinstate', requireAdmin, async (req, res) => {
  */
 router.delete('/recipes/:id', requireAdmin, async (req, res) => {
   try {
-    const result = await Recipe.deleteOne({ _id: req.params.id }); // hard delete
+    const result = await Recipe.deleteOne({ _id: req.params.id });
     if (result.deletedCount === 0) {
       return res.status(404).json({ success: false, error: 'Recipe not found' });
     }
     return res.json({ success: true, message: 'Recipe permanently deleted' });
   } catch (e) {
-    // console.error('Error deleting recipe:', e);
     return res.status(500).json({ success: false, error: 'Failed to permanently delete recipe' });
   }
 });
@@ -151,7 +145,6 @@ router.get('/stats', requireAdmin, async (req, res) => {
       stats: { totalRecipes, flaggedCount, deletedCount, forReviewCount },
     });
   } catch (e) {
-    // console.error('Error fetching stats:', e);
     res.status(500).json({ success: false, error: 'Failed to fetch statistics' });
   }
 });

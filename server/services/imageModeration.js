@@ -83,8 +83,6 @@ async function callVisionAPI(imageBase64, features) {
   const apiKey = getApiKey();
   const url = `https://vision.googleapis.com/v1/images:annotate?key=${apiKey}`;
 
-  console.log('[Vision API] Making request with features:', features.map(f => f.type).join(', '));
-
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -102,16 +100,11 @@ async function callVisionAPI(imageBase64, features) {
 
   const data = await response.json();
 
-  // Log the full response for debugging
-  console.log('[Vision API] Response status:', response.status);
-
   if (!response.ok) {
-    console.error('[Vision API] Error response:', JSON.stringify(data, null, 2));
     throw new Error(`Vision API error: ${response.status} - ${data.error?.message || 'Unknown error'}`);
   }
 
   if (data.responses && data.responses[0] && data.responses[0].error) {
-    console.error('[Vision API] Response error:', data.responses[0].error);
     throw new Error(data.responses[0].error.message);
   }
 
@@ -128,7 +121,6 @@ async function analyzeImage(imageSource) {
 
   // Check if API key is available
   if (!apiKey) {
-    console.warn('[Vision API] No API key configured - skipping moderation');
     return {
       success: true,
       approved: true,
@@ -136,8 +128,6 @@ async function analyzeImage(imageSource) {
       skipped: true
     };
   }
-
-  console.log('[Vision API] API key found, analyzing image...');
 
   try {
     // Extract base64 content (remove data:image/xxx;base64, prefix if present)
@@ -162,8 +152,6 @@ async function analyzeImage(imageSource) {
       medical: safeSearch.medical || 'UNKNOWN'
     };
 
-    console.log('[Vision API] SafeSearch results:', safeSearchResults);
-
     // Check for inappropriate content
     const inappropriateFlags = [];
     if (isUnsafe(safeSearchResults.adult)) {
@@ -182,8 +170,6 @@ async function analyzeImage(imageSource) {
       description: label.description.toLowerCase(),
       score: label.score
     }));
-
-    console.log('[Vision API] Detected labels:', detectedLabels.slice(0, 10).map(l => `${l.description} (${(l.score * 100).toFixed(1)}%)`));
 
     // Check if image contains non-food items (utensils, cartoons, etc.)
     const hasNonFoodItems = detectedLabels.some(label =>
@@ -204,15 +190,8 @@ async function analyzeImage(imageSource) {
     // Must have enough food labels AND not be primarily non-food (like utensils/cartoons)
     const isFoodRelated = foodLabels.length >= MIN_FOOD_LABELS && !hasNonFoodItems;
 
-    console.log('[Vision API] Has non-food items:', hasNonFoodItems);
-
-    console.log('[Vision API] Food labels found:', foodLabels.map(l => l.description));
-    console.log('[Vision API] Is food related:', isFoodRelated);
-
     // Build response
     const isApproved = inappropriateFlags.length === 0 && isFoodRelated;
-
-    console.log('[Vision API] Final decision - Approved:', isApproved);
 
     return {
       success: true,
@@ -228,7 +207,6 @@ async function analyzeImage(imageSource) {
     };
 
   } catch (error) {
-    console.error('[Vision API] Error analyzing image:', error.message);
     // Return NOT approved when there's an error - don't silently allow
     return {
       success: false,
@@ -299,7 +277,6 @@ async function quickSafetyCheck(imageSource) {
       }
     };
   } catch (error) {
-    console.error('[Vision API] Quick safety check error:', error.message);
     return {
       success: false,
       safe: false,

@@ -31,13 +31,6 @@ router.get("/ping", (_req, res) => res.json({ ok: true }));
 // GEOSPATIAL NEARBY SEARCH - Uses 2dsphere index for speed
 // ============================================================
 router.get("/nearby", async (req, res) => {
-  console.log('📍 /api/places/nearby called:', {
-    lat: req.query.lat,
-    lng: req.query.lng,
-    radius: req.query.radius,
-    limit: req.query.limit,
-    mode: req.query.radius === '0' ? 'ALL_RESTAURANTS' : 'GEO_SEARCH'
-  });
   try {
     const {
       lat,
@@ -205,7 +198,6 @@ router.get("/nearby", async (req, res) => {
       distanceKm: r.distance != null ? (r.distance / 1000).toFixed(2) : null
     }));
 
-    console.log(`✅ Found ${formattedRestaurants.length} restaurants (total: ${total})`);
     res.json({
       restaurants: formattedRestaurants,
       pagination: {
@@ -223,7 +215,6 @@ router.get("/nearby", async (req, res) => {
     });
 
   } catch (err) {
-    console.error('❌ Nearby search error:', err.message);
     res.status(500).json({
       error: "Nearby search failed",
       detail: err.message

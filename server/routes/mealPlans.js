@@ -16,7 +16,6 @@ router.get("/", protect, async (req, res) => {
     const items = await MealPlan.find(q).sort({ date: 1 });
     res.json({ success: true, items });
   } catch (e) {
-    // console.error("mealplans_list_error:", e);
     res.status(500).json({ success: false, error: "list_failed" });
   }
 });
@@ -51,7 +50,6 @@ router.put("/:date", protect, async (req, res) => {
 
     res.json({ success: true, plan: doc });
   } catch (e) {
-    // console.error("mealplan_put_error:", e);
     res.status(500).json({ success: false, error: "save_failed" });
   }
 });
@@ -73,7 +71,6 @@ router.delete("/:date/:index", protect, async (req, res) => {
     await doc.save();
     res.json({ success: true, plan: doc });
   } catch (e) {
-    // console.error("mealplan_delete_error:", e);
     res.status(500).json({ success: false, error: "delete_failed" });
   }
 });
