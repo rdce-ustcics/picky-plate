@@ -879,25 +879,56 @@ export default function CommunityRecipes() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setEditErrors(prev => ({ ...prev, image: "Image must be less than 5MB" }));
+    if (file.size > 10 * 1024 * 1024) {
+      setEditErrors(prev => ({ ...prev, image: "Image must be less than 10MB" }));
       return;
     }
 
     try {
       await validateImageOrientation(file);
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const imageData = reader.result;
-        setEditImagePreview(imageData);
-        setEditForm(prev => ({ ...prev, image: imageData }));
+      // Compress and resize image using canvas
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxSize = 1200; // Max 1200px for recipe images
+        let { width, height } = img;
+
+        // Calculate new dimensions while maintaining aspect ratio
+        if (width > height && width > maxSize) {
+          height = Math.round((height * maxSize) / width);
+          width = maxSize;
+        } else if (height > maxSize) {
+          width = Math.round((width * maxSize) / height);
+          height = maxSize;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        // Draw with smooth scaling
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert to JPEG at 85% quality
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        setEditImagePreview(compressedDataUrl);
+        setEditForm(prev => ({ ...prev, image: compressedDataUrl }));
         setEditErrors(prev => ({ ...prev, image: null }));
         setEditImageValidation(null);
         // Trigger Cloud Vision validation
-        validateEditImage(imageData);
+        validateEditImage(compressedDataUrl);
+
+        // Clean up object URL
+        URL.revokeObjectURL(img.src);
       };
-      reader.readAsDataURL(file);
+      img.onerror = () => {
+        setEditErrors(prev => ({ ...prev, image: "Failed to load image. Please try a different file." }));
+        URL.revokeObjectURL(img.src);
+      };
+      img.src = URL.createObjectURL(file);
     } catch (error) {
       setEditErrors(prev => ({ ...prev, image: error.message }));
       e.target.value = "";

@@ -7,7 +7,7 @@ import './Profile.css';
 export default function Profile() {
   // API base configuration (matching Dashboard)
   const API = process.env.REACT_APP_API_URL || "http://localhost:4000";
-  const { authHeaders } = useAuth();
+  const { authHeaders, updateUser } = useAuth();
 
   // ---- Identify active user ----
   const activeUserId = useMemo(() => {
@@ -34,6 +34,64 @@ export default function Profile() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
+  const [profileImage, setProfileImage] = useState('');
+  const fileInputRef = useRef(null);
+
+  // ---- Handle Profile Image Upload ----
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showAlert('Error', 'Please select an image file.', 'error');
+      return;
+    }
+
+    // Validate file size (max 5MB before compression)
+    if (file.size > 5 * 1024 * 1024) {
+      showAlert('Error', 'Image must be less than 5MB.', 'error');
+      return;
+    }
+
+    // Compress and resize image using canvas
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const maxSize = 300; // Max 300x300 for profile pics (keeps file size small)
+      let { width, height } = img;
+
+      // Calculate new dimensions while maintaining aspect ratio
+      if (width > height && width > maxSize) {
+        height = Math.round((height * maxSize) / width);
+        width = maxSize;
+      } else if (height > maxSize) {
+        width = Math.round((width * maxSize) / height);
+        height = maxSize;
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+
+      // Draw with smooth scaling
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Convert to JPEG at 80% quality (much smaller than PNG)
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      setProfileImage(compressedDataUrl);
+
+      // Clean up object URL
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror = () => {
+      showAlert('Error', 'Failed to load image file.', 'error');
+      URL.revokeObjectURL(img.src);
+    };
+    img.src = URL.createObjectURL(file);
+  };
 
   // ---- Change Password Modal (OTP-based) ----
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -262,6 +320,7 @@ export default function Profile() {
             setFirstName(data.user.firstName || '');
             setLastName(data.user.lastName || '');
             setPhone(data.user.phone || '');
+            setProfileImage(data.user.profileImage || '');
           }
         }
       } catch (e) {
@@ -546,7 +605,7 @@ export default function Profile() {
           'Content-Type': 'application/json',
           ...authHeaders(),
         },
-        body: JSON.stringify({ firstName, lastName, phone })
+        body: JSON.stringify({ firstName, lastName, phone, profileImage })
       });
 
       if (!profileRes.ok) {
@@ -554,15 +613,11 @@ export default function Profile() {
         throw new Error(t || 'Failed to save profile');
       }
 
-      // Update localStorage with new user data
+      // Update AuthContext and localStorage with new user data
       const profileData = await profileRes.json();
       if (profileData.user) {
+        updateUser(profileData.user);
         try {
-          const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-          localStorage.setItem('user', JSON.stringify({
-            ...storedUser,
-            ...profileData.user
-          }));
           localStorage.setItem('pap:activeUserName', profileData.user.name || displayName);
         } catch {}
       }
@@ -1022,16 +1077,39 @@ export default function Profile() {
           <div className="profile-editor-card">
             <div className="profile-avatar-section">
               <div className="avatar-wrapper">
-                <div className="avatar-circle">
-                  <svg className="avatar-icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                  </svg>
+                <div
+                  className="avatar-circle clickable"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Click to change photo"
+                >
+                  {profileImage ? (
+                    <img
+                      src={profileImage}
+                      alt="Profile"
+                      className="avatar-image"
+                    />
+                  ) : (
+                    <svg className="avatar-icon" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                  )}
                 </div>
-                <button className="edit-avatar-btn" title="Change avatar">
+                <button
+                  className="edit-avatar-btn"
+                  title="Change avatar"
+                  onClick={() => fileInputRef.current?.click()}
+                >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                   </svg>
                 </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageUpload}
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                />
               </div>
             </div>
 

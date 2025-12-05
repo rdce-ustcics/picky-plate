@@ -134,29 +134,104 @@ export default function UploadRecipe() {
     }
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
+      // Check file size (max 10MB before compression)
+      if (file.size > 10 * 1024 * 1024) {
         Swal.fire({
           icon: 'error',
           title: 'File Too Large',
-          text: 'Please upload an image smaller than 5MB',
+          text: 'Please upload an image smaller than 10MB',
           confirmButtonColor: '#F59E0B'
         });
         return;
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const imageData = reader.result;
-        setImage(imageData);
-        setImageValidation(null);
-        // Trigger validation
-        validateImage(imageData);
-      };
-      reader.readAsDataURL(file);
+      // Check for unsupported formats
+      const fileName = file.name.toLowerCase();
+      if (fileName.endsWith('.avif') || fileName.endsWith('.webp') || fileName.endsWith('.heic') || fileName.endsWith('.heif')) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Format Not Fully Supported',
+          text: 'AVIF, WebP, and HEIC formats may not work properly. Please use JPG or PNG for best results.',
+          confirmButtonColor: '#F59E0B'
+        });
+      }
+
+      try {
+        // Use createImageBitmap for better format support (fallback to Image if not available)
+        let imgSource;
+        if (typeof createImageBitmap === 'function') {
+          try {
+            imgSource = await createImageBitmap(file);
+          } catch {
+            // Fallback to blob URL method
+            imgSource = null;
+          }
+        }
+
+        const processImage = (img) => {
+          const canvas = document.createElement('canvas');
+          const maxSize = 1200; // Max 1200px for recipe images
+          let width = img.width;
+          let height = img.height;
+
+          // Calculate new dimensions while maintaining aspect ratio
+          if (width > height && width > maxSize) {
+            height = Math.round((height * maxSize) / width);
+            width = maxSize;
+          } else if (height > maxSize) {
+            width = Math.round((width * maxSize) / height);
+            height = maxSize;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+
+          // Draw with smooth scaling
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Convert to JPEG at 85% quality
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setImage(compressedDataUrl);
+          setImageValidation(null);
+          // Trigger validation
+          validateImage(compressedDataUrl);
+        };
+
+        if (imgSource) {
+          processImage(imgSource);
+        } else {
+          // Fallback: use Image element with object URL
+          const img = new Image();
+          const objectUrl = URL.createObjectURL(file);
+          img.onload = () => {
+            processImage(img);
+            URL.revokeObjectURL(objectUrl);
+          };
+          img.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            Swal.fire({
+              icon: 'error',
+              title: 'Unsupported Format',
+              text: 'This image format is not supported. Please use JPG or PNG.',
+              confirmButtonColor: '#F59E0B'
+            });
+          };
+          img.src = objectUrl;
+        }
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Image Error',
+          text: 'Failed to process the image. Please try a JPG or PNG file.',
+          confirmButtonColor: '#F59E0B'
+        });
+      }
     }
   };
 

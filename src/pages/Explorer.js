@@ -254,12 +254,54 @@ export default function Explorer() {
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-        setRecipeForm(prev => ({ ...prev, img: reader.result }));
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file.');
+        return;
+      }
+
+      // Validate file size (max 10MB before compression)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Image must be less than 10MB.');
+        return;
+      }
+
+      // Compress and resize image using canvas
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxSize = 1200; // Max 1200px
+        let { width, height } = img;
+
+        // Calculate new dimensions while maintaining aspect ratio
+        if (width > height && width > maxSize) {
+          height = Math.round((height * maxSize) / width);
+          width = maxSize;
+        } else if (height > maxSize) {
+          width = Math.round((width * maxSize) / height);
+          height = maxSize;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convert to JPEG at 85% quality
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        setImagePreview(compressedDataUrl);
+        setRecipeForm(prev => ({ ...prev, img: compressedDataUrl }));
+
+        URL.revokeObjectURL(img.src);
       };
-      reader.readAsDataURL(file);
+      img.onerror = () => {
+        alert('Failed to load image. Please try a different file.');
+        URL.revokeObjectURL(img.src);
+      };
+      img.src = URL.createObjectURL(file);
     }
   };
 

@@ -82,6 +82,7 @@ const sanitizeSessionForClient = (s, requestingToken = null) => {
       name: p.name,
       isRegistered: p.isRegistered,
       hasSubmitted: p.hasSubmitted,
+      profileImage: p.profileImage || '',
     })
   );
 
@@ -212,7 +213,7 @@ const sanitizeSessionForClient = (s, requestingToken = null) => {
     // ──────────────────────────────────────────────────────────────
     socket.on(
       'session:create',
-      async ({ name, password, userId = null, isRegistered = !!userId, options = [] }, cb) => {
+      async ({ name, password, userId = null, isRegistered = !!userId, options = [], profileImage = '' }, cb) => {
         try {
           if (!name || !password) return cb({ ok: false, error: 'Missing fields' });
 
@@ -270,6 +271,7 @@ const sanitizeSessionForClient = (s, requestingToken = null) => {
             hasSubmitted: false,
             socketId: socket.id,
             submittedOptionsCount: 0,
+            profileImage: profileImage || '',
           });
 
           sessions.set(code, s);
@@ -442,9 +444,10 @@ socket.on(
       password,
       name,
       isRegistered = false,
-      userId = null,        // 👈 NEW
+      userId = null,
       existingToken = null,
       restrictions = null,  // can be used for guests
+      profileImage = '',
     },
     cb
   ) => {
@@ -508,6 +511,7 @@ socket.on(
         : undefined,
       submittedOptionsCount:
         s.participants.get(token)?.submittedOptionsCount || 0,
+      profileImage: profileImage || '',
     });
 
     // Refilter options based on everyone’s non-negotiables

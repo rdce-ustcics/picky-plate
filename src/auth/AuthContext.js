@@ -99,6 +99,15 @@ export const AuthProvider = ({ children }) => {
     clearSessionId();
   };
 
+  // Update user data (e.g., after profile changes)
+  const updateUser = (updatedUser) => {
+    const newUser = { ...user, ...updatedUser };
+    setUser(newUser);
+    try {
+      localStorage.setItem('user', JSON.stringify(newUser));
+    } catch {}
+  };
+
   // Check if the user is authenticated based on token and user data
   const isAuthenticated = !!token && !!user;
 
@@ -192,6 +201,7 @@ export const AuthProvider = ({ children }) => {
       login,
       signup,
       logout,
+      updateUser,
       isAuthenticated,
       isAdmin,
       loading,

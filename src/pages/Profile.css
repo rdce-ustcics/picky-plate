@@ -120,6 +120,17 @@
   box-shadow: 0 12px 32px rgba(251, 191, 36, 0.5);
 }
 
+.avatar-circle.clickable {
+  cursor: pointer;
+}
+
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 .avatar-icon {
   width: 70px;
   height: 70px;

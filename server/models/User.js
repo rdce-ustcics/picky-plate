@@ -24,6 +24,10 @@ const userSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    profileImage: {
+      type: String,
+      default: '', // Base64 data URL or empty string
+    },
     email: {
       type: String,
       required: [true, 'Email is required'],

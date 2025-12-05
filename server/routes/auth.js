@@ -161,10 +161,10 @@ router.put('/change-password', protect, async (req, res) => {
   }
 });
 
-// PUT /api/auth/profile - Update user profile (firstName, lastName, phone)
+// PUT /api/auth/profile - Update user profile (firstName, lastName, phone, profileImage)
 router.put('/profile', protect, async (req, res) => {
   try {
-    const { firstName, lastName, phone } = req.body;
+    const { firstName, lastName, phone, profileImage } = req.body;
     const user = await User.findById(req.user.id);
 
     if (!user) {
@@ -175,6 +175,7 @@ router.put('/profile', protect, async (req, res) => {
     if (firstName !== undefined) user.firstName = String(firstName).trim();
     if (lastName !== undefined) user.lastName = String(lastName).trim();
     if (phone !== undefined) user.phone = String(phone).trim();
+    if (profileImage !== undefined) user.profileImage = profileImage; // Base64 data URL
 
     // Also update the name field to match firstName + lastName if both provided
     if (firstName !== undefined || lastName !== undefined) {
@@ -196,6 +197,7 @@ router.put('/profile', protect, async (req, res) => {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         phone: user.phone || '',
+        profileImage: user.profileImage || '',
         email: user.email,
         role: user.role,
         verified: user.verified

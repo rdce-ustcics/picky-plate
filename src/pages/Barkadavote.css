@@ -554,6 +554,39 @@
   border: 1px solid #10b981;
 }
 
+/* Participant Avatar */
+.participant-avatar {
+  flex-shrink: 0;
+  margin-right: 0.75rem;
+}
+
+.participant-avatar-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fbbf24;
+}
+
+.participant-avatar-placeholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+  border: 2px solid #fde68a;
+}
+
+.participant-info {
+  flex: 1;
+  min-width: 0;
+}
+
 /* Restaurant Cards */
 .restaurant-card {
   background: white;

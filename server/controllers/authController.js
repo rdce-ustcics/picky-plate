@@ -53,6 +53,7 @@ exports.signup = async (req, res) => {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         phone: user.phone || '',
+        profileImage: user.profileImage || '',
         email: user.email,
         role: user.role,
         verified: user.verified
@@ -105,6 +106,7 @@ exports.login = async (req, res) => {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         phone: user.phone || '',
+        profileImage: user.profileImage || '',
         email: user.email,
         role: user.role,
         verified: user.verified
@@ -128,6 +130,7 @@ exports.getMe = async (req, res) => {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         phone: user.phone || '',
+        profileImage: user.profileImage || '',
         email: user.email,
         role: user.role,
         verified: user.verified

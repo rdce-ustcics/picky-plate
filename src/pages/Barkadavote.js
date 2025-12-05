@@ -512,8 +512,9 @@ export default function BarkadaVote() {
       {
         name: createName,
         password: createPassword,
-        userId: null,
-        isRegistered: false,
+        userId: authUser?._id || authUser?.id || null,
+        isRegistered: !!authUser,
+        profileImage: authUser?.profileImage || '',
       },
       (res) => {
         if (!res?.ok) return showAlert(res?.error || "Create failed", "error");
@@ -558,9 +559,10 @@ export default function BarkadaVote() {
         password: joinPassword,
         name: joinName,
         isRegistered: !!authUser,
-        userId: authUser?._id || null,
+        userId: authUser?._id || authUser?.id || null,
         existingToken: participantToken || null,
         restrictions: restrictionsOverride,
+        profileImage: authUser?.profileImage || '',
       },
       (res) => {
         if (!res?.ok) return showAlert(res?.error || "Join failed", "error");
@@ -1358,7 +1360,20 @@ export default function BarkadaVote() {
             <div className="grid-2">
               {participants.map((p, i) => (
                 <div key={i} className="participant-card">
-                  <div>
+                  <div className="participant-avatar">
+                    {p.profileImage ? (
+                      <img
+                        src={p.profileImage}
+                        alt={p.name}
+                        className="participant-avatar-img"
+                      />
+                    ) : (
+                      <div className="participant-avatar-placeholder">
+                        {p.name?.charAt(0)?.toUpperCase() || "?"}
+                      </div>
+                    )}
+                  </div>
+                  <div className="participant-info">
                     <div className="participant-name">{p.name}</div>
                     {host?.name === p.name && (
                       <div

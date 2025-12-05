@@ -52,21 +52,27 @@ const FOOD_RELATED_LABELS = [
   'bbq', 'barbecue', 'grilled', 'baked'
 ];
 
-// Labels that should NOT count as food (even if detected)
-const NON_FOOD_LABELS = [
-  'fork', 'spoon', 'knife', 'utensil', 'cutlery', 'tableware',
-  'plate', 'bowl', 'cup', 'glass', 'mug', 'bottle',
-  'kitchen', 'restaurant', 'chef', 'cooking', 'culinary',
-  'table', 'dining', 'menu', 'recipe book',
+// Labels that indicate NON-FOOD primary content (cartoons, graphics, etc.)
+// NOTE: We ALLOW plates, bowls, utensils etc. since food is often served on them!
+const REJECTION_LABELS = [
+  // Only reject actual non-food content (cartoons, illustrations, etc.)
   'cartoon', 'illustration', 'drawing', 'clipart', 'icon', 'logo',
-  'graphic', 'design', 'art', 'artwork', 'vector'
+  'graphic', 'design', 'art', 'artwork', 'vector', 'animation',
+  'sketch', 'painting', 'digital art', 'comic'
+];
+
+// These are ACCEPTABLE - food is typically served on/with these
+const ACCEPTABLE_SERVING_ITEMS = [
+  'plate', 'bowl', 'cup', 'glass', 'mug', 'bottle', 'dish', 'platter',
+  'fork', 'spoon', 'knife', 'utensil', 'cutlery', 'tableware', 'chopsticks',
+  'kitchen', 'restaurant', 'table', 'dining', 'napkin', 'tablecloth'
 ];
 
 // Minimum confidence score for label detection (0-1)
-const LABEL_CONFIDENCE_THRESHOLD = 0.6;
+const LABEL_CONFIDENCE_THRESHOLD = 0.5; // Lowered from 0.6 to be more lenient
 
-// Minimum number of food-related labels required (stricter)
-const MIN_FOOD_LABELS = 2;
+// Minimum number of food-related labels required
+const MIN_FOOD_LABELS = 1; // Lowered from 2 - even 1 good food label is enough
 
 /**
  * Check if a likelihood level is considered unsafe
@@ -130,10 +136,57 @@ async function analyzeImage(imageSource) {
   }
 
   try {
+    // Validate input
+    if (!imageSource || typeof imageSource !== 'string') {
+      return {
+        success: false,
+        approved: false,
+        message: 'Invalid image data provided.'
+      };
+    }
+
     // Extract base64 content (remove data:image/xxx;base64, prefix if present)
     let base64Data = imageSource;
     if (imageSource.startsWith('data:image')) {
-      base64Data = imageSource.split(',')[1];
+      const parts = imageSource.split(',');
+      if (parts.length !== 2) {
+        return {
+          success: false,
+          approved: false,
+          message: 'Invalid image format. Please try a different image.'
+        };
+      }
+      base64Data = parts[1];
+    }
+
+    // Validate base64 data
+    if (!base64Data || base64Data.length < 100) {
+      return {
+        success: false,
+        approved: false,
+        message: 'Image data is too small or empty.'
+      };
+    }
+
+    // Check if base64 is valid (only contains valid base64 characters)
+    const base64Regex = /^[A-Za-z0-9+/]+=*$/;
+    if (!base64Regex.test(base64Data)) {
+      return {
+        success: false,
+        approved: false,
+        message: 'Invalid image encoding. Please try a different image.'
+      };
+    }
+
+    // Check size limit (Cloud Vision API limit is ~10MB, we'll be more conservative)
+    const imageSizeBytes = (base64Data.length * 3) / 4; // Approximate decoded size
+    const maxSizeBytes = 4 * 1024 * 1024; // 4MB limit
+    if (imageSizeBytes > maxSizeBytes) {
+      return {
+        success: false,
+        approved: false,
+        message: 'Image is too large. Please use a smaller image (under 4MB).'
+      };
     }
 
     // Call Vision API with both SafeSearch and Label detection
@@ -171,13 +224,25 @@ async function analyzeImage(imageSource) {
       score: label.score
     }));
 
-    // Check if image contains non-food items (utensils, cartoons, etc.)
-    const hasNonFoodItems = detectedLabels.some(label =>
-      NON_FOOD_LABELS.some(nonFoodTerm =>
-        label.description.includes(nonFoodTerm) ||
-        nonFoodTerm.includes(label.description)
+    // Check if image is primarily non-food content (cartoons, illustrations, etc.)
+    // NOTE: We DO NOT reject plates, bowls, utensils - those are fine with food!
+    const isCartoonOrIllustration = detectedLabels.some(label =>
+      REJECTION_LABELS.some(rejectionTerm =>
+        label.description.includes(rejectionTerm) ||
+        rejectionTerm.includes(label.description)
+      ) && label.score >= 0.6 // Higher threshold for rejection
+    );
+
+    // Check if serving items are present (plates, utensils, etc.) - this is GOOD, not bad
+    const hasServingItems = detectedLabels.some(label =>
+      ACCEPTABLE_SERVING_ITEMS.some(servingTerm =>
+        label.description.includes(servingTerm) ||
+        servingTerm.includes(label.description)
       ) && label.score >= 0.5
     );
+
+    // Legacy variable name for compatibility
+    const hasNonFoodItems = isCartoonOrIllustration;
 
     // Check for food-related content
     const foodLabels = detectedLabels.filter(label =>
@@ -187,8 +252,13 @@ async function analyzeImage(imageSource) {
       ) && label.score >= LABEL_CONFIDENCE_THRESHOLD
     );
 
-    // Must have enough food labels AND not be primarily non-food (like utensils/cartoons)
-    const isFoodRelated = foodLabels.length >= MIN_FOOD_LABELS && !hasNonFoodItems;
+    // Image is food-related if:
+    // 1. Has enough food labels, OR
+    // 2. Has serving items (plate/bowl/utensils) with at least some food indication
+    // AND not a cartoon/illustration
+    const hasSufficientFoodLabels = foodLabels.length >= MIN_FOOD_LABELS;
+    const hasServingWithFood = hasServingItems && foodLabels.length >= 1;
+    const isFoodRelated = (hasSufficientFoodLabels || hasServingWithFood) && !isCartoonOrIllustration;
 
     // Build response
     const isApproved = inappropriateFlags.length === 0 && isFoodRelated;
@@ -225,7 +295,8 @@ function generateMessage(inappropriateFlags, isFoodRelated, hasNonFoodItems) {
     return `Image rejected: Contains ${inappropriateFlags.join(', ')}. Please upload an appropriate food image.`;
   }
   if (hasNonFoodItems) {
-    return 'Image rejected: This appears to be a cartoon, illustration, or shows utensils/kitchenware instead of actual food. Please upload a real photo of your dish.';
+    // hasNonFoodItems now only refers to cartoons/illustrations
+    return 'Image rejected: This appears to be a cartoon or illustration. Please upload a real photo of your dish.';
   }
   if (!isFoodRelated) {
     return 'Image rejected: This doesn\'t appear to be a food-related image. Please upload a photo of your dish.';
