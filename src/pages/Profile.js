@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import LoadingModal from '../components/LoadingModal';
 import { useAuth } from '../auth/AuthContext';
 import { getCached, setCache, CACHE_KEYS, CACHE_TTL } from '../utils/cache';
@@ -30,21 +30,26 @@ export default function Profile() {
       .join(' ') || 'Friend';
   };
 
-  // ---- Profile fields (local) ----
-  const [name, setName] = useState(() => {
-    try {
-      return localStorage.getItem('pap:activeUserName') || nameFromEmail(localStorage.getItem('pap:activeUserId'));
-    } catch {
-      return 'Friend';
-    }
-  });
-  const [phone, setPhone] = useState(() => {
-    try {
-      return localStorage.getItem('pap:profile:phone') || '+63';
-    } catch {
-      return '+63';
-    }
-  });
+  // ---- Profile fields ----
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+
+  // ---- Change Password Modal (OTP-based) ----
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordStep, setPasswordStep] = useState(1); // 1: Request OTP, 2: Verify OTP, 3: New Password
+  const [passwordOtp, setPasswordOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordChanging, setPasswordChanging] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+
+  // Ref to track if password operation is in progress (prevents race conditions)
+  const passwordOperationRef = useRef(false);
+
+  // Computed display name
+  const displayName = [firstName, lastName].filter(Boolean).join(' ') || nameFromEmail(activeUserId);
 
   // ---- Option sets (with new additions) ----
   const cuisineOptions   = ['filipino','japanese','italian','korean','chinese','american','thai','mexican','middle-eastern'];
@@ -184,32 +189,50 @@ export default function Profile() {
     onCancel: null,
   });
 
-  // Custom alert function to replace browser alert
-  const showAlert = (title, message, type = 'info') => {
-    setAlertModal({
-      show: true,
-      type,
-      title,
-      message,
-      onConfirm: () => setAlertModal(prev => ({ ...prev, show: false })),
-      onCancel: null,
-    });
-  };
+  // Ref to prevent duplicate alerts
+  const alertShowingRef = useRef(false);
 
-  // Custom confirm function to replace browser confirm
-  const showConfirm = (title, message, onConfirm, type = 'confirm') => {
+  // Custom alert function to replace browser alert - with duplicate prevention
+  const showAlert = useCallback((title, message, type = 'info') => {
+    // Prevent showing if an alert is already visible
+    if (alertShowingRef.current) return;
+
+    alertShowingRef.current = true;
     setAlertModal({
       show: true,
       type,
       title,
       message,
       onConfirm: () => {
+        alertShowingRef.current = false;
+        setAlertModal(prev => ({ ...prev, show: false }));
+      },
+      onCancel: null,
+    });
+  }, []);
+
+  // Custom confirm function to replace browser confirm - with duplicate prevention
+  const showConfirm = useCallback((title, message, onConfirm, type = 'confirm') => {
+    // Prevent showing if an alert is already visible
+    if (alertShowingRef.current) return;
+
+    alertShowingRef.current = true;
+    setAlertModal({
+      show: true,
+      type,
+      title,
+      message,
+      onConfirm: () => {
+        alertShowingRef.current = false;
         setAlertModal(prev => ({ ...prev, show: false }));
         if (onConfirm) onConfirm();
       },
-      onCancel: () => setAlertModal(prev => ({ ...prev, show: false })),
+      onCancel: () => {
+        alertShowingRef.current = false;
+        setAlertModal(prev => ({ ...prev, show: false }));
+      },
     });
-  };
+  }, []);
 
   // Preferences wizard
   const [showPrefsWizard, setShowPrefsWizard] = useState(false);
@@ -222,6 +245,31 @@ export default function Profile() {
 
   // Combine all preferences for display
   const allSelectedPreferences = [...likes, ...dislikes, ...favorites, ...allergens, ...diets];
+
+  // ---- Load user profile on mount ----
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/api/auth/me`, {
+          headers: {
+            ...authHeaders(),
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled && data.user) {
+            setFirstName(data.user.firstName || '');
+            setLastName(data.user.lastName || '');
+            setPhone(data.user.phone || '');
+          }
+        }
+      } catch (e) {
+        // Ignore errors, will use defaults
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [API, authHeaders]);
 
   // ---- Load preferences on mount (with caching) ----
   useEffect(() => {
@@ -332,11 +380,194 @@ export default function Profile() {
     }
   };
 
+  // ---- Change Password Handlers (OTP-based) ----
+
+  // Step 1: Request OTP
+  const handleRequestPasswordOtp = async () => {
+    // Guard against double-clicks and race conditions using both state and ref
+    if (passwordChanging || passwordOperationRef.current) return;
+
+    passwordOperationRef.current = true;
+    setPasswordChanging(true);
+    try {
+      const res = await fetch(`${API}/api/auth/request-password-change-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders(),
+        }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.cooldownSec) {
+          setOtpCooldown(data.cooldownSec);
+        }
+        throw new Error(data.message || 'Failed to send OTP');
+      }
+
+      // Start cooldown timer
+      if (data.cooldownSec) {
+        setOtpCooldown(data.cooldownSec);
+      }
+
+      // Move to step 2 first, then show alert
+      setPasswordStep(2);
+      showAlert('OTP Sent!', 'Please check your email for the verification code.', 'success');
+    } catch (e) {
+      showAlert('Error', e.message || 'Failed to send OTP', 'error');
+    } finally {
+      passwordOperationRef.current = false;
+      setPasswordChanging(false);
+    }
+  };
+
+  // Step 2: Verify OTP
+  const handleVerifyPasswordOtp = async () => {
+    // Guard against double-clicks and race conditions using both state and ref
+    if (passwordChanging || passwordOperationRef.current || passwordStep !== 2) return;
+
+    if (!passwordOtp || passwordOtp.length < 6) {
+      showAlert('Error', 'Please enter the 6-digit OTP code.', 'error');
+      return;
+    }
+
+    passwordOperationRef.current = true;
+    setPasswordChanging(true);
+    try {
+      const res = await fetch(`${API}/api/auth/verify-password-change-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders(),
+        },
+        body: JSON.stringify({ otp: passwordOtp })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to verify OTP');
+      }
+
+      // Move to step 3 first, then show alert
+      setPasswordStep(3);
+      showAlert('OTP Verified!', 'You can now set your new password.', 'success');
+    } catch (e) {
+      showAlert('Error', e.message || 'Failed to verify OTP', 'error');
+    } finally {
+      passwordOperationRef.current = false;
+      setPasswordChanging(false);
+    }
+  };
+
+  // Step 3: Change Password
+  const handleChangePassword = async () => {
+    // Guard against double-clicks and race conditions using both state and ref
+    if (passwordChanging || passwordOperationRef.current || passwordStep !== 3) return;
+
+    if (!newPassword || !confirmPassword) {
+      showAlert('Error', 'Please fill in all password fields.', 'error');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      showAlert('Error', 'New passwords do not match.', 'error');
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      showAlert('Error', 'New password must be at least 8 characters.', 'error');
+      return;
+    }
+
+    passwordOperationRef.current = true;
+    setPasswordChanging(true);
+    try {
+      const res = await fetch(`${API}/api/auth/change-password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders(),
+        },
+        body: JSON.stringify({ newPassword, otp: passwordOtp })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to change password');
+      }
+
+      // Success - close modal and reset fields
+      setShowPasswordModal(false);
+      setPasswordStep(1);
+      setPasswordOtp('');
+      setNewPassword('');
+      setConfirmPassword('');
+      showAlert('Success!', 'Password changed successfully!', 'success');
+    } catch (e) {
+      showAlert('Error', e.message || 'Failed to change password', 'error');
+    } finally {
+      passwordOperationRef.current = false;
+      setPasswordChanging(false);
+    }
+  };
+
+  // Reset password modal state
+  const resetPasswordModal = () => {
+    setShowPasswordModal(false);
+    setPasswordStep(1);
+    setPasswordOtp('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setOtpCooldown(0);
+    passwordOperationRef.current = false;
+  };
+
+  // Countdown timer for OTP cooldown
+  React.useEffect(() => {
+    if (otpCooldown > 0) {
+      const timer = setTimeout(() => setOtpCooldown(otpCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [otpCooldown]);
+
   // ---- Save to server + persist local profile fields ----
   const saveChanges = async () => {
     setSaving(true);
     setError('');
     try {
+      // Save profile data (firstName, lastName, phone)
+      const profileRes = await fetch(`${API}/api/auth/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders(),
+        },
+        body: JSON.stringify({ firstName, lastName, phone })
+      });
+
+      if (!profileRes.ok) {
+        const t = await profileRes.text();
+        throw new Error(t || 'Failed to save profile');
+      }
+
+      // Update localStorage with new user data
+      const profileData = await profileRes.json();
+      if (profileData.user) {
+        try {
+          const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+          localStorage.setItem('user', JSON.stringify({
+            ...storedUser,
+            ...profileData.user
+          }));
+          localStorage.setItem('pap:activeUserName', profileData.user.name || displayName);
+        } catch {}
+      }
+
+      // Save preferences
       const payload = {
         likes,
         dislikes,
@@ -359,11 +590,6 @@ export default function Profile() {
         const t = await res.text();
         throw new Error(t || 'Save failed');
       }
-
-      try {
-        localStorage.setItem('pap:activeUserName', name || nameFromEmail(activeUserId));
-        localStorage.setItem('pap:profile:phone', phone || '+63');
-      } catch {}
 
       setCache(CACHE_KEYS.USER_PREFERENCES, {
         likes, dislikes, diets, allergens, favorites, kiddieMeal
@@ -551,13 +777,29 @@ export default function Profile() {
       }
     };
 
-    return (
-      <div className="custom-alert-overlay" onClick={(e) => {
-        if (e.target === e.currentTarget && alertModal.onCancel) {
+    // Handle closing the modal (for overlay clicks on non-confirm modals)
+    const handleOverlayClick = (e) => {
+      if (e.target === e.currentTarget) {
+        e.stopPropagation();
+        if (alertModal.onCancel) {
           alertModal.onCancel();
+        } else if (alertModal.onConfirm) {
+          alertModal.onConfirm();
         }
-      }}>
-        <div className={`custom-alert-container custom-alert-${alertModal.type}`}>
+      }
+    };
+
+    const handleButtonClick = (callback) => (e) => {
+      e.stopPropagation();
+      if (callback) callback();
+    };
+
+    return (
+      <div className="custom-alert-overlay" onClick={handleOverlayClick}>
+        <div
+          className={`custom-alert-container custom-alert-${alertModal.type}`}
+          onClick={(e) => e.stopPropagation()}
+        >
           {getIcon()}
           <h3 className="custom-alert-title">{alertModal.title}</h3>
           <p className="custom-alert-message">{alertModal.message}</p>
@@ -565,14 +807,14 @@ export default function Profile() {
             {alertModal.onCancel && (
               <button
                 className="custom-alert-btn custom-alert-btn-cancel"
-                onClick={alertModal.onCancel}
+                onClick={handleButtonClick(alertModal.onCancel)}
               >
                 Cancel
               </button>
             )}
             <button
               className={`custom-alert-btn custom-alert-btn-confirm ${alertModal.type === 'confirm' ? 'custom-alert-btn-danger' : ''}`}
-              onClick={alertModal.onConfirm}
+              onClick={handleButtonClick(alertModal.onConfirm)}
             >
               {alertModal.type === 'confirm' ? 'Delete' : 'OK'}
             </button>
@@ -589,11 +831,188 @@ export default function Profile() {
       {/* Custom Alert Modal */}
       <AlertModal />
 
+      {/* Change Password Modal (OTP-based) */}
+      {showPasswordModal && (
+        <div className="modal-overlay" onClick={resetPasswordModal}>
+          <div className="modal-content password-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Change Password</h2>
+              <button className="modal-close" onClick={resetPasswordModal}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Step Indicator */}
+            <div className="password-steps">
+              <div className={`password-step ${passwordStep >= 1 ? 'active' : ''} ${passwordStep > 1 ? 'completed' : ''}`}>
+                <span className="step-number">1</span>
+                <span className="step-label">Request OTP</span>
+              </div>
+              <div className="step-connector"></div>
+              <div className={`password-step ${passwordStep >= 2 ? 'active' : ''} ${passwordStep > 2 ? 'completed' : ''}`}>
+                <span className="step-number">2</span>
+                <span className="step-label">Verify OTP</span>
+              </div>
+              <div className="step-connector"></div>
+              <div className={`password-step ${passwordStep >= 3 ? 'active' : ''}`}>
+                <span className="step-number">3</span>
+                <span className="step-label">New Password</span>
+              </div>
+            </div>
+
+            <div className="modal-body">
+              {/* Step 1: Request OTP */}
+              {passwordStep === 1 && (
+                <div className="password-step-content">
+                  <div className="step-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="3" y="5" width="18" height="14" rx="2" ry="2"/>
+                      <polyline points="3 7 12 13 21 7"/>
+                    </svg>
+                  </div>
+                  <h3>Verify Your Identity</h3>
+                  <p>We'll send a 6-digit verification code to your email address to confirm it's you.</p>
+                  <p className="email-display">{activeUserId}</p>
+                </div>
+              )}
+
+              {/* Step 2: Verify OTP */}
+              {passwordStep === 2 && (
+                <div className="password-step-content">
+                  <div className="step-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                    </svg>
+                  </div>
+                  <h3>Enter Verification Code</h3>
+                  <p>Please enter the 6-digit code sent to your email.</p>
+                  <div className="otp-input-wrapper">
+                    <input
+                      type="text"
+                      value={passwordOtp}
+                      onChange={(e) => setPasswordOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="000000"
+                      className="otp-input"
+                      maxLength={6}
+                      autoFocus
+                    />
+                  </div>
+                  {otpCooldown > 0 ? (
+                    <p className="resend-timer">Resend code in {otpCooldown}s</p>
+                  ) : (
+                    <button
+                      className="resend-btn"
+                      onClick={handleRequestPasswordOtp}
+                      disabled={passwordChanging}
+                    >
+                      Resend Code
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Step 3: New Password */}
+              {passwordStep === 3 && (
+                <div className="password-step-content">
+                  <div className="password-field">
+                    <label>New Password</label>
+                    <div className="password-input-wrapper">
+                      <input
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password (min 8 characters)"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                      >
+                        {showNewPassword ? (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                            <line x1="1" y1="1" x2="23" y2="23"/>
+                          </svg>
+                        ) : (
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="password-field">
+                    <label>Confirm New Password</label>
+                    <div className="password-input-wrapper">
+                      <input
+                        type={showNewPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                      />
+                    </div>
+                    {confirmPassword && newPassword !== confirmPassword && (
+                      <span className="password-mismatch">Passwords do not match</span>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button
+                className="modal-btn secondary"
+                onClick={resetPasswordModal}
+              >
+                Cancel
+              </button>
+
+              {passwordStep === 1 && (
+                <button
+                  className="modal-btn primary"
+                  onClick={handleRequestPasswordOtp}
+                  disabled={passwordChanging}
+                >
+                  {passwordChanging ? 'Sending...' : 'Send OTP'}
+                </button>
+              )}
+
+              {passwordStep === 2 && (
+                <button
+                  className="modal-btn primary"
+                  onClick={handleVerifyPasswordOtp}
+                  disabled={passwordChanging || passwordOtp.length < 6}
+                >
+                  {passwordChanging ? 'Verifying...' : 'Verify OTP'}
+                </button>
+              )}
+
+              {passwordStep === 3 && (
+                <button
+                  className="modal-btn primary"
+                  onClick={handleChangePassword}
+                  disabled={passwordChanging || !newPassword || !confirmPassword || newPassword !== confirmPassword || newPassword.length < 8}
+                >
+                  {passwordChanging ? 'Changing...' : 'Change Password'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="profile-page">
         {/* Header Banner */}
         <div className="header-banner">
           <div className="banner-decoration"></div>
-          <h1>Hello, {name || nameFromEmail(activeUserId)}!</h1>
+          <h1>Hello, {displayName}!</h1>
           <p>Manage your account and personalize your experience</p>
         </div>
 
@@ -621,12 +1040,25 @@ export default function Profile() {
                 <svg className="field-icon" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                 </svg>
-                <label>Username</label>
+                <label>First Name</label>
                 <input
                   type="text"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="Your name"
+                  value={firstName}
+                  onChange={e => setFirstName(e.target.value)}
+                  placeholder="Enter your first name"
+                />
+              </div>
+
+              <div className="form-field">
+                <svg className="field-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+                <label>Last Name</label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={e => setLastName(e.target.value)}
+                  placeholder="Enter your last name"
                 />
               </div>
 
@@ -642,12 +1074,12 @@ export default function Profile() {
                 <svg className="field-icon" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/>
                 </svg>
-                <label>Phone Number</label>
+                <label>Phone Number <span style={{fontWeight: 'normal', color: '#92400e', fontSize: '0.75rem'}}>(Optional)</span></label>
                 <input
                   type="tel"
                   value={phone}
                   onChange={e => setPhone(e.target.value)}
-                  placeholder="+63"
+                  placeholder="e.g. +63 912 345 6789"
                 />
               </div>
             </div>
@@ -675,7 +1107,7 @@ export default function Profile() {
                 <svg className="info-icon" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                 </svg>
-                <span className="info-text">{name || nameFromEmail(activeUserId)}</span>
+                <span className="info-text">{displayName}</span>
               </div>
 
               <div className="info-item">
@@ -689,7 +1121,7 @@ export default function Profile() {
                 <svg className="info-icon" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56-.35-.12-.74-.03-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/>
                 </svg>
-                <span className="info-text">{phone || '+63'}</span>
+                <span className="info-text">{phone || 'Not set'}</span>
               </div>
 
               <div className="info-item">
@@ -697,7 +1129,7 @@ export default function Profile() {
                   <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
                 </svg>
                 <span className="info-text">••••••••</span>
-                <button className="change-password-btn" onClick={() => showAlert('Change Password', 'Hook your change password flow here', 'info')}>
+                <button className="change-password-btn" onClick={() => setShowPasswordModal(true)}>
                   Change Password
                 </button>
               </div>
@@ -1140,8 +1572,25 @@ export default function Profile() {
                             ⚠️ Does {kidName || "your kid"} have any food allergies?
                           </h3>
                           <p className="modal-section-subtitle">
-                            This is important for meal safety. Select all that apply.
+                            This is important for meal safety. Select all that apply, or click "No Allergens" if none.
                           </p>
+
+                          {/* No Allergens Button */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setKidAllergens([]);
+                              saveKid();
+                            }}
+                            disabled={savingKid}
+                            className="no-allergens-btn"
+                          >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                            No Allergens - Save {kidName || "Kid"}
+                          </button>
+
                           <div className="modal-options-grid allergen-grid">
                             {allergenOptions.map((id) => (
                               <button

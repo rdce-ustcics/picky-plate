@@ -972,6 +972,40 @@
   margin-bottom: 1rem;
 }
 
+/* No Allergens Button */
+.no-allergens-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  margin-bottom: 1.25rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.no-allergens-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.no-allergens-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.no-allergens-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Modal Input Group */
 .modal-input-group {
   display: flex;
@@ -1502,5 +1536,418 @@
   .save-button,
   .logout-button {
     font-size: 0.875rem;
+  }
+}
+
+/* ============================================
+   Change Password Modal Styles
+   ============================================ */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content.password-modal {
+  background: white;
+  border-radius: 1.5rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.password-modal .modal-header {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  padding: 1.5rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 3px solid #fbbf24;
+}
+
+.password-modal .modal-header h2 {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: #78350f;
+}
+
+.password-modal .modal-close {
+  background: white;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #92400e;
+}
+
+.password-modal .modal-close:hover {
+  background: #fef3c7;
+  transform: scale(1.1);
+}
+
+.password-modal .modal-body {
+  padding: 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.password-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.password-field label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #78350f;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding: 0.875rem 3rem 0.875rem 1rem;
+  border: 2px solid #fde68a;
+  border-radius: 0.75rem;
+  font-size: 0.95rem;
+  color: #78350f;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.password-input-wrapper input:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+
+.password-input-wrapper input::placeholder {
+  color: #d4a574;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  color: #92400e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.password-toggle:hover {
+  color: #78350f;
+}
+
+.password-mismatch {
+  font-size: 0.75rem;
+  color: #dc2626;
+  margin-top: 0.25rem;
+}
+
+.password-modal .modal-footer {
+  background: #fffbeb;
+  padding: 1.25rem 2rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 2px solid #fde68a;
+}
+
+.modal-btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-btn.secondary {
+  background: white;
+  color: #92400e;
+  border: 2px solid #fde68a;
+}
+
+.modal-btn.secondary:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+}
+
+.modal-btn.primary {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+.modal-btn.primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(251, 191, 36, 0.4);
+}
+
+.modal-btn.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (max-width: 480px) {
+  .modal-content.password-modal {
+    max-width: 100%;
+    border-radius: 1rem;
+  }
+
+  .password-modal .modal-header,
+  .password-modal .modal-body,
+  .password-modal .modal-footer {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .password-modal .modal-header h2 {
+    font-size: 1.25rem;
+  }
+
+  .modal-btn {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* ===== Multi-Step Password OTP Modal Styles ===== */
+
+.password-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 2rem 0.5rem;
+  background: linear-gradient(to bottom, #fef3c7, white);
+}
+
+.password-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.password-step.active {
+  opacity: 1;
+}
+
+.password-step.completed .step-number {
+  background: #22c55e;
+  color: white;
+}
+
+.step-number {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fde68a;
+  color: #78350f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+.password-step.active .step-number {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+}
+
+.step-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #78350f;
+  white-space: nowrap;
+}
+
+.step-connector {
+  width: 40px;
+  height: 3px;
+  background: #fde68a;
+  margin: 0 0.5rem;
+  margin-bottom: 1.5rem;
+  border-radius: 2px;
+}
+
+.password-step-content {
+  text-align: center;
+  padding: 0.5rem 0;
+}
+
+.password-step-content h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #78350f;
+}
+
+.password-step-content > p {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+.step-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.step-icon svg {
+  color: #f59e0b;
+}
+
+.email-display {
+  background: #fef3c7;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  color: #78350f;
+  border: 2px solid #fde68a;
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+
+.otp-input-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.otp-input {
+  width: 200px;
+  text-align: center;
+  padding: 1rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0.75rem;
+  border: 3px solid #fde68a;
+  border-radius: 1rem;
+  color: #78350f;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.otp-input:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.15);
+}
+
+.otp-input::placeholder {
+  color: #d4a574;
+  letter-spacing: 0.5rem;
+}
+
+.resend-timer {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: #92400e;
+}
+
+.resend-btn {
+  background: none;
+  border: none;
+  color: #f59e0b;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+  margin-top: 0.5rem;
+}
+
+.resend-btn:hover:not(:disabled) {
+  color: #d97706;
+}
+
+.resend-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Password step content with fields */
+.password-step-content .password-field {
+  text-align: left;
+}
+
+@media (max-width: 480px) {
+  .password-steps {
+    padding: 1rem 1rem 0.25rem;
+  }
+
+  .step-number {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
+
+  .step-label {
+    font-size: 0.65rem;
+  }
+
+  .step-connector {
+    width: 25px;
+  }
+
+  .otp-input {
+    width: 160px;
+    font-size: 1.5rem;
+    padding: 0.75rem;
+    letter-spacing: 0.5rem;
+  }
+
+  .email-display {
+    font-size: 0.85rem;
+    padding: 0.5rem 1rem;
   }
 }

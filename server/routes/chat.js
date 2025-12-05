@@ -970,12 +970,26 @@ router.post("/chat", async (req, res) => {
     }
 
         if (kidPrefsForPrompt.length > 0) {
+      // Build grammatically correct question based on number of kids
+      let kidsQuestion;
+      if (kidPrefsForPrompt.length === 1) {
+        const kidName = kidPrefsForPrompt[0].name || 'your child';
+        kidsQuestion = `Is ${kidName} eating with you?`;
+      } else {
+        const kidNames = kidPrefsForPrompt.map(k => k.name).filter(Boolean);
+        if (kidNames.length > 0) {
+          kidsQuestion = `Are any of your kids (${kidNames.join(', ')}) eating with you? Which ones?`;
+        } else {
+          kidsQuestion = `Are any of your kids eating with you? Which ones?`;
+        }
+      }
+
       systemMessages.push({
         role: "system",
         content:
           "The user has kids with the following preferences: " +
           JSON.stringify(kidPrefsForPrompt) +
-          ". Before giving recommendations, always ask: 'Are the kids eating with you? Which kids?' " +
+          `. Before giving recommendations, always ask: '${kidsQuestion}' ` +
           "If kids are included, adjust food suggestions to respect their likes/dislikes/allergies."
       });
     }

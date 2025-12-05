@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from "@vis.gl/react-google-maps";
 import useSupercluster from "use-supercluster";
 import LoadingModal from "../components/LoadingModal";
@@ -304,6 +305,7 @@ const UtensilsIcon = () => (
 
 export default function RestaurantLocator() {
   const mapInstanceRef = useRef(null);
+  const location = useLocation();
 
   const [restaurants, setRestaurants] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -349,6 +351,23 @@ export default function RestaurantLocator() {
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Handle URL parameters (from Barkada Vote winner redirect)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const searchParam = params.get('search');
+    const nearmeParam = params.get('nearme');
+
+    if (searchParam) {
+      setSearchQuery(decodeURIComponent(searchParam));
+    }
+
+    if (nearmeParam === 'true') {
+      // Automatically get user location and enable nearby filter
+      getUserLocation();
+      setShowNearbyOnly(true);
+    }
+  }, [location.search]);
 
   const METRO_MANILA_CITIES = [
     "Manila", "Quezon City", "Caloocan", "Las Piñas", "Makati", "Makati City",

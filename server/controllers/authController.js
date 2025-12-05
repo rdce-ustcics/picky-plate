@@ -47,7 +47,16 @@ exports.signup = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: 'Account created. Please verify your email to continue.',
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, verified: user.verified },
+      user: {
+        id: user._id,
+        name: user.name,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        phone: user.phone || '',
+        email: user.email,
+        role: user.role,
+        verified: user.verified
+      },
     });
   } catch (error) {
     // console.error('Signup error:', error);
@@ -90,7 +99,16 @@ exports.login = async (req, res) => {
       success: true,
       message: 'Login successful',
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, verified: user.verified },
+      user: {
+        id: user._id,
+        name: user.name,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        phone: user.phone || '',
+        email: user.email,
+        role: user.role,
+        verified: user.verified
+      },
     });
   } catch (error) {
     // console.error('Login error:', error);
@@ -104,7 +122,16 @@ exports.getMe = async (req, res) => {
     const user = await User.findById(req.user.id);
     return res.status(200).json({
       success: true,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, verified: user.verified },
+      user: {
+        id: user._id,
+        name: user.name,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+        phone: user.phone || '',
+        email: user.email,
+        role: user.role,
+        verified: user.verified
+      },
     });
   } catch {
     return res.status(500).json({ success: false, message: 'Error fetching user data' });

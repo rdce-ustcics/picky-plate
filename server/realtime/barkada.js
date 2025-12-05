@@ -731,8 +731,14 @@ socket.on(
       }
 
       try {
+        // Include numOptions from session settings if not in prefs
+        const prefsWithMax = {
+          ...prefs,
+          maxRestaurants: prefs.maxRestaurants || s.settings.numOptions || 4,
+        };
+
         const aiOptions = await aiRecommender.generateRestaurants({
-          prefs,
+          prefs: prefsWithMax,
           code,
         });
 
@@ -743,6 +749,7 @@ socket.on(
           });
         }
 
+        const maxOptions = prefsWithMax.maxRestaurants || 4;
         const cleaned = aiOptions
           .map((o, i) => ({
             id: i + 1,
@@ -753,7 +760,7 @@ socket.on(
             tags: new Set(Array.isArray(o.tags) ? o.tags : []),
           }))
           .filter((o) => o.name && o.price > 0)
-          .slice(0, 6); // safety max 6
+          .slice(0, maxOptions); // respect user's numOptions setting
 
         if (cleaned.length === 0) {
           return cb({

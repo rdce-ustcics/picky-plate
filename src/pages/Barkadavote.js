@@ -1,5 +1,6 @@
 // client/src/pages/Barkadavote.js
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import {
   Users,
@@ -251,6 +252,8 @@ function StarRating({
 }
 
 export default function BarkadaVote() {
+  const navigate = useNavigate();
+
   const defaultSettings = {
     engine: "manual",
     mode: "host_only",
@@ -275,6 +278,22 @@ export default function BarkadaVote() {
   const [joinName, setJoinName] = useState("");
   const [joinPassword, setJoinPassword] = useState("");
   const [joinCode, setJoinCode] = useState("");
+
+  // Get authUser for auto-populating name
+  const { user: authUser } = useAuth();
+
+  // Auto-populate name from authenticated user
+  useEffect(() => {
+    if (authUser) {
+      const fullName = [authUser.firstName, authUser.lastName].filter(Boolean).join(' ') || authUser.name || '';
+      if (fullName && !createName) {
+        setCreateName(fullName);
+      }
+      if (fullName && !joinName) {
+        setJoinName(fullName);
+      }
+    }
+  }, [authUser, createName, joinName]);
 
   const [sessionCode, setSessionCode] = useState("");
   const [isHost, setIsHost] = useState(false);
@@ -333,8 +352,6 @@ export default function BarkadaVote() {
   const closeAlert = () => {
     setAlertState({ message: "", type: "info" });
   };
-
-  const { user: authUser } = useAuth();
 
   /* Socket setup */
   useEffect(() => {
@@ -836,7 +853,10 @@ export default function BarkadaVote() {
       {
         code: sessionCode,
         token: participantToken,
-        prefs: aiPrefs,
+        prefs: {
+          ...aiPrefs,
+          maxRestaurants: settings.numOptions || settingsDraft.numOptions || 4,
+        },
       },
       (res) => {
         setAiLoading(false);
@@ -2261,6 +2281,39 @@ export default function BarkadaVote() {
                 <strong>{winner.score.toFixed(2)}</strong> — Voters:{" "}
                 {winner.voters}
               </p>
+              <button
+                onClick={() => navigate(`/restaurants?search=${encodeURIComponent(winner.name)}&nearme=true`)}
+                style={{
+                  marginTop: "1rem",
+                  padding: "0.75rem 1.5rem",
+                  background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "0.75rem",
+                  fontWeight: 600,
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = "translateY(-2px)";
+                  e.target.style.boxShadow = "0 6px 16px rgba(245, 158, 11, 0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = "translateY(0)";
+                  e.target.style.boxShadow = "0 4px 12px rgba(245, 158, 11, 0.3)";
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+                Find "{winner.name}" Near Me
+              </button>
             </div>
           )}
 
