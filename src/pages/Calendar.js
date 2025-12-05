@@ -244,6 +244,74 @@ export default function Calendar(){
   const [aiMonthBase,setAiMonthBase]=useState(()=> new Date(currentMonth));
   const [aiChosenWeekIdx,setAiChosenWeekIdx]=useState(0);
   const [aiBudget, setAiBudget] = useState("");
+  const [budgetType, setBudgetType] = useState("daily"); // "daily" or "weekly"
+  const [budgetWarning, setBudgetWarning] = useState(null);
+
+  // Minimum realistic budget thresholds (2024-2025 Philippine prices)
+  // Based on research: ₱64/day is poverty line, cheapest street food is ₱10-25
+  const MIN_BUDGET = {
+    daily: 150,     // Absolute minimum for 3 basic meals (instant noodles + rice level)
+    weekly: 1050,   // 7 days × ₱150/day
+    warning: {
+      daily: 250,   // Below this, meals will be very limited
+      weekly: 1750  // Below this, expect basic meals only
+    }
+  };
+
+  // Realistic Filipino food budget presets (2024-2025 prices)
+  const budgetPresets = {
+    daily: [
+      { label: "Budget", value: 350, desc: "₱350/day - Carinderia & home-cooked" },
+      { label: "Average", value: 550, desc: "₱550/day - Mix of local & fast food" },
+      { label: "Comfortable", value: 800, desc: "₱800/day - Restaurants & variety" },
+    ],
+    weekly: [
+      { label: "Budget", value: 2450, desc: "₱2,450/week - Carinderia & home-cooked" },
+      { label: "Average", value: 3850, desc: "₱3,850/week - Mix of local & fast food" },
+      { label: "Comfortable", value: 5600, desc: "₱5,600/week - Restaurants & variety" },
+    ]
+  };
+
+  // Validate budget and set warning
+  const validateBudget = (value, type) => {
+    const numValue = Number(value);
+    if (!value || isNaN(numValue) || numValue <= 0) {
+      setBudgetWarning(null);
+      return;
+    }
+
+    const minBudget = MIN_BUDGET[type];
+    const warningThreshold = MIN_BUDGET.warning[type];
+    const dailyEquivalent = type === 'weekly' ? Math.round(numValue / 7) : numValue;
+    const perMeal = Math.round(dailyEquivalent / 3);
+
+    if (numValue < minBudget) {
+      setBudgetWarning({
+        type: 'error',
+        message: `₱${numValue} ${type === 'weekly' ? '/week' : '/day'} is too low! That's only ₱${perMeal}/meal - you can't buy any real food for that price. Minimum: ₱${minBudget}${type === 'weekly' ? '/week' : '/day'}`
+      });
+    } else if (numValue < warningThreshold) {
+      setBudgetWarning({
+        type: 'warning',
+        message: `₱${numValue}${type === 'weekly' ? '/week' : '/day'} (₱${perMeal}/meal) is very tight. Expect basic meals like instant noodles, sardines, and eggs.`
+      });
+    } else {
+      setBudgetWarning(null);
+    }
+  };
+
+  // Handle budget change with validation
+  const handleBudgetChange = (value) => {
+    setAiBudget(value);
+    validateBudget(value, budgetType);
+  };
+
+  // Handle budget type change
+  const handleBudgetTypeChange = (newType) => {
+    setBudgetType(newType);
+    setAiBudget('');
+    setBudgetWarning(null);
+  };
 
   const calendarRef=useRef(null);
   const monthNames=["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -383,6 +451,8 @@ export default function Calendar(){
     setAiSuggestions([]); setAiSaving(false); setAiWeekStart(null); setAiLoading(false);
     setAiMode("remainder");
     setAiMonthBase(new Date(currentDate));
+    setAiBudget(""); // Reset budget
+    setBudgetWarning(null); // Reset warning
     const today0=new Date(); today0.setHours(0,0,0,0);
     const starts=weekStartsInMonth(currentDate);
     const idx=starts.findIndex(ws=> today0>=ws && today0<=endOfWeek(ws));
@@ -393,6 +463,12 @@ export default function Calendar(){
   const closeAiOptionsModal=()=> setShowAiOptions(false);
 
   const runAiGenerate=async ()=>{
+    // Check if budget is too low (error level)
+    if (aiBudget && budgetWarning?.type === 'error') {
+      alert(`Budget too low!\n\n${budgetWarning.message}\n\nPlease enter a higher budget or use one of the preset options.`);
+      return;
+    }
+
     const targetMonthStarts=weekStartsInMonth(aiMonthBase);
     const today0=new Date(); today0.setHours(0,0,0,0);
 
@@ -425,12 +501,16 @@ export default function Calendar(){
           startDate,
           mode: aiMode,
           budget: aiBudget ? Number(aiBudget) : undefined,
+          budgetType: budgetType,
         }),
       });
       const data=await res.json();
 
       if(res.ok && data.success){
         setAiSuggestions(normalizePlan(data.plan));
+      } else if (data?.error === "budget_too_low") {
+        alert(`Budget Too Low!\n\n${data.message}`);
+        setShowAiModal(false);
       } else if (data?.error === "ai_down") {
         const yes = window.confirm(data.message || "Our AI seems to be down right now... We can still generate completely random recipes if you want?");
         if (yes) {
@@ -442,6 +522,7 @@ export default function Calendar(){
               mode: aiMode,
               fallback: "random",
               budget: aiBudget ? Number(aiBudget) : undefined,
+              budgetType: budgetType,
             }),
           });
           const d2 = await r2.json();
@@ -946,13 +1027,60 @@ export default function Calendar(){
               )}
 
               <div className="calendar-ai-subpanel">
-                <label>Estimated Weekly Budget (₱)</label>
+                <label>Budget Type</label>
+                <div className="calendar-budget-toggle">
+                  <button
+                    type="button"
+                    className={`calendar-budget-toggle-btn ${budgetType === 'daily' ? 'active' : ''}`}
+                    onClick={() => handleBudgetTypeChange('daily')}
+                  >
+                    Daily
+                  </button>
+                  <button
+                    type="button"
+                    className={`calendar-budget-toggle-btn ${budgetType === 'weekly' ? 'active' : ''}`}
+                    onClick={() => handleBudgetTypeChange('weekly')}
+                  >
+                    Weekly
+                  </button>
+                </div>
+              </div>
+
+              <div className="calendar-ai-subpanel">
+                <label>Estimated {budgetType === 'daily' ? 'Daily' : 'Weekly'} Budget (₱)</label>
+                <div className="calendar-budget-presets">
+                  {budgetPresets[budgetType].map((preset) => (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      className={`calendar-budget-preset ${Number(aiBudget) === preset.value ? 'active' : ''}`}
+                      onClick={() => handleBudgetChange(String(preset.value))}
+                      title={preset.desc}
+                    >
+                      {preset.label}
+                      <span className="calendar-budget-preset-value">₱{preset.value.toLocaleString()}</span>
+                    </button>
+                  ))}
+                </div>
                 <input
                   type="number"
                   value={aiBudget}
-                  onChange={(e) => setAiBudget(e.target.value)}
-                  placeholder="Optional, e.g. 1500"
+                  onChange={(e) => handleBudgetChange(e.target.value)}
+                  placeholder={`Custom amount (₱/${budgetType === 'daily' ? 'day' : 'week'})`}
+                  className={`calendar-budget-custom-input ${budgetWarning?.type === 'error' ? 'input-error' : budgetWarning?.type === 'warning' ? 'input-warning' : ''}`}
+                  min={MIN_BUDGET[budgetType]}
                 />
+                {budgetWarning && (
+                  <div className={`calendar-budget-warning ${budgetWarning.type}`}>
+                    <span className="warning-icon">{budgetWarning.type === 'error' ? '⚠️' : '💡'}</span>
+                    <span>{budgetWarning.message}</span>
+                  </div>
+                )}
+                <p className="calendar-ai-hint">
+                  {budgetType === 'daily'
+                    ? `Min: ₱${MIN_BUDGET.daily}/day. Typical costs: Breakfast ₱80-150, Lunch ₱100-250, Dinner ₱150-350`
+                    : `Min: ₱${MIN_BUDGET.weekly}/week. Prices based on 2024-2025 Philippine food costs.`}
+                </p>
               </div>
             </div>
 

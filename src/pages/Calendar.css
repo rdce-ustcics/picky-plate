@@ -1695,6 +1695,131 @@
 }
 
 /* ============================================
+   BUDGET TOGGLE & PRESETS
+   ============================================ */
+
+.calendar-budget-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.calendar-budget-toggle-btn {
+  flex: 1;
+  padding: 0.625rem 1rem;
+  border: 2px solid #fde68a;
+  border-radius: 0.75rem;
+  background: white;
+  color: #92400e;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.calendar-budget-toggle-btn:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+}
+
+.calendar-budget-toggle-btn.active {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border-color: #f59e0b;
+  color: white;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.4);
+}
+
+.calendar-budget-presets {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.calendar-budget-preset {
+  flex: 1;
+  min-width: 90px;
+  padding: 0.75rem 0.5rem;
+  border: 2px solid #fde68a;
+  border-radius: 0.75rem;
+  background: white;
+  color: #92400e;
+  font-weight: 600;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.calendar-budget-preset:hover {
+  background: #fef3c7;
+  border-color: #fbbf24;
+  transform: translateY(-2px);
+}
+
+.calendar-budget-preset.active {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border-color: #f59e0b;
+  color: white;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+}
+
+.calendar-budget-preset-value {
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.calendar-budget-preset.active .calendar-budget-preset-value {
+  color: white;
+}
+
+.calendar-budget-custom-input {
+  margin-top: 0.5rem;
+}
+
+.calendar-budget-custom-input.input-error {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.calendar-budget-custom-input.input-warning {
+  border-color: #f59e0b;
+  background-color: #fffbeb;
+}
+
+/* Budget Warning Messages */
+.calendar-budget-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.calendar-budget-warning.error {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+.calendar-budget-warning.warning {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid #fcd34d;
+  color: #92400e;
+}
+
+.calendar-budget-warning .warning-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+/* ============================================
    AI SUGGESTIONS MODAL
    ============================================ */
 

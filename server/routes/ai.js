@@ -131,6 +131,30 @@ router.post("/suggest-week", protect, async (req, res) => {
     const startIso = req.body?.startDate || ymdFromDate(today);
     const mode = (req.body?.mode || "remainder").toLowerCase();
 
+    /* Budget handling - convert to daily budget for AI */
+    const rawBudget = req.body?.budget ? Number(req.body.budget) : null;
+    const budgetType = req.body?.budgetType || "daily";
+    const dailyBudget = rawBudget
+      ? (budgetType === "weekly" ? Math.round(rawBudget / 7) : rawBudget)
+      : null;
+
+    // Minimum budget thresholds (2024-2025 Philippine prices)
+    const MIN_DAILY_BUDGET = 150; // Absolute minimum for 3 basic meals
+    const WARNING_DAILY_BUDGET = 250; // Below this, meals will be very limited
+
+    // Reject budgets that are impossibly low
+    if (dailyBudget && dailyBudget < MIN_DAILY_BUDGET) {
+      const perMeal = Math.round(dailyBudget / 3);
+      return res.status(400).json({
+        success: false,
+        error: "budget_too_low",
+        message: `₱${dailyBudget}/day (₱${perMeal}/meal) is too low! You cannot buy any real food for that price. Even instant noodles cost ₱15-25. Minimum budget: ₱${MIN_DAILY_BUDGET}/day.`
+      });
+    }
+
+    // Flag for ultra-tight budget
+    const isUltraBudget = dailyBudget && dailyBudget < WARNING_DAILY_BUDGET;
+
     let start = new Date(`${startIso}T00:00:00`);
     if (isNaN(start.getTime())) start = new Date(today);
     if (start < today) start = new Date(today);
@@ -192,7 +216,33 @@ router.post("/suggest-week", protect, async (req, res) => {
     const avoidList = Array.from(monthSeen).slice(0, 800).join(", ");
 
     /* Call OpenAI */
-    const systemPrompt = `You are a meal planning assistant. Output STRICT JSON only.
+    // Build budget constraint text with realistic Filipino food prices
+    let budgetConstraint;
+    if (isUltraBudget) {
+      // Ultra-tight budget: suggest survival-level meals
+      budgetConstraint = `ULTRA-TIGHT BUDGET: ₱${dailyBudget} per day (₱${Math.round(dailyBudget / 3)}/meal average).
+This is SURVIVAL-LEVEL budget. ONLY suggest these cheap Filipino meals:
+- Breakfast (₱${Math.round(dailyBudget * 0.20)}-${Math.round(dailyBudget * 0.25)} max): instant noodles (Lucky Me, Payless), pandesal with palaman, lugaw/arroz caldo, instant coffee/3-in-1
+- Lunch (₱${Math.round(dailyBudget * 0.30)}-${Math.round(dailyBudget * 0.35)} max): sardines with rice, canned goods with rice, egg fried rice, instant noodles with egg
+- Dinner (₱${Math.round(dailyBudget * 0.40)}-${Math.round(dailyBudget * 0.45)} max): sardinas guisado, ginisang monggo, pakbet with minimal meat, tinola na sabaw lang
+
+DO NOT suggest: tapsilog (₱80+), fast food (₱100+), restaurant food, or any meal over ₱${Math.round(dailyBudget / 2)}.
+STRICT: Total daily cost MUST NOT exceed ₱${dailyBudget}. Be REALISTIC about prices!`;
+    } else if (dailyBudget) {
+      budgetConstraint = `BUDGET CONSTRAINT: ₱${dailyBudget} per day (total for all 3 meals).
+Distribute the daily budget realistically:
+- Breakfast: 15-20% of daily budget (₱${Math.round(dailyBudget * 0.15)}-${Math.round(dailyBudget * 0.20)})
+- Lunch: 30-35% of daily budget (₱${Math.round(dailyBudget * 0.30)}-${Math.round(dailyBudget * 0.35)})
+- Dinner: 45-55% of daily budget (₱${Math.round(dailyBudget * 0.45)}-${Math.round(dailyBudget * 0.55)})
+STRICT: Each day's total MUST NOT exceed ₱${dailyBudget}.`;
+    } else {
+      budgetConstraint = `Use realistic 2024-2025 Philippine food prices:
+- Breakfast: ₱80-200 (tapsilog, pandesal, coffee, etc.)
+- Lunch: ₱100-300 (carinderia, fast food, local restaurants)
+- Dinner: ₱150-400 (home-cooked style, restaurants)`;
+    }
+
+    const systemPrompt = `You are a Filipino meal planning assistant. Output STRICT JSON only.
 Return exactly 7 consecutive days starting from the provided date (inclusive).
 
 For each day:
@@ -200,14 +250,22 @@ For each day:
 - "dishes": array of EXACTLY 3 objects IN THIS ORDER: breakfast, lunch, dinner.
   Each object must be: {"slot":"breakfast|lunch|dinner", "name": string, "cost": number, "source":"ai"}
 
-Rules:
-- Mixed global cuisines (not limited to any single country).
+PRICING RULES (2024-2025 Philippine food costs):
+${budgetConstraint}
+
+General Rules:
+- Mix of Filipino and global cuisines, but prioritize Filipino dishes.
 - Do NOT repeat a dish name within the 7-day window.
 - Costs must be realistic, numeric Philippine pesos (no currency symbol).
 - Output JSON ONLY with either an array of 7 days, or {"plan":[...7 days...]}.`;
 
+const budgetInfo = dailyBudget
+  ? `Daily budget: ₱${dailyBudget} (STRICT - do not exceed this per day)`
+  : "No specific budget - use realistic Filipino food prices";
+
 const userPrompt = `
 Start date: ${ymdFromDate(start)}
+${budgetInfo}
 
 Avoid repeating: ${avoidList || "(none)"}
 
@@ -224,6 +282,7 @@ Rules:
 - Prefer dishes matching favorites.
 - Prefer kid-friendly dishes if kids exist.
 - Suggest varied dishes, not the same cuisine repeatedly. But prioritize the ones the user actually likes.
+- ${dailyBudget ? `IMPORTANT: Each day's 3 meals MUST total ≤ ₱${dailyBudget}` : 'Use realistic 2024-2025 Philippine food prices'}
 `;
 
     let plan;
