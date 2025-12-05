@@ -1,4 +1,4 @@
-/* Calendar.css - Complete Styles with Creative Header Design */
+/* Calendar.css - Complete Styles with Creative Header Design and Sidebar-Aware Modals */
 
 /* ============================================
    BASE STYLES
@@ -1268,12 +1268,15 @@
 }
 
 /* ============================================
-   MODALS - BASE STYLES
+   MODALS - BASE STYLES WITH SIDEBAR AWARENESS
    ============================================ */
 
 .calendar-modal-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   background: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(4px);
   z-index: 50;
@@ -1281,6 +1284,18 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
+}
+
+/* Use CSS custom property for dynamic sidebar width */
+.calendar-modal-overlay {
+  left: var(--detected-sidebar-width, 0);
+}
+
+/* Mobile override - always full width */
+@media (max-width: 767px) {
+  .calendar-modal-overlay {
+    left: 0 !important;
+  }
 }
 
 .calendar-modal {
@@ -1834,6 +1849,60 @@
   .calendar-ai-dish-row .calendar-dish-delete {
     grid-row: 2;
     grid-column: 3;
+  }
+}
+
+/* ============================================
+   AI LOADING OVERLAY - Full screen blur effect
+   ============================================ */
+
+.calendar-ai-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  animation: fadeInAiOverlay 0.3s ease-out;
+}
+
+@keyframes fadeInAiOverlay {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(8px);
+  }
+}
+
+.calendar-ai-loading-content {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 50%, #fde68a 100%);
+  padding: 3rem 4rem;
+  border-radius: 2rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  border: 3px solid #fcd34d;
+  animation: modalPulseIn 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  text-align: center;
+}
+
+@keyframes modalPulseIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 

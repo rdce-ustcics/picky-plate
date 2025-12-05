@@ -1,8 +1,21 @@
 // client/src/pages/Calendar.js
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ChevronLeft, ChevronRight, Plus, Sparkles, DollarSign, X, CheckCircle2, BadgeCheck,
-  CalendarDays, UtensilsCrossed, ChefHat, Salad, Coffee, Apple, Trash2,
+  ChevronLeft, 
+  ChevronRight, 
+  Plus, 
+  Sparkles, 
+  DollarSign, 
+  X, 
+  CheckCircle2, 
+  BadgeCheck,
+  CalendarDays, 
+  UtensilsCrossed, 
+  ChefHat, 
+  Salad, 
+  Coffee, 
+  Apple, 
+  Trash2
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { getCached, setCache, CACHE_KEYS, CACHE_TTL } from "../utils/cache";
@@ -133,6 +146,78 @@ function CookingLoader(){
 
 export default function Calendar(){
   const { isAuthenticated, authHeaders } = useAuth();
+
+  // Dynamic sidebar width detection
+  useEffect(() => {
+    const detectAndSetSidebarWidth = () => {
+      // Try multiple selector strategies to find the sidebar
+      const possibleSelectors = [
+        '.sidebar',
+        '[class*="sidebar"]',
+        'nav',
+        '.navigation',
+        '[class*="nav"]',
+        'aside',
+        '.side-menu',
+        '.side-panel'
+      ];
+      
+      let sidebar = null;
+      for (const selector of possibleSelectors) {
+        sidebar = document.querySelector(selector);
+        if (sidebar) break;
+      }
+      
+      if (sidebar) {
+        const rect = sidebar.getBoundingClientRect();
+        const width = rect.width;
+        
+        // Set CSS custom property for modal positioning
+        document.documentElement.style.setProperty('--detected-sidebar-width', `${width}px`);
+        
+        console.log(`Sidebar detected: ${width}px`); // For debugging
+      } else {
+        // No sidebar found, use full width
+        document.documentElement.style.setProperty('--detected-sidebar-width', '0px');
+        console.log('No sidebar detected, using full width');
+      }
+    };
+
+    // Detect immediately
+    detectAndSetSidebarWidth();
+    
+    // Detect after a short delay (in case sidebar is still loading)
+    setTimeout(detectAndSetSidebarWidth, 100);
+    
+    // Detect on window resize (when sidebar toggles)
+    const handleResize = () => {
+      setTimeout(detectAndSetSidebarWidth, 50);
+    };
+    window.addEventListener('resize', handleResize);
+    
+    // Detect when classes change on document body (common sidebar toggle pattern)
+    const observer = new MutationObserver(() => {
+      setTimeout(detectAndSetSidebarWidth, 50);
+    });
+    
+    observer.observe(document.body, { 
+      attributes: true, 
+      attributeFilter: ['class'],
+      subtree: false 
+    });
+    
+    // Also observe the document element for class changes
+    observer.observe(document.documentElement, { 
+      attributes: true, 
+      attributeFilter: ['class'],
+      subtree: false 
+    });
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      observer.disconnect();
+    };
+  }, []);
 
   const now=new Date(); const currentMonth=new Date(now.getFullYear(), now.getMonth(), 1);
   const minMonth=new Date(2025,9,1);
@@ -879,8 +964,17 @@ export default function Calendar(){
         </div>
       )}
 
+      {/* ===== AI Loading Overlay ===== */}
+      {aiLoading && (
+        <div className="calendar-ai-loading-overlay">
+          <div className="calendar-ai-loading-content">
+            <CookingLoader />
+          </div>
+        </div>
+      )}
+
       {/* ===== AI Suggestions Modal ===== */}
-      {showAiModal && (
+      {showAiModal && !aiLoading && (
         <div className="calendar-modal-overlay" onClick={()=>setShowAiModal(false)}>
           <div className="calendar-modal large" onClick={(e)=>e.stopPropagation()}>
             <div className="calendar-modal-header">
@@ -892,16 +986,12 @@ export default function Calendar(){
               </button>
             </div>
 
-            {aiLoading ? (
-              <CookingLoader />
-            ) : (
-              <>
-                <div className="calendar-modal-body space-y-4">
-                  {!aiSuggestions.length && (
-                    <div className="text-center" style={{color: '#b45309', padding: '2rem'}}>No suggestions yet.</div>
-                  )}
+            <div className="calendar-modal-body space-y-4">
+              {!aiSuggestions.length && (
+                <div className="text-center" style={{color: '#b45309', padding: '2rem'}}>No suggestions yet.</div>
+              )}
 
-                  {aiSuggestions.map((day, idx) => {
+              {aiSuggestions.map((day, idx) => {
                     const [y,m1,d] = day.dateKey.split("-").map(Number);
                     const dayTotal = day.dishes.reduce((a,b)=>a+(Number(b.cost)||0),0);
 
@@ -968,22 +1058,20 @@ export default function Calendar(){
                           </button>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                );
+              })}
+            </div>
 
-                <div className="calendar-modal-footer" style={{justifyContent: 'space-between'}}>
-                  <button onClick={()=>setShowAiModal(false)} className="calendar-btn calendar-btn-secondary">Close</button>
-                  <button
-                    onClick={acceptAllAi}
-                    disabled={aiSaving}
-                    className="calendar-btn calendar-btn-primary"
-                  >
-                    {aiSaving ? "Saving…" : "Accept All"}
-                  </button>
-                </div>
-              </>
-            )}
+            <div className="calendar-modal-footer" style={{justifyContent: 'space-between'}}>
+              <button onClick={()=>setShowAiModal(false)} className="calendar-btn calendar-btn-secondary">Close</button>
+              <button
+                onClick={acceptAllAi}
+                disabled={aiSaving}
+                className="calendar-btn calendar-btn-primary"
+              >
+                {aiSaving ? "Saving…" : "Accept All"}
+              </button>
+            </div>
           </div>
         </div>
       )}

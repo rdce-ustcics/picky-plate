@@ -3,6 +3,33 @@ const router = express.Router();
 const CulturalRecipe = require("../models/CulturalRecipe");
 const { requireAdmin } = require("../middleware/auth");
 
+// Simple in-memory cache for cultural recipes
+const cache = {
+  data: new Map(),
+  ttl: 5 * 60 * 1000, // 5 minutes cache TTL
+
+  get(key) {
+    const item = this.data.get(key);
+    if (!item) return null;
+    if (Date.now() > item.expiry) {
+      this.data.delete(key);
+      return null;
+    }
+    return item.value;
+  },
+
+  set(key, value) {
+    this.data.set(key, {
+      value,
+      expiry: Date.now() + this.ttl
+    });
+  },
+
+  invalidate() {
+    this.data.clear();
+  }
+};
+
 /**
  * GET /api/cultural-recipes/admin/all
  * Admin only - get ALL cultural recipes (including inactive)
@@ -29,6 +56,14 @@ router.get("/admin/all", requireAdmin, async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const { region, includeImages } = req.query;
+    const cacheKey = `recipes:${region || 'all'}:${includeImages || 'false'}`;
+
+    // Check cache first
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      return res.json({ success: true, recipes: cached, cached: true });
+    }
+
     const query = { isActive: true };
 
     if (region && region !== "All") {
@@ -46,6 +81,9 @@ router.get("/", async (req, res) => {
       .select(selectFields)
       .sort({ createdAt: -1 })
       .lean();
+
+    // Store in cache
+    cache.set(cacheKey, recipes);
 
     res.json({ success: true, recipes });
   } catch (e) {
@@ -96,6 +134,9 @@ router.post("/", requireAdmin, async (req, res) => {
       createdBy: req.user?._id || req.user?.id || null,
     });
 
+    // Invalidate cache on create
+    cache.invalidate();
+
     res.status(201).json({ success: true, recipe: culturalRecipe });
   } catch (e) {
     res.status(500).json({ success: false, error: "Failed to create cultural recipe" });
@@ -126,6 +167,9 @@ router.put("/:id", requireAdmin, async (req, res) => {
 
     await culturalRecipe.save();
 
+    // Invalidate cache on update
+    cache.invalidate();
+
     res.json({ success: true, recipe: culturalRecipe });
   } catch (e) {
     res.status(500).json({ success: false, error: "Failed to update cultural recipe" });
@@ -145,6 +189,9 @@ router.delete("/:id", requireAdmin, async (req, res) => {
 
     culturalRecipe.isActive = false;
     await culturalRecipe.save();
+
+    // Invalidate cache on delete
+    cache.invalidate();
 
     res.json({ success: true, message: "Cultural recipe deleted successfully" });
   } catch (e) {

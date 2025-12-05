@@ -723,8 +723,6 @@ export default function RestaurantLocator() {
 
           if (isCancelled) return;
 
-          console.log(`Fast load: ${result.restaurants.length} restaurants (nearby: ${showNearbyOnly})`);
-
           setRestaurants(result.restaurants);
           setTotalFromApi(result.total);
           setCacheStatus('api');
@@ -758,7 +756,6 @@ export default function RestaurantLocator() {
 
                 if (isCancelled) return;
 
-                console.log(`Background load complete: ${fullResult.restaurants.length} restaurants`);
                 setRestaurants(fullResult.restaurants);
                 setTotalFromApi(fullResult.total);
 
@@ -774,8 +771,7 @@ export default function RestaurantLocator() {
                     setLoadingProgress(prev => ({ ...prev, phase: 'idle' }));
                   }
                 }, 2000);
-              } catch (err) {
-                console.log('Background load skipped:', err.message);
+              } catch {
                 setLoadingProgress(prev => ({ ...prev, phase: 'idle' }));
               }
             }, 100);
@@ -796,7 +792,6 @@ export default function RestaurantLocator() {
       }
 
       // Fallback: Load from static JSON files
-      console.log('Using fallback JSON mode (API disabled or failed)');
       setLoadingProgress({ loaded: 0, total: 0, phase: 'initial', message: 'Loading from local data...' });
       try {
         const response = await fetch("/data/ncr_food_places2.json");
@@ -868,7 +863,6 @@ export default function RestaurantLocator() {
 
         if (isCancelled) return;
 
-        console.log(`Refetch: ${result.restaurants.length} restaurants (nearby: ${showNearbyOnly})`);
         setRestaurants(result.restaurants);
         setTotalFromApi(result.total);
         setLoading(false);
@@ -1298,6 +1292,7 @@ export default function RestaurantLocator() {
                             <img
                               src={restaurant.image || getRestaurantImage(restaurant.name)}
                               alt={restaurant.name}
+                              loading="lazy"
                               onError={(e) => {
                                 e.target.onerror = null;
                                 e.target.src = "https://img.icons8.com/color/200/restaurant.png";

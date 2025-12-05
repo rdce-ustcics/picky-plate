@@ -4,6 +4,9 @@ require('dotenv').config({ override: true });
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const mongoose = require('mongoose');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 
 const http = require('http');
 const { Server } = require('socket.io');
@@ -52,6 +55,38 @@ app.use((req, res, next) => {
   }
   return next(new Error('Not allowed by CORS'));
 });
+
+// ──────────────────────────────────────────────────────────────
+// Security & Performance Middleware
+// ──────────────────────────────────────────────────────────────
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: false // Disabled for API-only server
+}));
+
+app.use(compression());
+
+// Rate limiting - general API limit
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // 500 requests per 15 min
+  message: { success: false, message: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+// Stricter limit for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // 20 auth attempts per 15 min
+  message: { success: false, message: 'Too many login attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+app.use('/api', generalLimiter);
+app.use('/api/auth', authLimiter);
 
 // ──────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '25mb' }));

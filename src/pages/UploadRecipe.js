@@ -309,7 +309,6 @@ export default function UploadRecipe() {
       });
 
       const data = await res.json();
-      console.log('[Upload] Server response:', { status: res.status, data });
 
       if (!res.ok || !data.success) {
         if (res.status === 401) {

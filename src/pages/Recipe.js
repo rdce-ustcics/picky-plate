@@ -1176,7 +1176,6 @@ export default function CommunityRecipes() {
       });
 
       const data = await res.json();
-      console.log('[Upload Validation] Result:', data);
 
       setUploadImageValidation({
         approved: data.approved,
@@ -1709,6 +1708,7 @@ export default function CommunityRecipes() {
                           src={recipe.actualImage || recipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
                           alt={recipe.title}
                           className="recipe-card-image"
+                          loading="lazy"
                           onLoad={() => handleImageLoad(recipe._id)}
                           onError={() => handleImageError(recipe._id)}
                           style={{ opacity: recipe.imageLoading ? 0.5 : 1 }}
@@ -1853,6 +1853,7 @@ export default function CommunityRecipes() {
                 crossOrigin="anonymous"
                 src={selectedRecipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800&q=80&auto=format&fit=crop"}
                 alt={selectedRecipe.title}
+                loading="lazy"
               />
               <div className="cr-modal-image-overlay" />
               <button onClick={closeRecipeModal} className="cr-modal-close">

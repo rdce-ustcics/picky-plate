@@ -4,6 +4,7 @@ import MainLayout from "./layouts/MainLayout";
 import { AuthProvider } from "./auth/AuthContext";
 import RoleRoute, { GuestOnlyRoute } from "./auth/RoleRoute";
 import LoadingModal from "./components/LoadingModal";
+import ErrorBoundary from "./components/ErrorBoundary";
 import "./index.css";
 
 // Lazy load all pages for code splitting - reduces initial bundle size by ~70%
@@ -23,10 +24,11 @@ const VerifyOtp = lazy(() => import("./pages/VerifyOtp"));
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Suspense fallback={<LoadingModal message="Loading..." />}>
-          <Routes>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <Suspense fallback={<LoadingModal message="Loading..." />}>
+            <Routes>
             {/* ✅ All routes WITH Sidebar via MainLayout */}
             <Route element={<MainLayout />}>
             {/* 🌐 PUBLIC ROUTES - No login required */}
@@ -89,11 +91,12 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
           </Route>
 
-            {/* Catch-all route */}
-            <Route path="*" element={<div>Not Found</div>} />
-          </Routes>
-        </Suspense>
-      </AuthProvider>
-    </BrowserRouter>
+              {/* Catch-all route */}
+              <Route path="*" element={<div>Not Found</div>} />
+            </Routes>
+          </Suspense>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }

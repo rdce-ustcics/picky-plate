@@ -1321,6 +1321,7 @@ export default function BarkadaVote() {
                         src={imgSrc}
                         alt={tag ? `${formatTagLabel(tag)} food` : opt.name}
                         className="restaurant-image"
+                        loading="lazy"
                       />
                       <div className="restaurant-info">
                         <div className="restaurant-name">{opt.name}</div>
@@ -1366,6 +1367,7 @@ export default function BarkadaVote() {
                         src={p.profileImage}
                         alt={p.name}
                         className="participant-avatar-img"
+                        loading="lazy"
                       />
                     ) : (
                       <div className="participant-avatar-placeholder">
@@ -2169,6 +2171,7 @@ export default function BarkadaVote() {
                   src={imgSrc}
                   alt={tag ? `${formatTagLabel(tag)} food` : food.name}
                   className="restaurant-image"
+                  loading="lazy"
                 />
                 <div className="restaurant-info">
                   <h3 className="restaurant-name">{food.name}</h3>
@@ -2367,6 +2370,7 @@ export default function BarkadaVote() {
                       src={imgSrc}
                       alt={tag ? `${formatTagLabel(tag)} food` : opt.name}
                       className="leaderboard-image"
+                      loading="lazy"
                     />
                     <div>
                       <p

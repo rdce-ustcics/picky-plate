@@ -36,7 +36,10 @@ const RecipeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// helpful compound index
+// Compound indexes for common queries
 RecipeSchema.index({ isFlagged: 1, isDeleted: 1 });
+RecipeSchema.index({ state: 1, createdAt: -1 }); // Admin moderation queue
+RecipeSchema.index({ createdBy: 1, createdAt: -1 }); // User's recipes
+RecipeSchema.index({ title: 'text', description: 'text' }); // Text search
 
 module.exports = mongoose.model("Recipe", RecipeSchema);

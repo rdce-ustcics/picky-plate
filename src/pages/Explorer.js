@@ -589,6 +589,7 @@ export default function Explorer() {
                 <img
                   src={dish.img}
                   alt={dish.name}
+                  loading="lazy"
                   style={{
                     opacity: dish.imageLoading ? 0.5 : 1,
                     transition: 'opacity 0.4s ease-in-out'
@@ -678,7 +679,7 @@ export default function Explorer() {
                 X
               </button>
             </div>
-            <img className="modal-img" src={modalDish.img} alt={modalDish.name} />
+            <img className="modal-img" src={modalDish.img} alt={modalDish.name} loading="lazy" />
             <p className="modal-desc">{modalDish.desc}</p>
 
             {modalDish.ingredients && modalDish.ingredients.length > 0 && (
@@ -695,14 +696,14 @@ export default function Explorer() {
             {modalDish.instructions && modalDish.instructions.length > 0 && (
               <div className="recipe-box instructions-box">
                 <h3>Instructions</h3>
-                <ol className="instructions-list">
+                <div className="instructions-list">
                   {modalDish.instructions.map((step, i) => (
-                    <li key={i}>
+                    <div key={i} className="instruction-item">
                       <span className="step-number">{i + 1}</span>
                       <span className="step-text">{step}</span>
-                    </li>
+                    </div>
                   ))}
-                </ol>
+                </div>
               </div>
             )}
 

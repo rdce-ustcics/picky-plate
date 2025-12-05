@@ -27,5 +27,6 @@ const CulturalRecipeSchema = new mongoose.Schema(
 
 // Compound index for common query: { isActive: true, region: "X" } sorted by createdAt
 CulturalRecipeSchema.index({ isActive: 1, region: 1, createdAt: -1 });
+CulturalRecipeSchema.index({ name: 'text', desc: 'text' }); // Text search
 
 module.exports = mongoose.model("CulturalRecipe", CulturalRecipeSchema);
