@@ -5,40 +5,193 @@
     <link rel="icon" href="%PUBLIC_URL%/images/picklogo.png" />
     <link rel="preload" href="%PUBLIC_URL%/images/picklogo.png" as="image" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
+    <meta name="theme-color" content="#f5a623" />
     <meta
       name="description"
-      content="Web site created using create-react-app"
+      content="PickAPlate - Discover & Decide Your Next Meal. Filipino food discovery, meal planning, and recipe sharing platform."
     />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/images/picklogo.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
-
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
+    <!-- Preload critical fonts for faster text rendering -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <title>PickAPlate | Discover & Decide Your Next Meal</title>
+
+    <!-- Splash Screen Styles - Inline for instant loading -->
+    <style>
+      /* Splash screen shows immediately before React loads */
+      #splash-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999;
+        transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
+      }
+
+      #splash-screen.hidden {
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      .splash-spinner {
+        position: relative;
+        width: 160px;
+        height: 160px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .splash-ring {
+        position: absolute;
+        border-radius: 50%;
+        border: 3.5px solid transparent;
+      }
+
+      .splash-ring:nth-child(1) {
+        width: 150px;
+        height: 150px;
+        border-top-color: #f5a623;
+        border-right-color: #f5a623;
+        animation: splash-spin 1.8s linear infinite;
+        filter: drop-shadow(0 0 8px rgba(245, 166, 35, 0.6));
+      }
+
+      .splash-ring:nth-child(2) {
+        width: 115px;
+        height: 115px;
+        border-top-color: #f7b84c;
+        border-left-color: #f7b84c;
+        animation: splash-spin-reverse 1.4s linear infinite;
+        filter: drop-shadow(0 0 6px rgba(247, 184, 76, 0.5));
+      }
+
+      .splash-ring:nth-child(3) {
+        width: 80px;
+        height: 80px;
+        border-top-color: #f9c76b;
+        border-bottom-color: #f9c76b;
+        animation: splash-spin 1s linear infinite;
+        filter: drop-shadow(0 0 5px rgba(249, 199, 107, 0.4));
+      }
+
+      @keyframes splash-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      @keyframes splash-spin-reverse {
+        0% { transform: rotate(360deg); }
+        100% { transform: rotate(0deg); }
+      }
+
+      .splash-logo {
+        width: 50px;
+        height: 50px;
+        object-fit: contain;
+        position: relative;
+        z-index: 10;
+        animation: splash-pulse 2s ease-in-out infinite;
+        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+      }
+
+      @keyframes splash-pulse {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.9; }
+      }
+
+      .splash-text {
+        font-family: 'Poppins', 'Segoe UI', system-ui, -apple-system, sans-serif;
+        font-size: 1.35rem;
+        font-weight: 600;
+        color: #ffffff;
+        margin: 28px 0 0 0;
+        text-align: center;
+        letter-spacing: 0.5px;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+      }
+
+      .splash-subtext {
+        font-family: 'Poppins', 'Segoe UI', system-ui, -apple-system, sans-serif;
+        font-size: 0.875rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-top: 8px;
+        letter-spacing: 0.3px;
+      }
+
+      /* Progress bar */
+      .splash-progress {
+        width: 200px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+        margin-top: 24px;
+        overflow: hidden;
+      }
+
+      .splash-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #f5a623, #f9c76b);
+        border-radius: 4px;
+        animation: splash-progress 2.5s ease-in-out infinite;
+      }
+
+      @keyframes splash-progress {
+        0% { width: 0%; }
+        50% { width: 70%; }
+        100% { width: 100%; }
+      }
+
+      @media (max-width: 480px) {
+        .splash-spinner { width: 140px; height: 140px; }
+        .splash-ring:nth-child(1) { width: 130px; height: 130px; }
+        .splash-ring:nth-child(2) { width: 100px; height: 100px; }
+        .splash-ring:nth-child(3) { width: 70px; height: 70px; }
+        .splash-logo { width: 42px; height: 42px; }
+        .splash-text { font-size: 1.15rem; }
+        .splash-progress { width: 160px; }
+      }
+    </style>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>
+
+    <!-- Splash Screen - Shows immediately while React loads -->
+    <div id="splash-screen">
+      <div class="splash-spinner">
+        <div class="splash-ring"></div>
+        <div class="splash-ring"></div>
+        <div class="splash-ring"></div>
+        <img src="%PUBLIC_URL%/images/picklogo.png" alt="PickAPlate" class="splash-logo" />
+      </div>
+      <p class="splash-text">PickAPlate</p>
+      <p class="splash-subtext">Discover & Decide Your Next Meal</p>
+      <div class="splash-progress">
+        <div class="splash-progress-bar"></div>
+      </div>
+    </div>
+
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
 
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
+    <!-- Hide splash screen when React is ready -->
+    <script>
+      // Hide splash screen after React mounts (with fallback timeout)
+      window.hideSplash = function() {
+        var splash = document.getElementById('splash-screen');
+        if (splash) {
+          splash.classList.add('hidden');
+          setTimeout(function() { splash.remove(); }, 400);
+        }
+      };
+      // Fallback: hide after 8 seconds if React fails to load
+      setTimeout(window.hideSplash, 8000);
+    </script>
   </body>
 </html>

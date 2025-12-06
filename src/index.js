@@ -2,8 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-import { createRoot } from "react-dom/client";
-import ChatBot from "./pages/ChatBot";
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -11,3 +9,11 @@ root.render(
     <App />
   </React.StrictMode>
 );
+
+// Hide splash screen after React mounts
+if (typeof window.hideSplash === 'function') {
+  // Small delay to ensure content is painted
+  requestAnimationFrame(() => {
+    setTimeout(window.hideSplash, 100);
+  });
+}
