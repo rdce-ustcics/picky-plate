@@ -951,12 +951,7 @@ router.post("/chat", async (req, res) => {
       role: "system",
       content:
         "When recommending RESTAURANTS (not dishes), ALWAYS clearly include one of these words in the restaurant name or description: “restaurant”, “diner”, “cafe”, “bistro”, or “spot”.\n" +
-        "Ensure they appear naturally, e.g.:\n" +
-        "- Barrio Chef Bistro\n" +
-        "- Tita’s Kare-Kare House Restaurant\n" +
-        "- Udon King Noodle Spot\n" +
-        "- Mang Juan’s Seafood Cafe\n\n" +
-        "This is required so the client can reliably detect restaurant recommendations."
+        "This helps the user easily identify that it is a place to eat at, not just a dish name."
     });
 
     if (mood) {
