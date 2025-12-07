@@ -903,7 +903,15 @@ router.post("/chat", async (req, res) => {
     }
 
     // 🕒 Time-of-day detection
-    const hour = new Date().getHours();
+  const rawClientHour = req.body?.localHour;
+
+  const hour =
+    typeof rawClientHour === "number" &&
+    Number.isFinite(rawClientHour) &&
+    rawClientHour >= 0 &&
+    rawClientHour < 24
+      ? rawClientHour
+      : new Date().getHours();
     let mealContext = "any meal";
 
     if (hour >= 5 && hour < 11) mealContext = "breakfast";

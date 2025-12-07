@@ -327,25 +327,26 @@ function parseRecipe(content) {
 function isRestaurantOption(text) {
   if (!text) return false;
 
-  const lower = text.toLowerCase();
+  // Get only the title part BEFORE any description
+  const title = text.split(":")[0].trim().toLowerCase();
 
-  // Very strong indicators (most restaurant names or descriptions include these)
+  // Strong restaurant indicators that rarely appear in dish names
   const keywords = [
     "restaurant",
-    "house",
-    "grill",
-    "express",
     "diner",
+    "express",
     "cafe",
     "bistro",
-    "bar and grill",
-    "kitchen",
-    "known for",
-    "serves",
-    "offers",
+    "bar and grill"
   ];
 
-  return keywords.some((k) => lower.includes(k));
+  // Special cases: only match these if in the title (not description)
+  const weakKeywords = ["house", "kitchen"];
+
+  return (
+    keywords.some(k => title.includes(k)) ||
+    weakKeywords.some(k => title.endsWith(` ${k}`) || title.startsWith(`${k} `))
+  );
 }
 
 export default function ChatBot() {
@@ -403,7 +404,8 @@ export default function ChatBot() {
   }
 
   function buildPayload({ message, history, chatId, mood }) {
-    const base = { message, history, chatId };
+    const localHour = new Date().getHours();   
+    const base = { message, history, chatId, localHour };
     if (mood) base.mood = mood;
 
     return isAuthenticated ? base : { ...base, sessionId: SESSION_ID };
@@ -886,30 +888,33 @@ function handleChooseRecommendation(text, msgIndex) {
   const restaurant = isRestaurantOption(text);
 
   if (restaurant) {
-    // Store restaurant name
+    const titleOnly = getDishTitle(text);
+
     setChosenRestaurant(titleOnly);
     setCtaChatId(activeChatId);
     setPostDecisionStep("restaurant-choice");
 
-    // 🔥 Add a chatbot message acknowledging the restaurant choice
     setChats((prev) =>
       prev.map((c) =>
         c.id === activeChatId
           ? {
               ...c,
-              messages: [
-                ...c.messages,
-                {
+              messages: c.messages
+                .map((msg, index) =>
+                  index === msgIndex
+                    ? { ...msg, choiceLocked: true }   // 🔒 lock the options
+                    : msg
+                )
+                .concat({
                   role: "assistant",
                   content: `Excellent choice! "${titleOnly}" is a great pick. You can use the button below to locate this restaurant near you!`,
-                },
-              ],
+                }),
             }
           : c
       )
     );
 
-    return; // stop here (no confirmation modal)
+    return;
   }
 
   // Default—recipe or dish flow
@@ -953,7 +958,6 @@ function handleChooseRecommendation(text, msgIndex) {
           ? {
               ...c,
               hasFinalChoice: true,
-              closed: true,
               messages: c.messages
                 .map((msg, index) =>
                   index === pendingChoiceMessageIndex

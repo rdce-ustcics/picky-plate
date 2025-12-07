@@ -281,12 +281,12 @@ export default function Dashboard() {
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
 
   const foodMoods = [
-    { id: 'hungry', icon: Flame, label: 'Starving', query: 'Quick filling meals' },
-    { id: 'healthy', icon: Salad, label: 'Healthy', query: 'Healthy nutritious recipes' },
-    { id: 'comfort', icon: Coffee, label: 'Comfort', query: 'Comfort food recipes' },
-    { id: 'sweet', icon: Cake, label: 'Sweet Tooth', query: 'Dessert recipes' },
-    { id: 'adventure', icon: Globe, label: 'Adventurous', query: 'Exotic international recipes' },
-    { id: 'quick', icon: Zap, label: 'Quick Bite', query: '15 minute easy recipes' },
+    { id: 'hungry', icon: Flame, label: 'Starving', query: 'What filling meals can you recommend?' },
+    { id: 'healthy', icon: Salad, label: 'Healthy', query: 'Suggest me some Healthy nutritious food please!' },
+    { id: 'comfort', icon: Coffee, label: 'Comfort', query: 'What comfort food would you recommend?' },
+    { id: 'sweet', icon: Cake, label: 'Sweet Tooth', query: 'I am in the mood for dessert! What would you suggest?' },
+    { id: 'adventure', icon: Globe, label: 'Adventurous', query: 'Suggest me some exotic International Recipes!' },
+    { id: 'quick', icon: Zap, label: 'Quick Bite', query: 'What would you suggest for a quick bite?' },
   ];
 
   const foodFacts = useMemo(() => [
