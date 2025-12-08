@@ -282,6 +282,17 @@ export default function BarkadaVote() {
   // Get authUser for auto-populating name
   const { user: authUser } = useAuth();
 
+    const handleCreateClick = () => {
+    // if not logged in, go to login page instead of opening modal
+    if (!authUser) {
+      navigate("/login?redirect=/barkadavote");
+      return;
+    }
+    // logged in → open the Create Session modal
+    setShowCreateModal(true);
+  };
+
+
   // Auto-populate name from authenticated user
   useEffect(() => {
     if (authUser) {
@@ -916,7 +927,7 @@ export default function BarkadaVote() {
         {/* Main Action Buttons - ONLY BUTTONS, NO FORMS */}
         <div className="home-actions">
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={handleCreateClick}
             disabled={connState !== "connected"}
             className="home-action-btn home-action-create"
           >

@@ -213,8 +213,11 @@ const sanitizeSessionForClient = (s, requestingToken = null) => {
     // ──────────────────────────────────────────────────────────────
     socket.on(
       'session:create',
-      async ({ name, password, userId = null, isRegistered = !!userId, options = [], profileImage = '' }, cb) => {
+      async ({ name, password, userId = null, isRegistered = false, options = [], profileImage = '' }, cb) => {
         try {
+          if (!isRegistered || !userId) {
+            return cb({ ok: false, error: 'You must be logged in to create a session.' });
+          }
           if (!name || !password) return cb({ ok: false, error: 'Missing fields' });
 
           // Validate initial (optional) options 0..6
