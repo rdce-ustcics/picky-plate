@@ -951,7 +951,8 @@ router.post("/chat", async (req, res) => {
       role: "system",
       content:
         "When recommending RESTAURANTS (not dishes), ALWAYS clearly include one of these words in the restaurant description: “restaurant”, “diner”, “cafe”, “bistro”, or “spot”.\n" +
-        "This helps the user easily identify that it is a place to eat at, not just a dish name."
+        "This helps the user easily identify that it is a place to eat at, not just a dish name." +
+        "Make sure that all of the restaurants are located in the Philippines.",
     });
 
     if (mood) {

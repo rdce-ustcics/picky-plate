@@ -337,7 +337,9 @@ function isRestaurantOption(text) {
     "express",
     "cafe",
     "bistro",
-    "bar and grill"
+    "bar and grill",
+    "spot",
+    "known for",
   ];
 
   // Special cases: only match these if in the title (not description)
