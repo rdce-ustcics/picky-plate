@@ -66,7 +66,6 @@ export default function CommunityRecipes() {
 
   const tagMenuRef = useRef(null);
   const allergenMenuRef = useRef(null);
-  const modalRef = useRef(null);
   
   // NEW: Refs for dropdown buttons to calculate position
   const tagButtonRef = useRef(null);
@@ -606,76 +605,175 @@ export default function CommunityRecipes() {
     }
   };
 
-  // PDF helpers
-  async function captureToPdfBlob() {
-    if (!modalRef.current || !selectedRecipe) return null;
-    const node = modalRef.current;
 
-    node.classList.add("pdf-mode");
-    const prevBg = node.style.background;
-    node.style.background = "#ffffff";
+    // ============================================
+  // SIMPLE TEXT-BASED PDF (NO CSS / NO CANVAS)
+  // ============================================
+  const createRecipePdf = (recipe) => {
+    if (!recipe) return null;
 
-    const scale = window.devicePixelRatio ? Math.min(3, window.devicePixelRatio) : 2;
+    const pdf = new jsPDF("p", "pt", "a4");
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 40;
+    const contentWidth = pageWidth - margin * 2;
+    let y = margin;
 
-    try {
-      const canvas = await html2canvas(node, {
-        scale,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: node.scrollWidth,
-        windowHeight: node.scrollHeight,
-      });
-
-      const imgData = canvas.toDataURL("image/png", 0.95);
-      const pdf = new jsPDF("p", "pt", "a4");
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-
-      const imgWidth = pageWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-      if (imgHeight <= pageHeight) {
-        pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
-      } else {
-        let yShift = 0;
-        let remaining = imgHeight;
-        while (remaining > 0) {
-          pdf.addImage(imgData, "PNG", 0, yShift, imgWidth, imgHeight);
-          remaining -= pageHeight;
-          if (remaining > 0) {
-            pdf.addPage();
-            yShift -= pageHeight;
-          }
-        }
+    const ensurePageSpace = (lineHeight = 16) => {
+      if (y > pageHeight - margin) {
+        pdf.addPage();
+        y = margin;
       }
+    };
 
-      return pdf;
-    } catch (err) {
-      return null;
-    } finally {
-      node.classList.remove("pdf-mode");
-      node.style.background = prevBg;
+    const writeLines = (textOrLines, options = {}) => {
+      const lineHeight = options.lineHeight || 16;
+      const lines = Array.isArray(textOrLines)
+        ? textOrLines
+        : pdf.splitTextToSize(textOrLines, contentWidth);
+
+      lines.forEach((line) => {
+        ensurePageSpace(lineHeight);
+        pdf.text(line, margin, y);
+        y += lineHeight;
+      });
+      y += options.after || 0;
+    };
+
+    const writeSectionTitle = (title) => {
+      ensurePageSpace(20);
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(13);
+      pdf.text(title, margin, y);
+      y += 20;
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(12);
+    };
+
+    // ---- Title ----
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(18);
+    const title = (recipe.title || "Recipe").trim();
+    const titleLines = pdf.splitTextToSize(title, contentWidth);
+    titleLines.forEach((line) => {
+      ensurePageSpace(22);
+      pdf.text(line, margin, y);
+      y += 22;
+    });
+
+    // Author (optional)
+    if (recipe.author) {
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(11);
+      ensurePageSpace(16);
+      pdf.text(`By ${recipe.author}`, margin, y);
+      y += 18;
     }
-  }
 
-  const downloadRecipePdf = async () => {
-    const pdf = await captureToPdfBlob();
-    if (!pdf) return;
-    pdf.save(`${selectedRecipe?.title?.trim() || "recipe"}.pdf`);
+    // Small divider
+    ensurePageSpace(10);
+    pdf.setDrawColor(150);
+    pdf.line(margin, y, pageWidth - margin, y);
+    y += 14;
+
+    // ---- Description ----
+    if (recipe.description) {
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(12);
+      writeLines(recipe.description.trim(), { lineHeight: 16, after: 6 });
+    }
+
+    // ---- Basic Info: prep / cook / difficulty / servings ----
+    const metaRows = [
+      ["Prep time", recipe.prepTime || "—"],
+      ["Cook time", recipe.cookTime || "—"],
+      ["Difficulty", recipe.difficulty || "—"],
+      ["Servings", recipe.servings || "—"],
+    ];
+
+    pdf.setFontSize(12);
+    metaRows.forEach(([label, value]) => {
+      ensurePageSpace(16);
+      pdf.setFont("helvetica", "bold");
+      pdf.text(`${label}:`, margin, y);
+      pdf.setFont("helvetica", "normal");
+      pdf.text(String(value), margin + 90, y);
+      y += 16;
+    });
+
+    y += 10;
+
+    // ---- Tags (optional, single line) ----
+    if (recipe.tags && recipe.tags.length) {
+      const tagText = "Tags: " + recipe.tags.map((t) => `#${t}`).join(", ");
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(11);
+      writeLines(tagText, { lineHeight: 14, after: 6 });
+    }
+
+    // ---- Ingredients ----
+    if (recipe.ingredients && recipe.ingredients.length) {
+      writeSectionTitle("Ingredients");
+      recipe.ingredients.forEach((ing) => {
+        if (!ing || !String(ing).trim()) return;
+        const bulletText = `• ${String(ing).trim()}`;
+        writeLines(bulletText, { lineHeight: 16 });
+      });
+      y += 6;
+    }
+
+    // ---- Instructions ----
+    if (recipe.instructions && recipe.instructions.length) {
+      writeSectionTitle("Cooking Instructions");
+      recipe.instructions.forEach((step, idx) => {
+        if (!step || !String(step).trim()) return;
+        const text = `${idx + 1}. ${String(step).trim()}`;
+        writeLines(text, { lineHeight: 16 });
+      });
+      y += 6;
+    }
+
+    // ---- Notes ----
+    if (recipe.notes && recipe.notes.trim()) {
+      writeSectionTitle("Notes");
+      writeLines(recipe.notes.trim(), { lineHeight: 16 });
+    }
+
+    return pdf;
   };
 
-  const previewRecipePdf = async () => {
-    const pdf = await captureToPdfBlob();
+  // Download directly (works on desktop + most mobile browsers)
+  const downloadRecipePdf = () => {
+    if (!selectedRecipe) return;
+    const pdf = createRecipePdf(selectedRecipe);
     if (!pdf) return;
+
+    const safeTitle =
+      (selectedRecipe.title || "recipe").trim().replace(/[\\/:*?"<>|]+/g, "_") ||
+      "recipe";
+
+    pdf.save(`${safeTitle}.pdf`);
+  };
+
+  // Open preview in new tab (mobile can then "download" from viewer)
+  const previewRecipePdf = () => {
+    if (!selectedRecipe) return;
+    const pdf = createRecipePdf(selectedRecipe);
+    if (!pdf) return;
+
     try {
-      const blobUrl = pdf.output("bloburl");
-      window.open(blobUrl, "_blank", "noopener,noreferrer");
+      const blob = pdf.output("blob");
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, "_blank", "noopener,noreferrer");
+      if (!win) {
+        // Popup blocked – fallback to data URL
+        pdf.output("dataurlnewwindow");
+      }
     } catch {
       pdf.output("dataurlnewwindow");
     }
   };
+
 
   function openReport() {
     if (!selectedRecipe) return;
@@ -1396,6 +1494,8 @@ export default function CommunityRecipes() {
     }
   };
 
+  
+
   return (
     <>
       {loading && <LoadingModal message="Loading community recipes..." />}
@@ -1847,7 +1947,7 @@ export default function CommunityRecipes() {
       {/* Recipe Modal */}
       {selectedRecipe && (
         <div className="cr-modal-overlay" onClick={closeRecipeModal}>
-          <div ref={modalRef} className="cr-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="cr-modal" onClick={(e) => e.stopPropagation()}>
             <div className="cr-modal-image">
               <img
                 crossOrigin="anonymous"
