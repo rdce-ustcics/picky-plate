@@ -2188,12 +2188,6 @@ export default function BarkadaVote() {
         />
         
         <header className="barkada-header">
-          <button
-            onClick={() => setCurrentView("lobby")}
-            className="barkada-btn-icon"
-          >
-            <ArrowLeft style={{ width: "1.25rem", height: "1.25rem" }} />
-          </button>
           <h1
             style={{
               fontSize: "1.25rem",
