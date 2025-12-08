@@ -21,6 +21,8 @@ import { useAuth } from "../auth/AuthContext";
 import { getCached, setCache, CACHE_KEYS, CACHE_TTL } from "../utils/cache";
 import BotPng from "../assets/bot.png";
 import "./Calendar.css";
+import jsPDF from "jspdf";   // ⬅️ NEW
+
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
@@ -444,7 +446,94 @@ export default function Calendar(){
     return total;
   },[mealData,currentDate,s,e,daysInMonth]);
 
-  const handlePrint=()=> window.print();
+const handlePrint = () => {
+  // Simple calendar PDF (no CSS, no external HTML)
+  const doc = new jsPDF(); // default A4, portrait, mm units
+
+  const year = currentDate.getFullYear();
+  const monthIndex = currentDate.getMonth();
+  const monthLabel = `${monthNames[monthIndex]} ${year}`;
+  const fileNameSafe = `Meal_Plan_${year}-${pad2(monthIndex + 1)}.pdf`;
+
+  // Page layout
+  const pageWidth = doc.internal.pageSize.getWidth();   // ~210mm
+  const margin = 10;
+  const gridWidth = pageWidth - margin * 2;
+  const cellWidth = gridWidth / 7;
+  const headerHeight = 10;
+  const cellHeight = 25;
+
+  let startY = 20;
+
+  // Title
+  doc.setFontSize(16);
+  doc.text("Meal Plan Calendar", pageWidth / 2, startY, { align: "center" });
+
+  startY += 8;
+  doc.setFontSize(12);
+  doc.text(monthLabel, pageWidth / 2, startY, { align: "center" });
+
+  startY += 10;
+
+  // Day name row
+  const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  doc.setFontSize(9);
+
+  dayLabels.forEach((label, colIdx) => {
+    const x = margin + colIdx * cellWidth;
+    // Header cell
+    doc.rect(x, startY, cellWidth, headerHeight);
+    doc.text(label, x + 2, startY + headerHeight / 2 + 2);
+  });
+
+  // Calendar grid based on existing `days` / `rows`
+  let idx = 0;
+  let yOffset = startY + headerHeight;
+
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < 7; col++) {
+      const day = days[idx++];
+      const x = margin + col * cellWidth;
+      const y = yOffset + row * cellHeight;
+
+      // Draw cell box
+      doc.rect(x, y, cellWidth, cellHeight);
+
+      if (!day) continue;
+
+      const ymdKey = ymdFromParts(year, monthIndex + 1, day);
+      const dishes = (mealData[ymdKey]?.dishes || []).slice();
+      const total = dishes.reduce((sum, d) => sum + (Number(d.cost) || 0), 0);
+
+      // Day number (top-left)
+      doc.setFontSize(9);
+      doc.text(String(day), x + 1.8, y + 4);
+
+      // Total (bottom-left)
+      if (total > 0) {
+        doc.setFontSize(8);
+        doc.text(`₱${total.toFixed(0)}`, x + 1.8, y + cellHeight - 3);
+      }
+
+      // Meal names (first 2) in the middle, tiny text
+      if (dishes.length) {
+        const names = dishes
+          .slice(0, 2)
+          .map(d => d.name || "")
+          .join(", ");
+
+        if (names) {
+          doc.setFontSize(7);
+          const lines = doc.splitTextToSize(names, cellWidth - 3);
+          const textStartY = y + 8; // below date
+          doc.text(lines, x + 1.8, textStartY);
+        }
+      }
+    }
+  }
+
+  doc.save(fileNameSafe);
+};
 
   const openAiOptionsModal=()=>{
     if(!isAuthenticated){ alert("Please log in to use AI."); return; }
@@ -811,31 +900,44 @@ export default function Calendar(){
                               )}
                             </div>
 
-                            {hasMeals && (
-                              <div className="calendar-day-meals">
-                                {dishes.map((dish, i) => (
-                                  <div key={i} className="calendar-meal-item">
-                                    <p className="calendar-meal-text">
-                                      <span className="truncate">{dish.name}</span>
-                                      <span className="calendar-meal-cost">₱{Number(dish.cost).toFixed(0)}</span>
-                                      {dish.source === "ai" && (
-                                        <span className="calendar-meal-ai-badge">
-                                          <BadgeCheck className="w-3 h-3" /> AI
-                                        </span>
-                                      )}
-                                    </p>
-                                  </div>
-                                ))}
-                                {dishes.length > 2 && (
-                                  <div className="calendar-day-meals-overflow">
-                                    +{dishes.length - 2} more
-                                  </div>
-                                )}
-                                <div className="calendar-day-total">
-                                  ₱{total.toFixed(0)}
-                                </div>
+                          {hasMeals && (
+                            <div className="calendar-day-meals">
+                              {(() => {
+                                const visibleDishes = dishes.slice(0, 3);
+                                const overflowCount = dishes.length - visibleDishes.length;
+
+                                return (
+                                  <>
+                                    {visibleDishes.map((dish, i) => (
+                                      <div key={i} className="calendar-meal-item">
+                                        <p className="calendar-meal-text">
+                                          <span className="truncate">{dish.name}</span>
+                                          <span className="calendar-meal-cost">
+                                            ₱{Number(dish.cost).toFixed(0)}
+                                          </span>
+                                          {dish.source === "ai" && (
+                                            <span className="calendar-meal-ai-badge">
+                                              <BadgeCheck className="w-3 h-3" /> AI
+                                            </span>
+                                          )}
+                                        </p>
+                                      </div>
+                                    ))}
+
+                                    {overflowCount > 0 && (
+                                      <div className="calendar-day-meals-overflow">
+                                        +{overflowCount} more
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
+
+                              <div className="calendar-day-total">
+                                ₱{total.toFixed(0)}
                               </div>
-                            )}
+                            </div>
+                          )}
                           </>
                         )}
                       </div>
