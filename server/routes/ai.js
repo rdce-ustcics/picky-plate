@@ -34,25 +34,89 @@ function titleCase(s=""){
 }
 
 /* ───────────── RANDOM fallback (only when explicitly requested) ───────────── */
+/* Diverse cuisine pool - includes Filipino, Japanese, Korean, Chinese, Thai, Vietnamese,
+   Indian, Italian, Mexican, American, Mediterranean, Middle Eastern cuisines */
 const POOL = {
   breakfast: [
-    "Greek Yogurt Parfait","Avocado Toast","Tapsilog","Japanese Tamago Sando",
-    "French Omelette","Arepa con Queso","Masala Upma","Congee with Scallions",
-    "Bagel & Cream Cheese","Oatmeal with Banana","Huevos Rancheros","Smoked Salmon Bagel",
-    "Ube Pancakes","Shakshuka","Chia Pudding"
+    // Filipino
+    "Tapsilog","Longsilog","Bangsilog","Tocilog","Pandesal with Kesong Puti",
+    "Champorado","Arroz Caldo","Lugaw with Egg",
+    // Japanese
+    "Japanese Tamago Sando","Onigiri with Salmon","Miso Soup with Rice",
+    // Korean
+    "Korean Juk (Rice Porridge)","Gyeran Bap (Egg Rice)","Korean Toast",
+    // Chinese
+    "Congee with Scallions","Dim Sum Dumplings","Chinese Fried Rice",
+    // American
+    "Pancakes with Maple Syrup","Bagel & Cream Cheese","Oatmeal with Banana",
+    "Avocado Toast","French Toast","Eggs Benedict",
+    // Mediterranean/Middle Eastern
+    "Greek Yogurt Parfait","Shakshuka","Hummus with Pita Bread",
+    // Mexican
+    "Huevos Rancheros","Breakfast Burrito","Chilaquiles",
+    // Indian
+    "Masala Upma","Idli with Sambar","Poha",
+    // Italian
+    "Italian Frittata","Cornetto with Cappuccino"
   ],
   lunch: [
-    "Chicken Adobo with Rice","Bibimbap Bowl","Falafel Wrap","Tuna Sandwich",
-    "Margherita Pizza Slice","Pork Menudo with Rice","Thai Basil Chicken with Rice",
-    "Mediterranean Grain Bowl","Vegetable Katsu Curry","Chicken Caesar Salad",
-    "Burrito Bowl","Hummus & Pita Plate","Beef Gyro","Sushi Bento","Tom Yum Noodle Soup"
+    // Filipino
+    "Chicken Adobo with Rice","Pork Sinigang with Rice","Kare-Kare with Rice",
+    "Pork Menudo with Rice","Bicol Express with Rice","Sisig with Rice",
+    // Japanese
+    "Sushi Bento","Chicken Katsu Curry","Ramen Bowl","Teriyaki Chicken Don",
+    // Korean
+    "Bibimbap Bowl","Korean Fried Chicken","Japchae with Rice","Bulgogi Rice Bowl",
+    // Chinese
+    "Kung Pao Chicken with Rice","Sweet & Sour Pork","Dim Sum Platter","Mapo Tofu with Rice",
+    // Thai
+    "Thai Basil Chicken with Rice","Pad Thai","Green Curry with Rice","Tom Yum Noodle Soup",
+    // Vietnamese
+    "Pho Bo (Beef Pho)","Banh Mi Sandwich","Vietnamese Spring Rolls",
+    // Indian
+    "Butter Chicken with Naan","Chicken Biryani","Paneer Tikka Masala",
+    // Italian
+    "Margherita Pizza Slice","Spaghetti Bolognese","Caprese Panini",
+    // Mexican
+    "Burrito Bowl","Chicken Tacos","Quesadilla",
+    // American
+    "Tuna Sandwich","Chicken Caesar Salad","Club Sandwich",
+    // Mediterranean
+    "Mediterranean Grain Bowl","Falafel Wrap","Greek Salad with Pita",
+    // Middle Eastern
+    "Hummus & Pita Plate","Beef Gyro","Shawarma Wrap"
   ],
   dinner: [
-    "Penne Arrabbiata","Beef Nilaga with Rice","Teriyaki Salmon with Rice",
-    "Vegetable Stir-fry with Tofu","Butter Chicken with Naan","Shrimp Pad Thai",
-    "Ratatouille with Couscous","Beef Tacos","Chicken Tinola with Rice","Soba Noodles & Vegetables",
-    "Mushroom Risotto","Lamb Kofta with Rice","Pesto Chicken Pasta","Bibimbap (Dinner)",
-    "Moroccan Chickpea Stew"
+    // Filipino
+    "Beef Nilaga with Rice","Chicken Tinola with Rice","Pork Adobo with Rice",
+    "Sinigang na Baboy","Pinakbet with Rice","Laing with Rice","Crispy Pata",
+    // Japanese
+    "Teriyaki Salmon with Rice","Soba Noodles & Vegetables","Tonkatsu with Rice",
+    "Yakitori Set","Beef Gyudon",
+    // Korean
+    "Samgyeopsal Set","Korean BBQ Short Ribs","Kimchi Jjigae with Rice",
+    "Bibimbap (Dinner)","Dakgalbi",
+    // Chinese
+    "Vegetable Stir-fry with Tofu","Peking Duck","Kung Pao Shrimp",
+    "Beef & Broccoli with Rice","Sweet & Sour Fish",
+    // Thai
+    "Shrimp Pad Thai","Massaman Curry","Thai Green Curry","Pad Kra Pao",
+    // Vietnamese
+    "Vietnamese Pho","Ca Kho To (Caramelized Fish)","Bun Cha",
+    // Indian
+    "Butter Chicken with Naan","Lamb Rogan Josh","Chicken Tikka Masala",
+    "Vegetable Biryani","Palak Paneer",
+    // Italian
+    "Penne Arrabbiata","Mushroom Risotto","Pesto Chicken Pasta",
+    "Lasagna","Chicken Parmesan",
+    // Mexican
+    "Beef Tacos","Enchiladas","Carnitas Bowl","Chicken Fajitas",
+    // American
+    "Grilled Salmon with Vegetables","BBQ Ribs","Roasted Chicken",
+    // Mediterranean
+    "Ratatouille with Couscous","Grilled Lamb Chops","Mediterranean Baked Fish",
+    // Middle Eastern
+    "Lamb Kofta with Rice","Moroccan Chickpea Stew","Chicken Shawarma Plate"
   ]
 };
 function rand(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
@@ -253,8 +317,17 @@ For each day:
 PRICING RULES (2024-2025 Philippine food costs):
 ${budgetConstraint}
 
+CRITICAL CUISINE MIXING RULES:
+- You MUST include dishes from AT LEAST 5 DIFFERENT CUISINES across the 7-day plan.
+- Available cuisines to mix: Filipino, Japanese, Korean, Chinese, Thai, Vietnamese, Indian, Italian, Mexican, American, Mediterranean, Middle Eastern, Spanish, French, Greek.
+- PRIORITIZE user's favorite cuisines (if provided) for approximately 50-60% of dishes.
+- The remaining 40-50% MUST be from NON-FAVORITE cuisines to ensure variety.
+- NEVER have 3 consecutive meals from the same cuisine.
+- Each day should ideally have dishes from 2-3 different cuisines.
+- For breakfast: Include variety like Filipino (tapsilog, pandesal), American (pancakes, oatmeal), Japanese (tamago), Korean (juk), Chinese (congee).
+- For lunch/dinner: Rotate through different cuisines each day.
+
 General Rules:
-- Mix of Filipino and global cuisines, but prioritize Filipino dishes.
 - Do NOT repeat a dish name within the 7-day window.
 - Costs must be realistic, numeric Philippine pesos (no currency symbol).
 - Output JSON ONLY with either an array of 7 days, or {"plan":[...7 days...]}.`;
@@ -262,6 +335,14 @@ General Rules:
 const budgetInfo = dailyBudget
   ? `Daily budget: ₱${dailyBudget} (STRICT - do not exceed this per day)`
   : "No specific budget - use realistic Filipino food prices";
+
+// Build favorite cuisines string for explicit guidance
+const favoriteCuisinesArray = Array.from(favoriteList);
+const hasFavorites = favoriteCuisinesArray.length > 0;
+const cuisineMixingGuidance = hasFavorites
+  ? `FAVORITE CUISINES (prioritize 50-60% of dishes from these): ${favoriteCuisinesArray.join(", ")}
+NON-FAVORITES TO MIX IN (40-50% of dishes): Japanese, Korean, Chinese, Thai, Vietnamese, Indian, Italian, Mexican, American, Mediterranean cuisines that are NOT in the favorites list above.`
+  : `Mix these cuisines evenly: Filipino, Japanese, Korean, Chinese, Thai, Italian, Mexican, American, Mediterranean. Include at least 5 different cuisines across the week.`;
 
 const userPrompt = `
 Start date: ${ymdFromDate(start)}
@@ -274,14 +355,22 @@ Allergens to avoid: ${Array.from(avoidAllergenSet).join(", ") || "none"}
 Kids in household: ${kids.length}
 Kids dislikes: ${kids.flatMap(k => k.dislikes).join(", ") || "none"}
 
-Try to include favorites when possible: ${Array.from(favoriteList).join(", ") || "none"}
+${cuisineMixingGuidance}
+
+STRICT CUISINE MIXING RULES:
+1. Each day MUST have dishes from at least 2 different cuisines.
+2. Never have breakfast, lunch, AND dinner all from the same cuisine on any day.
+3. Across the 7-day plan, include dishes from at least 5 different cuisines total.
+4. If user has favorite cuisines, 50-60% of dishes should be from favorites, but 40-50% MUST be from other cuisines for variety.
+5. Examples of good daily mixing:
+   - Day 1: Filipino breakfast, Japanese lunch, Italian dinner
+   - Day 2: American breakfast, Korean lunch, Filipino dinner
+   - Day 3: Chinese breakfast (congee), Mexican lunch, Thai dinner
 
 Rules:
 - NEVER suggest dishes containing allergens.
 - Strongly avoid dishes that match dislikes.
-- Prefer dishes matching favorites.
 - Prefer kid-friendly dishes if kids exist.
-- Suggest varied dishes, not the same cuisine repeatedly. But prioritize the ones the user actually likes.
 - ${dailyBudget ? `IMPORTANT: Each day's 3 meals MUST total ≤ ₱${dailyBudget}` : 'Use realistic 2024-2025 Philippine food prices'}
 `;
 
