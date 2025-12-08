@@ -1576,79 +1576,70 @@ export default function BarkadaVote() {
                   </button>
                 </div>
 
-                <div className="space-y">
-                  {myDraft.map((o, i) => (
-                    <div key={i} className="menu-editor-row">
-                      <input
-                        placeholder="Restaurant name"
-                        value={o.name}
-                        onChange={(e) =>
-                          setMyDraft((prev) =>
-                            prev.map((x, idx) =>
-                              idx === i ? { ...x, name: e.target.value } : x
-                            )
-                          )
-                        }
-                        className="barkada-input"
-                      />
-                      <input
-                        placeholder="Area / Branch (e.g. UST, BGC)"
-                        value={o.restaurant}
-                        onChange={(e) =>
-                          setMyDraft((prev) =>
-                            prev.map((x, idx) =>
-                              idx === i
-                                ? { ...x, restaurant: e.target.value }
-                                : x
-                            )
-                          )
-                        }
-                        className="barkada-input"
-                      />
-                      <input
-                        placeholder="Avg price (₱)"
-                        type="number"
-                        min="1"
-                        value={o.price}
-                        onChange={(e) =>
-                          setMyDraft((prev) =>
-                            prev.map((x, idx) =>
-                              idx === i
-                                ? { ...x, price: e.target.value }
-                                : x
-                            )
-                          )
-                        }
-                        className="barkada-input"
-                      />
-                      <input
-                        placeholder="Image URL"
-                        value={o.image}
-                        onChange={(e) =>
-                          setMyDraft((prev) =>
-                            prev.map((x, idx) =>
-                              idx === i
-                                ? { ...x, image: e.target.value }
-                                : x
-                            )
-                          )
-                        }
-                        className="barkada-input"
-                      />
-                      <button
-                        onClick={() =>
-                          setMyDraft((prev) =>
-                            prev.filter((_, idx) => idx !== i)
-                          )
-                        }
-                        className="barkada-btn-delete"
-                        aria-label="remove"
-                      >
-                        <Trash2 style={{ width: "1rem", height: "1rem" }} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+        <div className="space-y">
+          {myDraft.map((o, i) => (
+            <div key={i} className="menu-editor-row">
+              {/* Restaurant Name */}
+              <input
+                placeholder="Restaurant name"
+                value={o.name}
+                onChange={(e) =>
+                  setMyDraft((prev) =>
+                    prev.map((x, idx) =>
+                      idx === i ? { ...x, name: e.target.value } : x
+                    )
+                  )
+                }
+                className="barkada-input"
+              />
+
+              {/* Classification dropdown */}
+              <select
+                className="barkada-input"
+                value={o.tag || ""}
+                onChange={(e) =>
+                  setMyDraft((prev) =>
+                    prev.map((x, idx) =>
+                      idx === i ? { ...x, tag: e.target.value } : x
+                    )
+                  )
+                }
+              >
+                <option value="">Select classification</option>
+                {CLASSIFICATION_OPTIONS.map((tag) => (
+                  <option key={tag} value={tag}>
+                    {formatTagLabel(tag)}
+                  </option>
+                ))}
+              </select>
+
+              {/* How much (₱) */}
+              <input
+                placeholder="Avg price (₱)"
+                type="number"
+                min="1"
+                value={o.price}
+                onChange={(e) =>
+                  setMyDraft((prev) =>
+                    prev.map((x, idx) =>
+                      idx === i ? { ...x, price: e.target.value } : x
+                    )
+                  )
+                }
+                className="barkada-input"
+              />
+
+              <button
+                onClick={() =>
+                  setMyDraft((prev) => prev.filter((_, idx) => idx !== i))
+                }
+                className="barkada-btn-delete"
+              >
+                <Trash2 style={{ width: "1rem", height: "1rem" }} />
+              </button>
+            </div>
+          ))}
+        </div>
 
                 <div style={{ marginTop: "1rem" }}>
                   <button
