@@ -67,6 +67,7 @@ router.get("/", async (req, res) => {
 
     const q = {
       state: { $ne: "forReview" }, // Exclude recipes that are marked as "forReview"
+      isFlagged: { $ne: true }, // Exclude flagged recipes (5+ reports/week or 20+ lifetime)
     };
 
     // Text search across fields
@@ -562,38 +563,38 @@ router.delete("/:id", protect, async (req, res) => {
 /**
  * POST /api/recipes/:id/report
  * Report a recipe for admin review (with detailed tracking)
+ * Auto-flags recipe if: 5+ reports in past week OR 20+ lifetime reports
  */
 router.post("/:id/report", protect, async (req, res) => {
   try {
     const { reason = 'other', description = '' } = req.body;
-    
+
     const recipe = await Recipe.findById(req.params.id);
-    
+
     if (!recipe) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Recipe not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Recipe not found'
       });
     }
 
     if (recipe.isDeleted) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'This recipe has already been removed' 
+      return res.status(400).json({
+        success: false,
+        message: 'This recipe has already been removed'
       });
     }
 
-    // Check if user already reported this recipe
+    // Check if user already reported this recipe (any status)
     const existingReport = await RecipeReport.findOne({
       recipeId: req.params.id,
-      reportedBy: req.user._id,
-      status: 'pending'
+      reportedBy: req.user._id
     });
 
     if (existingReport) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'You have already reported this recipe' 
+      return res.status(400).json({
+        success: false,
+        message: 'You have already reported this recipe'
       });
     }
 
@@ -606,23 +607,34 @@ router.post("/:id/report", protect, async (req, res) => {
       status: 'pending'
     });
 
-    // Flag the recipe if not already flagged
-    if (!recipe.isFlagged) {
+    // Check report thresholds: 5 reports/week OR 20 lifetime
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const [lifetimeCount, weeklyCount] = await Promise.all([
+      RecipeReport.countDocuments({ recipeId: req.params.id }),
+      RecipeReport.countDocuments({ recipeId: req.params.id, createdAt: { $gte: weekAgo } })
+    ]);
+
+    // Auto-flag if thresholds met
+    const shouldFlag = weeklyCount >= 5 || lifetimeCount >= 20;
+
+    if (shouldFlag && !recipe.isFlagged) {
       recipe.isFlagged = true;
       recipe.flaggedAt = new Date();
       recipe.flaggedBy = req.user._id;
       await recipe.save();
     }
 
-    res.json({ 
-      success: true, 
-      message: 'Recipe reported successfully. Our admin team will review it.' 
+    res.json({
+      success: true,
+      message: 'Recipe reported successfully. Our admin team will review it.',
+      flagged: shouldFlag
     });
   } catch (e) {
     // console.error('report_recipe_error:', e);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to report recipe. Please try again.' 
+    res.status(500).json({
+      success: false,
+      message: 'Failed to report recipe. Please try again.'
     });
   }
 });

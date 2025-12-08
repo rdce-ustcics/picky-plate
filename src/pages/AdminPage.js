@@ -1,6 +1,6 @@
 // client/src/pages/Admin.js
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Globe, Clock, TrendingUp, Users, X, RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
+import { Globe, Clock, TrendingUp, Users, X, RefreshCw, CheckCircle, AlertCircle, Flag } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import LoadingModal from "../components/LoadingModal";
 import "./Admin.css";
@@ -12,7 +12,9 @@ export default function Admin() {
 
   const [activeTab, setActiveTab] = useState("review");
   const [reviewRecipes, setReviewRecipes] = useState([]);
+  const [flaggedRecipes, setFlaggedRecipes] = useState([]);
   const [selectedReviewRecipe, setSelectedReviewRecipe] = useState(null);
+  const [selectedFlaggedRecipe, setSelectedFlaggedRecipe] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -21,6 +23,7 @@ export default function Admin() {
     open: false,
     action: null,
     recipe: null,
+    type: null, // 'review' or 'flagged'
   });
 
   const modalRef = useRef(null);
@@ -54,16 +57,39 @@ export default function Admin() {
     }
   }, [authHeaders]);
 
+  const fetchFlaggedRecipes = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await fetchJSON(`${API_BASE}/api/admin/flagged-recipes`, {
+        headers: authHeaders(),
+      });
+      setFlaggedRecipes(data.recipes || []);
+    } catch (e) {
+      setError(e.message || "Failed to fetch flagged recipes");
+    } finally {
+      setLoading(false);
+    }
+  }, [authHeaders]);
+
   useEffect(() => {
     fetchReviewRecipes();
-  }, [fetchReviewRecipes]);
+    fetchFlaggedRecipes();
+  }, [fetchReviewRecipes, fetchFlaggedRecipes]);
 
   // -------- actions (with confirm) --------
-  const requestReinstate = (recipe) =>
-    setConfirm({ open: true, action: "reinstate", recipe });
+  const requestReinstate = (recipe, type = "review") =>
+    setConfirm({ open: true, action: "reinstate", recipe, type });
 
-  const requestDelete = (recipe) =>
-    setConfirm({ open: true, action: "delete", recipe });
+  const requestDelete = (recipe, type = "review") =>
+    setConfirm({ open: true, action: "delete", recipe, type });
+
+  // For flagged recipes: approve (unflag) or reject (delete)
+  const requestApprove = (recipe) =>
+    setConfirm({ open: true, action: "approve", recipe, type: "flagged" });
+
+  const requestReject = (recipe) =>
+    setConfirm({ open: true, action: "reject", recipe, type: "flagged" });
 
   const handleConfirm = async () => {
     if (!confirm.open || !confirm.recipe) return;
@@ -80,18 +106,37 @@ export default function Admin() {
           method: "DELETE",
           headers: authHeaders(),
         });
+      } else if (confirm.action === "approve") {
+        // Approve flagged recipe (unflag it)
+        await fetchJSON(`${API_BASE}/api/admin/approve-recipe/${id}`, {
+          method: "POST",
+          headers: authHeaders(),
+        });
+      } else if (confirm.action === "reject") {
+        // Reject flagged recipe (soft delete)
+        await fetchJSON(`${API_BASE}/api/admin/reject-recipe/${id}`, {
+          method: "DELETE",
+          headers: authHeaders(),
+        });
       }
-      await fetchReviewRecipes();
-      if (selectedReviewRecipe?._id === id) setSelectedReviewRecipe(null);
+
+      // Refresh appropriate list
+      if (confirm.type === "flagged") {
+        await fetchFlaggedRecipes();
+        if (selectedFlaggedRecipe?._id === id) setSelectedFlaggedRecipe(null);
+      } else {
+        await fetchReviewRecipes();
+        if (selectedReviewRecipe?._id === id) setSelectedReviewRecipe(null);
+      }
     } catch (e) {
       alert(e.message || "Action failed");
     } finally {
-      setConfirm({ open: false, action: null, recipe: null });
+      setConfirm({ open: false, action: null, recipe: null, type: null });
     }
   };
 
   const handleCancelConfirm = () =>
-    setConfirm({ open: false, action: null, recipe: null });
+    setConfirm({ open: false, action: null, recipe: null, type: null });
 
   // -------- render --------
   return (
@@ -123,6 +168,17 @@ export default function Admin() {
               Recipes
               {reviewRecipes.length > 0 && (
                 <span className="admin-tab-badge">{reviewRecipes.length}</span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab("flagged")}
+              className={`admin-tab ${activeTab === "flagged" ? "active" : ""}`}
+            >
+              <Flag className="w-5 h-5" />
+              Flagged
+              {flaggedRecipes.length > 0 && (
+                <span className="admin-tab-badge flagged">{flaggedRecipes.length}</span>
               )}
             </button>
 
@@ -310,6 +366,175 @@ export default function Admin() {
             </>
           )}
 
+          {/* FLAGGED TAB */}
+          {activeTab === "flagged" && (
+            <>
+              <div className="admin-section-header">
+                <h2 className="admin-section-title">Flagged Recipes</h2>
+                <p className="admin-section-subtitle">
+                  Recipes flagged by users (5+ reports/week or 20+ lifetime)
+                </p>
+                <button onClick={fetchFlaggedRecipes} className="admin-refresh-btn">
+                  <RefreshCw className="w-4 h-4" />
+                  Refresh
+                </button>
+              </div>
+
+              {loading ? (
+                <div className="admin-loading">
+                  <div className="admin-loading-spinner"></div>
+                  <p className="admin-loading-text">Loading flagged recipes...</p>
+                </div>
+              ) : flaggedRecipes.length === 0 ? (
+                <div className="admin-empty">
+                  <CheckCircle className="admin-empty-icon" />
+                  <p className="admin-empty-title">No flagged recipes</p>
+                  <p className="admin-empty-text">All clear!</p>
+                </div>
+              ) : (
+                <div className="admin-recipes-grid">
+                  {flaggedRecipes.map((r) => (
+                    <div
+                      key={r._id}
+                      className="admin-recipe-card"
+                      onClick={() => setSelectedFlaggedRecipe(r)}
+                    >
+                      <div className="admin-recipe-card-image">
+                        <img
+                          src={r.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800"}
+                          alt={r.title}
+                        />
+                        <div className="admin-recipe-card-overlay"></div>
+                        <span className="admin-recipe-card-badge flagged">Flagged</span>
+                      </div>
+                      <div className="admin-recipe-card-content">
+                        <h3 className="admin-recipe-card-title">{r.title}</h3>
+                        <p className="admin-recipe-card-author">By {r.author || "anonymous"}</p>
+                        <div className="admin-recipe-card-meta">
+                          <span className="admin-recipe-card-meta-item">
+                            <Flag /> Flagged {r.flaggedAt ? new Date(r.flaggedAt).toLocaleDateString() : "—"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* FLAGGED MODAL */}
+              {selectedFlaggedRecipe && (
+                <div
+                  className="admin-modal-overlay"
+                  onClick={() => setSelectedFlaggedRecipe(null)}
+                >
+                  <div
+                    ref={modalRef}
+                    className="admin-modal"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="admin-modal-image">
+                      <img
+                        src={selectedFlaggedRecipe.image || "https://images.unsplash.com/photo-1495521821757-a1efb6729352?w=800"}
+                        alt={selectedFlaggedRecipe.title}
+                      />
+                      <button
+                        onClick={() => setSelectedFlaggedRecipe(null)}
+                        className="admin-modal-close"
+                      >
+                        <X />
+                      </button>
+                    </div>
+
+                    <div className="admin-modal-content">
+                      <h2 className="admin-modal-title">{selectedFlaggedRecipe.title}</h2>
+                      <p className="admin-modal-author">By {selectedFlaggedRecipe.author || "anonymous"}</p>
+
+                      {selectedFlaggedRecipe.flaggedAt && (
+                        <p className="admin-modal-flagged-info">
+                          <Flag className="w-4 h-4" />
+                          Flagged on {new Date(selectedFlaggedRecipe.flaggedAt).toLocaleDateString()}
+                        </p>
+                      )}
+
+                      {selectedFlaggedRecipe.description && (
+                        <p className="admin-modal-description">{selectedFlaggedRecipe.description}</p>
+                      )}
+
+                      {/* Quick info */}
+                      <div className="admin-modal-info-grid">
+                        <div className="admin-modal-info-item">
+                          <Clock />
+                          <p className="admin-modal-info-label">Prep Time</p>
+                          <p className="admin-modal-info-value">{selectedFlaggedRecipe.prepTime || "—"}</p>
+                        </div>
+                        <div className="admin-modal-info-item">
+                          <Clock />
+                          <p className="admin-modal-info-label">Cook Time</p>
+                          <p className="admin-modal-info-value">{selectedFlaggedRecipe.cookTime || "—"}</p>
+                        </div>
+                        <div className="admin-modal-info-item">
+                          <TrendingUp />
+                          <p className="admin-modal-info-label">Difficulty</p>
+                          <p className="admin-modal-info-value">{selectedFlaggedRecipe.difficulty || "Easy"}</p>
+                        </div>
+                        <div className="admin-modal-info-item">
+                          <Users />
+                          <p className="admin-modal-info-label">Servings</p>
+                          <p className="admin-modal-info-value">{selectedFlaggedRecipe.servings || "—"}</p>
+                        </div>
+                      </div>
+
+                      {/* Ingredients */}
+                      {selectedFlaggedRecipe.ingredients?.length > 0 && (
+                        <div className="admin-modal-section">
+                          <h3 className="admin-modal-section-title">Ingredients</h3>
+                          <div className="admin-modal-ingredients">
+                            {selectedFlaggedRecipe.ingredients.map((i, idx) => (
+                              <div key={idx} className="admin-modal-ingredient">{i}</div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Instructions */}
+                      {selectedFlaggedRecipe.instructions?.length > 0 && (
+                        <div className="admin-modal-section">
+                          <h3 className="admin-modal-section-title">Instructions</h3>
+                          <div className="admin-modal-instructions">
+                            {selectedFlaggedRecipe.instructions.map((step, idx) => (
+                              <div key={idx} className="admin-modal-instruction">
+                                <div className="admin-modal-instruction-num">{idx + 1}</div>
+                                <p className="admin-modal-instruction-text">{step}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div className="admin-modal-actions">
+                        <button
+                          onClick={() => requestApprove(selectedFlaggedRecipe)}
+                          className="admin-action-btn reinstate"
+                        >
+                          <CheckCircle className="w-5 h-5" />
+                          Approve (Unflag)
+                        </button>
+                        <button
+                          onClick={() => requestReject(selectedFlaggedRecipe)}
+                          className="admin-action-btn delete"
+                        >
+                          <X className="w-5 h-5" />
+                          Reject (Remove)
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
           {/* CULTURAL TAB */}
           {activeTab === "cultural" && (
             <div className="admin-cultural-card">
@@ -332,12 +557,20 @@ export default function Admin() {
           <div className="admin-confirm-overlay" onClick={handleCancelConfirm}>
             <div className="admin-confirm-modal" onClick={(e) => e.stopPropagation()}>
               <h3 className="admin-confirm-title">
-                {confirm.action === "reinstate" ? "Reinstate Recipe" : "Delete Recipe"}
+                {confirm.action === "reinstate" && "Reinstate Recipe"}
+                {confirm.action === "delete" && "Delete Recipe"}
+                {confirm.action === "approve" && "Approve Recipe"}
+                {confirm.action === "reject" && "Reject Recipe"}
               </h3>
               <p className="admin-confirm-text">
-                {confirm.action === "reinstate"
-                  ? `Are you sure you want to reinstate "${confirm.recipe.title}"? This will set the state to "active".`
-                  : `Are you sure you want to delete "${confirm.recipe.title}"? This will permanently remove it from the database.`}
+                {confirm.action === "reinstate" &&
+                  `Are you sure you want to reinstate "${confirm.recipe.title}"? This will set the state to "active".`}
+                {confirm.action === "delete" &&
+                  `Are you sure you want to delete "${confirm.recipe.title}"? This will permanently remove it from the database.`}
+                {confirm.action === "approve" &&
+                  `Are you sure you want to approve "${confirm.recipe.title}"? This will unflag it and make it visible in community recipes again.`}
+                {confirm.action === "reject" &&
+                  `Are you sure you want to reject "${confirm.recipe.title}"? This will remove it from public view.`}
               </p>
               <div className="admin-confirm-actions">
                 <button onClick={handleCancelConfirm} className="admin-confirm-btn cancel">
@@ -345,9 +578,12 @@ export default function Admin() {
                 </button>
                 <button
                   onClick={handleConfirm}
-                  className={`admin-confirm-btn confirm ${confirm.action}`}
+                  className={`admin-confirm-btn confirm ${confirm.action === "delete" || confirm.action === "reject" ? "delete" : "reinstate"}`}
                 >
-                  {confirm.action === "reinstate" ? "Reinstate" : "Delete"}
+                  {confirm.action === "reinstate" && "Reinstate"}
+                  {confirm.action === "delete" && "Delete"}
+                  {confirm.action === "approve" && "Approve"}
+                  {confirm.action === "reject" && "Reject"}
                 </button>
               </div>
             </div>
