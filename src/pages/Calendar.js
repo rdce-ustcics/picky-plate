@@ -512,7 +512,7 @@ const handlePrint = () => {
       // Total (bottom-left)
       if (total > 0) {
         doc.setFontSize(8);
-        doc.text(`₱${total.toFixed(0)}`, x + 1.8, y + cellHeight - 3);
+        doc.text(`PHP ${total.toFixed(0)}`, x + 1.8, y + cellHeight - 3);
       }
 
       // Meal names (first 2) in the middle, tiny text
