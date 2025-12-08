@@ -1712,16 +1712,6 @@ export default function BarkadaVote() {
             )}
           </div>
 
-          {isHost && (
-            <button
-              onClick={endVoting}
-              disabled={connState !== "connected"}
-              className="barkada-btn barkada-btn-danger"
-              style={{ width: "100%", padding: "1rem", marginTop: "1rem" }}
-            >
-              End Voting
-            </button>
-          )}
         </div>
 
         {/* SETTINGS MODAL */}
@@ -2325,7 +2315,6 @@ export default function BarkadaVote() {
             </div>
           </div>
         )}
-
 
         <div className="fixed-bottom-bar">
           <button
