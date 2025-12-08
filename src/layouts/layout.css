@@ -1,6 +1,7 @@
 .app-shell {
   display: flex;
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport for mobile browsers */
   width: 100vw;
   overflow: hidden;
   margin: 0;
@@ -13,6 +14,7 @@
   overflow-y: auto;
   min-width: 0; /* Prevents overflow issues */
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport for mobile browsers */
   margin: 0;
   padding: 0;
 }
@@ -22,13 +24,15 @@
   .app-shell {
     flex-direction: column;
     height: 100vh;
+    height: 100dvh;
     width: 100vw;
   }
 
   .app-content {
-    padding-top: 60px; /* Space for mobile menu button */
+    padding-top: 0; /* Hamburger button floats over content */
     width: 100%;
     height: 100vh;
+    height: 100dvh;
     overflow-y: auto;
     margin: 0;
   }
@@ -37,6 +41,50 @@
 /* Small mobile */
 @media (max-width: 600px) {
   .app-content {
-    padding-top: 56px;
+    padding-top: 0;
+  }
+}
+
+/* ========== MOBILE HEADER SPACING FOR HAMBURGER BUTTON ========== */
+/* Ensures page headers/titles don't overlap with the floating hamburger button */
+@media (max-width: 900px) {
+  /* Most headers - standard padding */
+  .barkada-header,
+  .app-header,
+  .chatbot-header {
+    padding-left: 52px !important;
+  }
+
+  /* Headers with nested content wrappers */
+  .cr-header-content,
+  .explorer-header-content,
+  .header-container-v2 {
+    padding-left: 52px !important;
+  }
+
+  /* Profile - less padding for more centered look */
+  .header-banner {
+    padding-left: 38px !important;
+  }
+
+  /* Calendar - no extra padding, content is centered and hamburger overlays */
+}
+
+@media (max-width: 600px) {
+  .barkada-header,
+  .app-header,
+  .chatbot-header {
+    padding-left: 48px !important;
+  }
+
+  .cr-header-content,
+  .explorer-header-content,
+  .header-container-v2 {
+    padding-left: 48px !important;
+  }
+
+  /* Profile - less padding */
+  .header-banner {
+    padding-left: 34px !important;
   }
 }

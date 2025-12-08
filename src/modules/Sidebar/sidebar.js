@@ -52,27 +52,39 @@ const Sidebar = () => {
   return (
     <>
       {/* Mobile Menu Button */}
-      <button
-        className="mobile-menu-btn"
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        aria-label="Toggle menu"
-      >
-        {isMobileMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
-      </button>
+      {/* Mobile menu button - only shows hamburger, hidden when sidebar is open */}
+      {!isMobileMenuOpen && (
+        <button
+          className="mobile-menu-btn"
+          onClick={() => setIsMobileMenuOpen(true)}
+          aria-label="Open menu"
+        >
+          <FiMenu size={24} />
+        </button>
+      )}
 
       {/* Overlay */}
       {isMobileMenuOpen && <div className="mobile-overlay" onClick={closeMobileMenu} />}
 
       {/* Sidebar - CHANGED: Added is-expanded class based on state */}
       <aside className={`pap-sidebar ${isMobileMenuOpen ? "mobile-open" : ""} ${isExpanded ? "is-expanded" : ""}`}>
-        
+
         {/* NEW: Toggle Button for Desktop */}
-        <button 
-          className="sidebar-toggle-btn" 
+        <button
+          className="sidebar-toggle-btn"
           onClick={toggleSidebar}
           aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
         >
           <FiChevronRight size={18} />
+        </button>
+
+        {/* Mobile Close Button - Inside Sidebar Header */}
+        <button
+          className="mobile-close-btn"
+          onClick={closeMobileMenu}
+          aria-label="Close menu"
+        >
+          <FiX size={22} />
         </button>
 
         <Link to="/" className="pap-logo-container" onClick={closeMobileMenu}>

@@ -24,9 +24,35 @@ const allowed = (process.env.CORS_ORIGIN || 'http://localhost:3000,http://127.0.
   .split(',')
   .map(s => s.trim());
 
-// Socket.IO CORS needs a plain array (matches your manual CORS above)
+// Socket.IO with production-ready configuration for Render.com
 const io = new Server(server, {
-  cors: { origin: allowed, credentials: true },
+  cors: {
+    origin: allowed,
+    methods: ["GET", "POST"],
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"]
+  },
+  // CRITICAL: Start with polling, then upgrade to websocket
+  transports: ["polling", "websocket"],
+  allowUpgrades: true,
+  // Ping/Pong settings for connection stability
+  pingTimeout: 60000,      // 60 seconds before considering connection dead
+  pingInterval: 25000,     // Ping every 25 seconds
+  upgradeTimeout: 30000,   // Time to complete WebSocket upgrade
+  // Connection state recovery for better reconnection
+  connectionStateRecovery: {
+    maxDisconnectionDuration: 2 * 60 * 1000, // 2 minutes
+    skipMiddlewares: true
+  }
+});
+
+// Socket.IO error logging for debugging connection issues
+io.engine.on("connection_error", (err) => {
+  console.error("[Socket.IO] Connection error:", {
+    code: err.code,
+    message: err.message,
+    context: err.context
+  });
 });
 
 // Mount Barkada Vote realtime handlers
@@ -93,8 +119,19 @@ app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(cookieParser());
 
-// Health (works even before DB is up)
-app.get('/api/health', (_req, res) => res.json({ ok: true, nodeEnv: process.env.NODE_ENV }));
+// Health check endpoints (works even before DB is up)
+// Render.com recommends /health at root level
+app.get('/health', (_req, res) => res.status(200).json({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+  socketConnections: io.engine.clientsCount,
+  nodeEnv: process.env.NODE_ENV
+}));
+app.get('/api/health', (_req, res) => res.json({
+  ok: true,
+  nodeEnv: process.env.NODE_ENV,
+  socketConnections: io.engine.clientsCount
+}));
 
 try {
   const devRouter = require('./routes/dev');
@@ -140,11 +177,48 @@ connectDB()
     app.use('/api/admin', require('./routes/admin'));
 
     const port = process.env.PORT || 4000;
-    server.listen(port);
+    // CRITICAL: Bind to 0.0.0.0 for Render.com (not localhost)
+    server.listen(port, '0.0.0.0', () => {
+      console.log(`[Server] Listening on 0.0.0.0:${port}`);
+      console.log(`[Server] Socket.IO ready with transports: polling, websocket`);
+    });
   })
-  .catch(() => {
+  .catch((err) => {
+    console.error('[Server] Failed to start:', err);
     process.exit(1);
   });
+
+// ──────────────────────────────────────────────────────────────
+// Graceful shutdown for Render.com deploys
+// ──────────────────────────────────────────────────────────────
+const gracefulShutdown = (signal) => {
+  console.log(`[Server] ${signal} received, starting graceful shutdown...`);
+
+  // Close Socket.IO connections first
+  io.close(() => {
+    console.log('[Server] Socket.IO connections closed');
+
+    // Then close HTTP server
+    server.close(() => {
+      console.log('[Server] HTTP server closed');
+
+      // Close MongoDB connection
+      mongoose.connection.close(false, () => {
+        console.log('[Server] MongoDB connection closed');
+        process.exit(0);
+      });
+    });
+  });
+
+  // Force exit after 30 seconds if graceful shutdown fails
+  setTimeout(() => {
+    console.error('[Server] Forced shutdown after timeout');
+    process.exit(1);
+  }, 30000);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 // ──────────────────────────────────────────────────────────────
 // Error handler

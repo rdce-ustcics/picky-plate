@@ -403,22 +403,61 @@
     flex-wrap: nowrap;
     justify-content: space-between;
   }
-  
+
   .header-floating-icon {
     opacity: 0.1;
   }
-  
+
   .greeting-card {
     padding: 0.4rem 0.6rem;
   }
-  
+
   .greeting-avatar {
     width: 1.75rem;
     height: 1.75rem;
   }
-  
+
   .greeting-label {
     font-size: 0.75rem;
+  }
+}
+
+/* ===== MOBILE HAMBURGER BUTTON SPACING ===== */
+@media (max-width: 900px) {
+  .header-title-v2 {
+    white-space: nowrap;
+  }
+
+  .header-tagline {
+    display: none;
+  }
+
+  .header-badge {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-title-v2 {
+    font-size: 1.25rem;
+  }
+
+  .header-logo-v2 {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .logo-plate {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .logo-fork {
+    font-size: 1rem;
+  }
+
+  .header-brand {
+    gap: 0.5rem;
   }
 }
 

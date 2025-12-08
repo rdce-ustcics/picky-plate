@@ -21,9 +21,26 @@ import {
 import { useAuth } from "../auth/AuthContext";
 import "./Barkadavote.css";
 
-const SOCKET_URL =
-  process.env.REACT_APP_SOCKET_URL ||
-  `${window.location.protocol}//${window.location.hostname}:4000`;
+// Socket URL configuration for Render.com
+// In production (Render), do NOT include port - Render routes through standard ports
+// In development, use localhost:4000
+const getSocketUrl = () => {
+  // If explicitly set in environment, use that
+  if (process.env.REACT_APP_SOCKET_URL) {
+    return process.env.REACT_APP_SOCKET_URL;
+  }
+
+  // Production: use same protocol/host without port (Render handles routing)
+  if (process.env.NODE_ENV === 'production' || window.location.hostname !== 'localhost') {
+    // For Render.com - use the backend URL without port
+    return process.env.REACT_APP_API_URL?.replace('/api', '') || `${window.location.protocol}//${window.location.hostname}`;
+  }
+
+  // Development: use localhost with port
+  return `${window.location.protocol}//${window.location.hostname}:4000`;
+};
+
+const SOCKET_URL = getSocketUrl();
 
   // Classification tags for restaurants
 const CLASSIFICATION_OPTIONS = [
@@ -353,18 +370,60 @@ export default function BarkadaVote() {
     setAlertState({ message: "", type: "info" });
   };
 
-  /* Socket setup */
+  /* Socket setup - Optimized for Render.com */
   useEffect(() => {
+    console.log("[Socket] Connecting to:", SOCKET_URL);
+
     const s = io(SOCKET_URL, {
       withCredentials: true,
-      transports: ["websocket", "polling"],
+      // CRITICAL: Start with polling first, then upgrade to websocket
+      // This ensures the handshake completes before attempting WebSocket
+      transports: ["polling", "websocket"],
       path: "/socket.io",
+      // Reconnection settings
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      // Timeout settings
+      timeout: 20000,
+      // Allow transport upgrade
+      upgrade: true,
     });
     socketRef.current = s;
 
-    s.on("connect", () => setConnState("connected"));
-    s.on("connect_error", () => setConnState("error"));
-    s.on("disconnect", () => setConnState("error"));
+    s.on("connect", () => {
+      console.log("[Socket] Connected:", s.id);
+      console.log("[Socket] Transport:", s.io.engine.transport.name);
+      setConnState("connected");
+    });
+
+    // Better error handling with transport fallback
+    s.on("connect_error", (err) => {
+      console.error("[Socket] Connection error:", err.message);
+      setConnState("error");
+
+      // If WebSocket fails, force polling-first on next attempt
+      if (s.io.opts.transports[0] === "websocket") {
+        console.log("[Socket] Switching to polling-first strategy");
+        s.io.opts.transports = ["polling", "websocket"];
+      }
+    });
+
+    s.on("disconnect", (reason) => {
+      console.log("[Socket] Disconnected:", reason);
+      setConnState("error");
+
+      // Manual reconnect needed for server-initiated disconnect
+      if (reason === "io server disconnect") {
+        s.connect();
+      }
+    });
+
+    // Log transport upgrades for debugging
+    s.io.engine?.on("upgrade", (transport) => {
+      console.log("[Socket] Transport upgraded to:", transport.name);
+    });
 
     s.on("session:state", (state) => {
       setParticipants(state.participants || []);
