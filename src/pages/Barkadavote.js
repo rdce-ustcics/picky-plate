@@ -289,6 +289,7 @@ export default function BarkadaVote() {
   // New state for modal-based forms
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [expandedResultId, setExpandedResultId] = useState(null);
 
   const [createName, setCreateName] = useState("");
   const [createPassword, setCreatePassword] = useState("");
@@ -298,6 +299,17 @@ export default function BarkadaVote() {
 
   // Get authUser for auto-populating name
   const { user: authUser } = useAuth();
+
+    const handleCreateClick = () => {
+    // if not logged in, go to login page instead of opening modal
+    if (!authUser) {
+      navigate("/login?redirect=/barkadavote");
+      return;
+    }
+    // logged in → open the Create Session modal
+    setShowCreateModal(true);
+  };
+
 
   // Auto-populate name from authenticated user
   useEffect(() => {
@@ -331,6 +343,9 @@ export default function BarkadaVote() {
   const [participantToken, setParticipantToken] = useState(
     localStorage.getItem("barkada_vote_token") || ""
   );
+
+  const [showWaitingModal, setShowWaitingModal] = useState(false);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   const [ratings, setRatings] = useState({});
   const [menuDraft, setMenuDraft] = useState([]);
@@ -369,6 +384,19 @@ export default function BarkadaVote() {
   const closeAlert = () => {
     setAlertState({ message: "", type: "info" });
   };
+
+  const handleEndVoteClick = () => {
+    const total = participants.length || 0;
+    const submitted = participants.filter((p) => p.hasSubmitted).length;
+
+    // If not everyone has voted, show confirm modal
+    if (total > 0 && submitted < total) {
+      setShowEndConfirm(true);
+    } else {
+      endVoting();
+    }
+  };
+
 
   /* Socket setup - Optimized for Render.com */
   useEffect(() => {
@@ -462,6 +490,13 @@ export default function BarkadaVote() {
       s.disconnect();
     };
   }, []);
+
+    useEffect(() => {
+    if (!isVotingOpen) {
+      setShowWaitingModal(false);
+    }
+  }, [isVotingOpen]);
+
 
   useEffect(() => {
     if (isVotingOpen && (currentView === "lobby" || currentView === "home")) {
@@ -796,6 +831,11 @@ export default function BarkadaVote() {
       (res) => {
         if (!res?.ok) return showAlert(res?.error || "Submit failed", "error");
         showAlert("Ratings submitted!", "success");
+
+            if (!isHost) {
+                setShowWaitingModal(true);
+                         }
+
       }
     );
   };
@@ -975,7 +1015,7 @@ export default function BarkadaVote() {
         {/* Main Action Buttons - ONLY BUTTONS, NO FORMS */}
         <div className="home-actions">
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={handleCreateClick}
             disabled={connState !== "connected"}
             className="home-action-btn home-action-create"
           >
@@ -1635,79 +1675,70 @@ export default function BarkadaVote() {
                   </button>
                 </div>
 
-                <div className="space-y">
-                  {myDraft.map((o, i) => (
-                    <div key={i} className="menu-editor-row">
-                      <input
-                        placeholder="Restaurant name"
-                        value={o.name}
-                        onChange={(e) =>
-                          setMyDraft((prev) =>
-                            prev.map((x, idx) =>
-                              idx === i ? { ...x, name: e.target.value } : x
-                            )
-                          )
-                        }
-                        className="barkada-input"
-                      />
-                      <input
-                        placeholder="Area / Branch (e.g. UST, BGC)"
-                        value={o.restaurant}
-                        onChange={(e) =>
-                          setMyDraft((prev) =>
-                            prev.map((x, idx) =>
-                              idx === i
-                                ? { ...x, restaurant: e.target.value }
-                                : x
-                            )
-                          )
-                        }
-                        className="barkada-input"
-                      />
-                      <input
-                        placeholder="Avg price (₱)"
-                        type="number"
-                        min="1"
-                        value={o.price}
-                        onChange={(e) =>
-                          setMyDraft((prev) =>
-                            prev.map((x, idx) =>
-                              idx === i
-                                ? { ...x, price: e.target.value }
-                                : x
-                            )
-                          )
-                        }
-                        className="barkada-input"
-                      />
-                      <input
-                        placeholder="Image URL"
-                        value={o.image}
-                        onChange={(e) =>
-                          setMyDraft((prev) =>
-                            prev.map((x, idx) =>
-                              idx === i
-                                ? { ...x, image: e.target.value }
-                                : x
-                            )
-                          )
-                        }
-                        className="barkada-input"
-                      />
-                      <button
-                        onClick={() =>
-                          setMyDraft((prev) =>
-                            prev.filter((_, idx) => idx !== i)
-                          )
-                        }
-                        className="barkada-btn-delete"
-                        aria-label="remove"
-                      >
-                        <Trash2 style={{ width: "1rem", height: "1rem" }} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+        <div className="space-y">
+          {myDraft.map((o, i) => (
+            <div key={i} className="menu-editor-row">
+              {/* Restaurant Name */}
+              <input
+                placeholder="Restaurant name"
+                value={o.name}
+                onChange={(e) =>
+                  setMyDraft((prev) =>
+                    prev.map((x, idx) =>
+                      idx === i ? { ...x, name: e.target.value } : x
+                    )
+                  )
+                }
+                className="barkada-input"
+              />
+
+              {/* Classification dropdown */}
+              <select
+                className="barkada-input"
+                value={o.tag || ""}
+                onChange={(e) =>
+                  setMyDraft((prev) =>
+                    prev.map((x, idx) =>
+                      idx === i ? { ...x, tag: e.target.value } : x
+                    )
+                  )
+                }
+              >
+                <option value="">Select classification</option>
+                {CLASSIFICATION_OPTIONS.map((tag) => (
+                  <option key={tag} value={tag}>
+                    {formatTagLabel(tag)}
+                  </option>
+                ))}
+              </select>
+
+              {/* How much (₱) */}
+              <input
+                placeholder="Avg price (₱)"
+                type="number"
+                min="1"
+                value={o.price}
+                onChange={(e) =>
+                  setMyDraft((prev) =>
+                    prev.map((x, idx) =>
+                      idx === i ? { ...x, price: e.target.value } : x
+                    )
+                  )
+                }
+                className="barkada-input"
+              />
+
+              <button
+                onClick={() =>
+                  setMyDraft((prev) => prev.filter((_, idx) => idx !== i))
+                }
+                className="barkada-btn-delete"
+              >
+                <Trash2 style={{ width: "1rem", height: "1rem" }} />
+              </button>
+            </div>
+          ))}
+        </div>
 
                 <div style={{ marginTop: "1rem" }}>
                   <button
@@ -1741,16 +1772,6 @@ export default function BarkadaVote() {
             )}
           </div>
 
-          {isHost && (
-            <button
-              onClick={endVoting}
-              disabled={connState !== "connected"}
-              className="barkada-btn barkada-btn-danger"
-              style={{ width: "100%", padding: "1rem", marginTop: "1rem" }}
-            >
-              End Voting
-            </button>
-          )}
         </div>
 
         {/* SETTINGS MODAL */}
@@ -1860,6 +1881,7 @@ export default function BarkadaVote() {
                 </div>
 
                 {settingsDraft.engine === "ai" && (
+                  <>
                 <div className="settings-group">
                   <label className="settings-label">
                     Number of restaurants (for AI suggestions)
@@ -1881,6 +1903,37 @@ export default function BarkadaVote() {
                     AI will suggest up to this many restaurants (max 6).
                   </p>
                 </div>
+
+              {/* NEW: Optional budget per head for AI */}
+              <div className="settings-group">
+                <label className="settings-label">
+                  Budget per person (₱){" "}
+                  <span style={{ fontWeight: 400 }}>(optional — minimum ₱100)</span>
+                </label>
+                <input
+                  type="number"
+                  min={100}
+                  className="barkada-input"
+                  placeholder="e.g. 200–400"
+                  value={aiPrefs.budgetPerPerson}
+                  onChange={(e) => {
+                    let val = e.target.value;
+
+                    // Only clamp if user entered something
+                    if (val !== "" && Number(val) < 100) val = 100;
+
+                    setAiPrefs((p) => ({
+                      ...p,
+                      budgetPerPerson: val,
+                    }));
+                  }}
+                />
+                <p className="settings-hint">
+                  If set, the AI will try to favor restaurants around this price per head.
+                </p>
+              </div>
+
+                </>
                 )}
 
 
@@ -2180,6 +2233,11 @@ export default function BarkadaVote() {
      VOTING VIEW
      ======================================== */
   if (currentView === "voting") {
+    const total = participants.length || 0;
+    const submitted = participants.filter((p) => p.hasSubmitted).length;
+    const progress = total > 0 ? (submitted / total) * 100 : 0;
+
+
     return (
       <div className="barkada-page" style={{ paddingBottom: "6rem" }}>
         {/* Themed Alert */}
@@ -2190,12 +2248,6 @@ export default function BarkadaVote() {
         />
         
         <header className="barkada-header">
-          <button
-            onClick={() => setCurrentView("lobby")}
-            className="barkada-btn-icon"
-          >
-            <ArrowLeft style={{ width: "1.25rem", height: "1.25rem" }} />
-          </button>
           <h1
             style={{
               fontSize: "1.25rem",
@@ -2280,6 +2332,44 @@ export default function BarkadaVote() {
           </div>
         </div>
 
+                {/* Host-only voting progress */}
+        {isHost && (
+          <div style={{ padding: "0 1rem 0.75rem" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: "0.8rem",
+                color: "#78350f",
+                marginBottom: "0.25rem",
+              }}
+            >
+              <span>Voting progress</span>
+              <span>
+                {submitted}/{total} have voted
+              </span>
+            </div>
+            <div
+              style={{
+                width: "100%",
+                height: "0.5rem",
+                borderRadius: "999px",
+                background: "#fde68a",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${progress}%`,
+                  height: "100%",
+                  background: "linear-gradient(90deg, #f59e0b, #d97706)",
+                  transition: "width 0.3s ease",
+                }}
+              />
+            </div>
+          </div>
+        )}
+
         <div className="fixed-bottom-bar">
           <button
             onClick={submitRatings}
@@ -2291,7 +2381,7 @@ export default function BarkadaVote() {
           </button>
           {isHost && (
             <button
-              onClick={endVoting}
+              onClick={handleEndVoteClick}
               disabled={connState !== "connected"}
               className="barkada-btn barkada-btn-danger"
               style={{ padding: "1rem" }}
@@ -2300,9 +2390,98 @@ export default function BarkadaVote() {
             </button>
           )}
         </div>
-      </div>
-    );
-  }
+
+              {/* ⬇️ NEW: Waiting for others modal */}
+      {showWaitingModal && (
+        <div className="barkada-modal-overlay">
+          <div className="barkada-modal">
+            <div className="barkada-modal-header">
+              <h3 className="barkada-modal-title">Waiting for others to vote</h3>
+            </div>
+            <div className="barkada-modal-body">
+              <p style={{ fontSize: "0.9rem", color: "#78350f", marginBottom: "0.5rem" }}>
+                Your ratings have been submitted. 🎉
+              </p>
+              <p style={{ fontSize: "0.85rem", color: "#92400e" }}>
+                We’re waiting for the rest of your barkada to finish voting.
+                The results will appear automatically once the host ends the vote
+                or the timer runs out.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+            {/* 👇 New: confirm end-voting modal for host */}
+      {showEndConfirm && (
+        <div className="barkada-modal-overlay">
+          <div className="barkada-modal">
+            <div className="barkada-modal-header">
+              <h3 className="barkada-modal-title">End voting?</h3>
+            </div>
+            <div className="barkada-modal-body">
+              <p style={{ fontSize: "0.9rem", color: "#78350f", marginBottom: "0.5rem" }}>
+                Not everyone has voted yet.
+              </p>
+              <p style={{ fontSize: "0.85rem", color: "#92400e" }}>
+                Are you sure you want to end the vote now and show the results?
+              </p>
+            </div>
+            <div className="barkada-modal-footer">
+              <button
+                className="barkada-btn barkada-btn-secondary"
+                style={{ flex: 1 }}
+                onClick={() => setShowEndConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="barkada-btn barkada-btn-danger"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  setShowEndConfirm(false);
+                  endVoting();
+                }}
+              >
+                Yes, end anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const resetToHome = () => {
+  // clear session + lobby-related state
+  setSessionCode("");
+  setIsHost(false);
+  setParticipants([]);
+  setOptions([]);
+  setIsVotingOpen(false);
+  setHost(null);
+  setCreatedAt(null);
+  setLastActivityAt(null);
+  setVotingEndsAt(null);
+  setExpiresAt(null);
+
+  // clear ratings + drafts
+  setRatings({});
+  setMenuDraft([]);
+  setMyDraft([{ name: "", tag: "", price: "" }]);
+
+  // reset settings
+  setSettings(defaultSettings);
+  setSettingsDraft(defaultSettings);
+
+  // clear stored results
+  window.__barkadaResults = null;
+
+  // go back to the internal home view
+  setCurrentView("home");
+};
+
 
   /* ========================================
      RESULTS VIEW
@@ -2409,13 +2588,40 @@ export default function BarkadaVote() {
               const tag =
                 opt.tag ||
                 (Array.isArray(opt.tags) && opt.tags.length ? opt.tags[0] : "default");
-
               const imgSrc = getImageForTag(tag);
+
+              // 🔍 Coerce to numbers if possible (handles "4.5" as well)
+              const avgTaste =
+                opt.avgTaste !== undefined && opt.avgTaste !== null
+                  ? Number(opt.avgTaste)
+                  : null;
+              const avgMood =
+                opt.avgMood !== undefined && opt.avgMood !== null
+                  ? Number(opt.avgMood)
+                  : null;
+              const avgValue =
+                opt.avgValue !== undefined && opt.avgValue !== null
+                  ? Number(opt.avgValue)
+                  : null;
+
+              const hasBreakdown =
+                (avgTaste !== null && !Number.isNaN(avgTaste)) ||
+                (avgMood !== null && !Number.isNaN(avgMood)) ||
+                (avgValue !== null && !Number.isNaN(avgValue));
+
+              const isExpanded = expandedResultId === (opt.id || i);
 
               return (
                 <div
-                  key={opt.id}
+                  key={opt.id || i}
                   className={`leaderboard-item ${i === 0 ? "winner" : ""}`}
+                  style={{ cursor: hasBreakdown ? "pointer" : "default" }}
+                  onClick={() => {
+                    if (!hasBreakdown) return;
+                    setExpandedResultId((prev) =>
+                      prev === (opt.id || i) ? null : opt.id || i
+                    );
+                  }}
                 >
                   <div
                     style={{
@@ -2450,40 +2656,90 @@ export default function BarkadaVote() {
                       </p>
                     </div>
                   </div>
+
                   <div style={{ textAlign: "right" }}>
-                    <p className="leaderboard-score">
-                      {opt.score.toFixed(2)}
-                    </p>
-                    <p className="leaderboard-voters">
-                      voters: {opt.voters}
-                    </p>
+                    <p className="leaderboard-score">{opt.score.toFixed(2)}</p>
+                    <p className="leaderboard-voters">voters: {opt.voters}</p>
+                    {hasBreakdown && (
+                      <p
+                        style={{
+                          fontSize: "0.7rem",
+                          color: "#6b7280",
+                          marginTop: "0.25rem",
+                        }}
+                      >
+                        Click for breakdown
+                      </p>
+                    )}
                   </div>
+
+                  {hasBreakdown && isExpanded && (
+                    <div
+                      className="leaderboard-breakdown"
+                      style={{
+                        marginTop: "0.75rem",
+                        paddingTop: "0.75rem",
+                        borderTop: "1px solid #fbbf24",
+                        fontSize: "0.8rem",
+                        color: "#78350f",
+                      }}
+                    >
+                      <p
+                        style={{
+                          marginBottom: "0.5rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Average ratings (out of 5)
+                      </p>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(3, 1fr)",
+                          gap: "0.5rem",
+                        }}
+                      >
+                        <div>
+                          <p style={{ fontSize: "0.75rem", color: "#92400e" }}>Taste</p>
+                          <p style={{ fontWeight: 600 }}>
+                            {avgTaste !== null && !Number.isNaN(avgTaste)
+                              ? avgTaste.toFixed(2)
+                              : "–"}
+                          </p>
+                        </div>
+                        <div>
+                          <p style={{ fontSize: "0.75rem", color: "#92400e" }}>Mood</p>
+                          <p style={{ fontWeight: 600 }}>
+                            {avgMood !== null && !Number.isNaN(avgMood)
+                              ? avgMood.toFixed(2)
+                              : "–"}
+                          </p>
+                        </div>
+                        <div>
+                          <p style={{ fontSize: "0.75rem", color: "#92400e" }}>Value</p>
+                          <p style={{ fontWeight: 600 }}>
+                            {avgValue !== null && !Number.isNaN(avgValue)
+                              ? avgValue.toFixed(2)
+                              : "–"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
             </div>
 
-            <div className="flex-gap" style={{ marginTop: "1.5rem" }}>
-              <button
-                onClick={() => {
-                  setCurrentView("home");
-                  setParticipants([]);
-                  setOptions([]);
-                  window.__barkadaResults = null;
-                }}
-                className="barkada-btn barkada-btn-primary"
-                style={{ flex: 1, padding: "1rem" }}
-              >
-                New Session
-              </button>
-              <button
-                onClick={() => setCurrentView("voting")}
-                className="barkada-btn barkada-btn-secondary"
-                style={{ flex: 1, padding: "1rem" }}
-              >
-                Vote Again
-              </button>
-            </div>
+          <div className="flex-gap" style={{ marginTop: "1.5rem" }}>
+            <button
+              onClick={resetToHome}
+              className="barkada-btn barkada-btn-primary"
+              style={{ flex: 1, padding: "1rem" }}
+            >
+              Vote Again
+            </button>
+          </div>
           </div>
         </div>
       </div>

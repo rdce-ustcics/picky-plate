@@ -120,51 +120,55 @@ const sanitizeSessionForClient = (s, requestingToken = null) => {
     io.to(code).emit('session:state', sanitizeSessionForClient(s));
   };
 
-  const computeResults = (s) => {
-    const W = s.settings?.weights || { taste: 40, mood: 40, value: 20 };
-    const wt = Number(W.taste) / 100;
-    const wm = Number(W.mood) / 100;
-    const wv = Number(W.value) / 100;
+const computeResults = (s) => {
+  const W = s.settings?.weights || { taste: 40, mood: 40, value: 20 };
+  const wt = Number(W.taste) / 100;
+  const wm = Number(W.mood) / 100;
+  const wv = Number(W.value) / 100;
 
-    const perOption = s.options.map((opt) => {
-      let voters = 0;
-      let tasteSum = 0;
-      let moodSum = 0;
-      let valueSum = 0;
-      s.ratings.forEach((byOption) => {
-        const r = byOption[opt.id];
-        if (r) {
-          voters++;
-          tasteSum += r.taste;
-          moodSum += r.mood;
-          valueSum += r.value;
-        }
-      });
-      const tasteAvg = voters ? tasteSum / voters : 0;
-      const moodAvg = voters ? moodSum / voters : 0;
-      const valueAvg = voters ? valueSum / voters : 0;
-      const score = tasteAvg * wt + moodAvg * wm + valueAvg * wv;
-      return {
-        ...opt,
-        tags: Array.from(opt.tags || []),   // 👈 FIX missing classification
-        voters,
-        tasteAvg,
-        moodAvg,
-        valueAvg,
-        score: Number(score.toFixed(3)),
-      };
+  const perOption = s.options.map((opt) => {
+    let voters = 0;
+    let tasteSum = 0;
+    let moodSum = 0;
+    let valueSum = 0;
+
+    s.ratings.forEach((byOption) => {
+      const r = byOption[opt.id];
+      if (r) {
+        voters++;
+        tasteSum += r.taste;
+        moodSum += r.mood;
+        valueSum += r.value;
+      }
     });
 
-    // Tie-breakers: score desc, voters desc, price asc, name asc
-    perOption.sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      if (b.voters !== a.voters) return b.voters - a.voters;
-      if (a.price !== b.price) return a.price - b.price;
-      return a.name.localeCompare(b.name);
-    });
+    const tasteAvg = voters ? tasteSum / voters : 0;
+    const moodAvg  = voters ? moodSum  / voters : 0;
+    const valueAvg = voters ? valueSum / voters : 0;
+    const score    = tasteAvg * wt + moodAvg * wm + valueAvg * wv;
 
-    return perOption;
-  };
+    return {
+      ...opt,
+      tags: Array.from(opt.tags || []),   // keep classifications for images
+      voters,
+      // 👇 rename to match frontend expectation
+      avgTaste: tasteAvg,
+      avgMood:  moodAvg,
+      avgValue: valueAvg,
+      score: Number(score.toFixed(3)),
+    };
+  });
+
+  // Tie-breakers: score desc, voters desc, price asc, name asc
+  perOption.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.voters !== a.voters) return b.voters - a.voters;
+    if (a.price !== b.price) return a.price - b.price;
+    return a.name.localeCompare(b.name);
+  });
+
+  return perOption;
+};
 
   const filterOptionsByNonNegotiables = (options, participants) => {
     const avoid = new Set();
@@ -201,9 +205,16 @@ const sanitizeSessionForClient = (s, requestingToken = null) => {
       // Auto-end, same as host-triggered end but without token check
       if (!sessions.has(s.code)) return;
       s.isVotingOpen = false;
+
       const leaderboard = computeResults(s);
       const winner = leaderboard[0] || null;
+
       io.to(s.code).emit('session:results', { leaderboard, winner });
+
+      // 🔚 After results are broadcast, destroy the lobby/code
+      sessions.delete(s.code);
+      if (s.timers?.expire) clearTimeout(s.timers.expire);
+      s.timers.voting = undefined;
     }, ms);
   };
 
@@ -213,8 +224,11 @@ const sanitizeSessionForClient = (s, requestingToken = null) => {
     // ──────────────────────────────────────────────────────────────
     socket.on(
       'session:create',
-      async ({ name, password, userId = null, isRegistered = !!userId, options = [], profileImage = '' }, cb) => {
+      async ({ name, password, userId = null, isRegistered = false, options = [], profileImage = '' }, cb) => {
         try {
+          if (!isRegistered || !userId) {
+            return cb({ ok: false, error: 'You must be logged in to create a session.' });
+          }
           if (!name || !password) return cb({ ok: false, error: 'Missing fields' });
 
           // Validate initial (optional) options 0..6
@@ -545,64 +559,103 @@ socket.on(
       cb({ ok: true, state: sanitizeSessionForClient(s, token) });
     });
 
-    // ──────────────────────────────────────────────────────────────
-    // Each user submits their own options (per_user mode)
-    // ──────────────────────────────────────────────────────────────
-    socket.on('session:addUserOptions', ({ code, token, options }, cb) => {
-      const s = sessions.get(code);
-      if (!s) return cb({ ok: false, error: 'Invalid code' });
-      if (s.isVotingOpen) return cb({ ok: false, error: 'Voting already started' });
+  // ──────────────────────────────────────────────────────────────
+  // Each user submits their own options (per_user mode)
+  // ──────────────────────────────────────────────────────────────
+  socket.on('session:addUserOptions', ({ code, token, options }, cb) => {
+    const s = sessions.get(code);
+    if (!s) return cb({ ok: false, error: 'Invalid code' });
+    if (s.isVotingOpen) return cb({ ok: false, error: 'Voting already started' });
 
-      if (s.settings.mode !== 'per_user') return cb({ ok: false, error: 'Per-user adding is disabled' });
-      const p = s.participants.get(token);
-      if (!p) return cb({ ok: false, error: 'Not in session' });
+    if (s.settings.mode !== 'per_user')
+      return cb({ ok: false, error: 'Per-user adding is disabled' });
 
-      const limit = s.settings.perUserLimit || 2;
-      const cleaned = Array.isArray(options)
-        ? options
-            .map((o) => ({
-              id: undefined,
-              name: String(o.name || '').trim(),
-              restaurant: String(o.restaurant || '').trim(),
-              price: Number(o.price),
-              image: String(o.image || '').trim(),
-              tags: new Set(),
-            }))
-            .filter((o) => o.name && o.restaurant && o.price > 0)
-        : [];
+    const p = s.participants.get(token);
+    if (!p) return cb({ ok: false, error: 'Not in session' });
 
-      const toAccept = Math.min(limit - (p.submittedOptionsCount || 0), cleaned.length);
-      if (toAccept <= 0) return cb({ ok: false, error: `Limit reached (${limit})` });
+    const limit = s.settings.perUserLimit || 2;
+    const raw = Array.isArray(options) ? options : [];
 
-      // Global cap of 6 options total
-      const remainingSlots = Math.max(0, 6 - s.baseOptions.length);
-      const acceptCount = Math.min(toAccept, remainingSlots);
-      if (acceptCount <= 0) return cb({ ok: false, error: 'Menu is full (max 6)' });
-
-      // Assign incremental ids continuing from current baseOptions length
-      const startIdx = s.baseOptions.length;
-      for (let i = 0; i < acceptCount; i++) {
-        const item = cleaned[i];
-        item.id = startIdx + 1 + i;
-        s.baseOptions.push(item);
-      }
-
-      p.submittedOptionsCount = (p.submittedOptionsCount || 0) + acceptCount;
-
-      // Refilter + reset ratings since the set changed
-      s.options = filterOptionsByNonNegotiables(s.baseOptions, Array.from(s.participants.values()));
-      s.ratings.clear();
-      s.participants.forEach((pp) => (pp.hasSubmitted = false));
-
-      // bump inactivity window
-      const now = new Date();
-      s.lastActivityAt = now;
-      s.expiresAt = new Date(now.getTime() + s.settings.inactivityMinutes * 60 * 1000);
-      rescheduleExpire(s);
-
-      cb({ ok: true, accepted: acceptCount, state: sanitizeSessionForClient(s, token) });
-      broadcastState(code);
+    // did the user type anything at all?
+    const hasAnyRow = raw.some((o) => {
+      const name = String(o.name || '').trim();
+      const tag = String(o.tag || '').trim();
+      const price = Number(o.price);
+      return name || tag || price > 0;
     });
+
+    const cleaned = raw
+      .map((o) => {
+        const name = String(o.name || '').trim();
+        const tag = String(o.tag || '').trim().toLowerCase(); // classification
+        const price = Number(o.price);
+        const restaurant = String(o.restaurant || '').trim();  // optional now
+        const image = String(o.image || '').trim();
+        const tags = new Set(tag ? [tag] : []);                // ⬅ classification goes here
+        return { id: undefined, name, restaurant, price, image, tags };
+      })
+      // ✅ require name + classification(tag) + price > 0
+      .filter((o) => o.name && o.price > 0 && o.tags.size > 0);
+
+    if (!hasAnyRow) {
+      return cb({ ok: false, error: 'Add at least one restaurant.' });
+    }
+
+    if (hasAnyRow && cleaned.length === 0) {
+      return cb({
+        ok: false,
+        error:
+          'Please complete name, classification, and price (₱) for at least one restaurant.',
+      });
+    }
+
+    // How many we can still accept from THIS participant
+    const toAccept = Math.min(
+      limit - (p.submittedOptionsCount || 0),
+      cleaned.length
+    );
+    if (toAccept <= 0)
+      return cb({ ok: false, error: `Limit reached (${limit})` });
+
+    // Global cap of 6 options total
+    const remainingSlots = Math.max(0, 6 - s.baseOptions.length);
+    const acceptCount = Math.min(toAccept, remainingSlots);
+    if (acceptCount <= 0)
+      return cb({ ok: false, error: 'Menu is full (max 6)' });
+
+    // Assign incremental ids continuing from current baseOptions length
+    const startIdx = s.baseOptions.length;
+    for (let i = 0; i < acceptCount; i++) {
+      const item = cleaned[i];
+      item.id = startIdx + 1 + i;
+      s.baseOptions.push(item);
+    }
+
+    p.submittedOptionsCount = (p.submittedOptionsCount || 0) + acceptCount;
+
+    // Refilter + reset ratings since the set changed
+    s.options = filterOptionsByNonNegotiables(
+      s.baseOptions,
+      Array.from(s.participants.values())
+    );
+    s.ratings.clear();
+    s.participants.forEach((pp) => (pp.hasSubmitted = false));
+
+    // bump inactivity window
+    const now = new Date();
+    s.lastActivityAt = now;
+    s.expiresAt = new Date(
+      now.getTime() + s.settings.inactivityMinutes * 60 * 1000
+    );
+    rescheduleExpire(s);
+
+    cb({
+      ok: true,
+      accepted: acceptCount,
+      state: sanitizeSessionForClient(s, token),
+    });
+    broadcastState(code);
+  });
 
     // ──────────────────────────────────────────────────────────────
     // Start voting (host-only). Requires ≥2 participants and ≥1 option.
@@ -701,6 +754,11 @@ socket.on(
 
       io.to(code).emit('session:results', { leaderboard, winner });
       cb?.({ ok: true, leaderboard, winner });
+
+      // 🔚 After results, invalidate the code/lobby
+      sessions.delete(code);
+      if (s.timers?.expire) clearTimeout(s.timers.expire);
+
     });
 
     // ──────────────────────────────────────────────────────────────

@@ -337,7 +337,9 @@ function isRestaurantOption(text) {
     "express",
     "cafe",
     "bistro",
-    "bar and grill"
+    "bar and grill",
+    "spot",
+    "known for",
   ];
 
   // Special cases: only match these if in the title (not description)
@@ -350,7 +352,7 @@ function isRestaurantOption(text) {
 }
 
 export default function ChatBot() {
-  const { isAuthenticated, authHeaders } = useAuth();
+  const { isAuthenticated, authHeaders, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -385,6 +387,12 @@ export default function ChatBot() {
   const suppressLocalLoadRef = useRef(false);
   const [chosenRestaurant, setChosenRestaurant] = useState(null);
 
+    const displayName = React.useMemo(() => {
+    if (!isAuthenticated || !user) return "Guest";
+
+    // Prefer name → username → email → fallback
+    return user.name || user.username || user.email || "User";
+  }, [isAuthenticated, user]);
 
   function clearLocalChatStorage() {
     try {
@@ -1349,44 +1357,6 @@ function renderMoodPill() {
               <Plus size={20} color="white" />
               <span>New Chat</span>
             </button>
-            <button
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                fontSize: 14,
-                cursor: "pointer",
-                background: "transparent",
-                border: "1px solid #F4E4C1",
-                fontWeight: 500,
-                color: brand.text,
-              }}
-            >
-              <Search size={20} color={brand.primary} />
-              <span>Search Chats</span>
-            </button>
-            <button
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                width: "100%",
-                padding: "10px 12px",
-                borderRadius: 10,
-                fontSize: 14,
-                cursor: "pointer",
-                background: "transparent",
-                border: "1px solid #F4E4C1",
-                fontWeight: 500,
-                color: brand.text,
-              }}
-            >
-              <Image size={20} color={brand.primary} />
-              <span>Library</span>
-            </button>
           </div>
 
           <div
@@ -1538,7 +1508,7 @@ function renderMoodPill() {
                   color: brand.darkText,
                 }}
               >
-                Username
+                {displayName}
               </span>
             </div>
           </div>
