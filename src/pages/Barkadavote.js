@@ -1801,6 +1801,7 @@ export default function BarkadaVote() {
                 </div>
 
                 {settingsDraft.engine === "ai" && (
+                  <>
                 <div className="settings-group">
                   <label className="settings-label">
                     Number of restaurants (for AI suggestions)
@@ -1822,6 +1823,37 @@ export default function BarkadaVote() {
                     AI will suggest up to this many restaurants (max 6).
                   </p>
                 </div>
+
+              {/* NEW: Optional budget per head for AI */}
+              <div className="settings-group">
+                <label className="settings-label">
+                  Budget per person (₱){" "}
+                  <span style={{ fontWeight: 400 }}>(optional — minimum ₱100)</span>
+                </label>
+                <input
+                  type="number"
+                  min={100}
+                  className="barkada-input"
+                  placeholder="e.g. 200–400"
+                  value={aiPrefs.budgetPerPerson}
+                  onChange={(e) => {
+                    let val = e.target.value;
+
+                    // Only clamp if user entered something
+                    if (val !== "" && Number(val) < 100) val = 100;
+
+                    setAiPrefs((p) => ({
+                      ...p,
+                      budgetPerPerson: val,
+                    }));
+                  }}
+                />
+                <p className="settings-hint">
+                  If set, the AI will try to favor restaurants around this price per head.
+                </p>
+              </div>
+
+                </>
                 )}
 
 
