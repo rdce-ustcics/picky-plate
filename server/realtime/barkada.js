@@ -205,9 +205,16 @@ const computeResults = (s) => {
       // Auto-end, same as host-triggered end but without token check
       if (!sessions.has(s.code)) return;
       s.isVotingOpen = false;
+
       const leaderboard = computeResults(s);
       const winner = leaderboard[0] || null;
+
       io.to(s.code).emit('session:results', { leaderboard, winner });
+
+      // 🔚 After results are broadcast, destroy the lobby/code
+      sessions.delete(s.code);
+      if (s.timers?.expire) clearTimeout(s.timers.expire);
+      s.timers.voting = undefined;
     }, ms);
   };
 
@@ -747,6 +754,11 @@ socket.on(
 
       io.to(code).emit('session:results', { leaderboard, winner });
       cb?.({ ok: true, leaderboard, winner });
+
+      // 🔚 After results, invalidate the code/lobby
+      sessions.delete(code);
+      if (s.timers?.expire) clearTimeout(s.timers.expire);
+
     });
 
     // ──────────────────────────────────────────────────────────────
