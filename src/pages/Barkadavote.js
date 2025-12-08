@@ -327,6 +327,7 @@ export default function BarkadaVote() {
   );
 
   const [showWaitingModal, setShowWaitingModal] = useState(false);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   const [ratings, setRatings] = useState({});
   const [menuDraft, setMenuDraft] = useState([]);
@@ -365,6 +366,19 @@ export default function BarkadaVote() {
   const closeAlert = () => {
     setAlertState({ message: "", type: "info" });
   };
+
+  const handleEndVoteClick = () => {
+  const total = participants.length || 0;
+  const submitted = participants.filter((p) => p.hasSubmitted).length;
+
+  // If not everyone has voted, show confirm modal
+  if (total > 0 && submitted < total) {
+    setShowEndConfirm(true);
+  } else {
+    endVoting();
+  }
+};
+
 
   /* Socket setup */
   useEffect(() => {
@@ -2169,6 +2183,11 @@ export default function BarkadaVote() {
      VOTING VIEW
      ======================================== */
   if (currentView === "voting") {
+    const total = participants.length || 0;
+    const submitted = participants.filter((p) => p.hasSubmitted).length;
+    const progress = total > 0 ? (submitted / total) * 100 : 0;
+
+
     return (
       <div className="barkada-page" style={{ paddingBottom: "6rem" }}>
         {/* Themed Alert */}
@@ -2269,6 +2288,45 @@ export default function BarkadaVote() {
           </div>
         </div>
 
+                {/* Host-only voting progress */}
+        {isHost && (
+          <div style={{ padding: "0 1rem 0.75rem" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: "0.8rem",
+                color: "#78350f",
+                marginBottom: "0.25rem",
+              }}
+            >
+              <span>Voting progress</span>
+              <span>
+                {submitted}/{total} have voted
+              </span>
+            </div>
+            <div
+              style={{
+                width: "100%",
+                height: "0.5rem",
+                borderRadius: "999px",
+                background: "#fde68a",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  width: `${progress}%`,
+                  height: "100%",
+                  background: "linear-gradient(90deg, #f59e0b, #d97706)",
+                  transition: "width 0.3s ease",
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+
         <div className="fixed-bottom-bar">
           <button
             onClick={submitRatings}
@@ -2280,7 +2338,7 @@ export default function BarkadaVote() {
           </button>
           {isHost && (
             <button
-              onClick={endVoting}
+              onClick={handleEndVoteClick}
               disabled={connState !== "connected"}
               className="barkada-btn barkada-btn-danger"
               style={{ padding: "1rem" }}
@@ -2310,9 +2368,48 @@ export default function BarkadaVote() {
           </div>
         </div>
       )}
+
+            {/* 👇 New: confirm end-voting modal for host */}
+      {showEndConfirm && (
+        <div className="barkada-modal-overlay">
+          <div className="barkada-modal">
+            <div className="barkada-modal-header">
+              <h3 className="barkada-modal-title">End voting?</h3>
+            </div>
+            <div className="barkada-modal-body">
+              <p style={{ fontSize: "0.9rem", color: "#78350f", marginBottom: "0.5rem" }}>
+                Not everyone has voted yet.
+              </p>
+              <p style={{ fontSize: "0.85rem", color: "#92400e" }}>
+                Are you sure you want to end the vote now and show the results?
+              </p>
+            </div>
+            <div className="barkada-modal-footer">
+              <button
+                className="barkada-btn barkada-btn-secondary"
+                style={{ flex: 1 }}
+                onClick={() => setShowEndConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="barkada-btn barkada-btn-danger"
+                style={{ flex: 1 }}
+                onClick={() => {
+                  setShowEndConfirm(false);
+                  endVoting();
+                }}
+              >
+                Yes, end anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 
   /* ========================================
