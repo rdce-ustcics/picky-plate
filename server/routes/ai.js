@@ -336,28 +336,155 @@ Rules:
     }
 
     /* Normalize, title-case, enforce month uniqueness & slot order */
-    const normalized = plan.slice(0,7).map((day, i) => {
-      const d = new Date(start); d.setDate(start.getDate()+i); d.setHours(0,0,0,0);
-      const parts = String(day?.dateKey || `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`).split("-").map(Number);
-      const y = parts[0] || d.getFullYear();
-      const m1 = parts[1] || (d.getMonth()+1);
-      const dd = parts[2] || d.getDate();
-      const dateKey = ymdPad(y,m1,dd);
+    // Calculate number of days needed (inclusive of both start and end)
+    const startTime = new Date(start); startTime.setHours(0,0,0,0);
+    const endTime = new Date(end); endTime.setHours(0,0,0,0);
+    const numDays = Math.round((endTime - startTime) / (24*60*60*1000)) + 1;
 
-      const dishes = uniqueByName((Array.isArray(day?.dishes) ? day.dishes : []).map(x => ({
+    // Track dishes used within THIS generation (separate from month-level DB entries)
+    const weekSeen = new Set();
+
+    const normalized = [];
+    for (let i = 0; i < numDays && i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      d.setHours(0,0,0,0);
+
+      const dateKey = ymdPad(d.getFullYear(), d.getMonth()+1, d.getDate());
+
+      // Find matching day from AI response
+      const aiDay = plan.find(day => {
+        if (!day?.dateKey) return false;
+        const parts = String(day.dateKey).split("-").map(Number);
+        return parts[0] === d.getFullYear() && parts[1] === (d.getMonth()+1) && parts[2] === d.getDate();
+      }) || plan[i]; // fallback to index-based match
+
+      // First pass: filter against existing DB entries and this week's dishes
+      let dishes = uniqueByName((Array.isArray(aiDay?.dishes) ? aiDay.dishes : []).map(x => ({
         slot: x?.slot || "other",
         name: titleCase(String(x?.name || "").trim()),
         cost: Number(x?.cost) || 0,
         source: "ai",
       })))
-      .filter(d => !monthSeen.has(d.name.toLowerCase()))
+      .filter(dish => {
+        const key = dish.name.toLowerCase();
+        // Only filter if it's already in the DB this month
+        if (monthSeen.has(key)) return false;
+        // Filter within current week to avoid exact same dish
+        if (weekSeen.has(key)) return false;
+        return true;
+      })
       .sort((a,b)=> (SLOT_ORDER[a.slot]??999)-(SLOT_ORDER[b.slot]??999));
 
-      // mark into monthSeen so later days avoid repeats
-      for (const it of dishes) monthSeen.add(it.name.toLowerCase());
+      // For ultra-tight budgets (< 250/day), if we have no dishes, allow week repeats
+      // This is better than showing "No suggestions"
+      if (dishes.length === 0 && isUltraBudget) {
+        dishes = uniqueByName((Array.isArray(aiDay?.dishes) ? aiDay.dishes : []).map(x => ({
+          slot: x?.slot || "other",
+          name: titleCase(String(x?.name || "").trim()),
+          cost: Number(x?.cost) || 0,
+          source: "ai",
+        })))
+        .filter(dish => !monthSeen.has(dish.name.toLowerCase())) // Only filter DB entries
+        .sort((a,b)=> (SLOT_ORDER[a.slot]??999)-(SLOT_ORDER[b.slot]??999));
+      }
 
-      return { dateKey, jsDate: new Date(`${dateKey}T00:00:00`), dishes };
-    }).filter(p => p.jsDate >= start && p.jsDate <= end);
+      // Fill in missing meal slots with fallback dishes
+      // This handles both completely empty days AND partial days (e.g., only breakfast returned)
+      if (dailyBudget) {
+        const budgetBreakfast = Math.round(dailyBudget * 0.22);
+        const budgetLunch = Math.round(dailyBudget * 0.33);
+        const budgetDinner = Math.round(dailyBudget * 0.45);
+
+        // Comprehensive fallback dishes for budget meals (₱150-300/day range)
+        const fallbackOptions = {
+          breakfast: [
+            // Rice meals (₱30-60)
+            "Sinangag With Egg", "Champorado", "Arroz Caldo", "Lugaw With Egg", "Goto",
+            // Bread-based (₱20-45)
+            "Pandesal With Palaman", "Pandesal With Cheese", "Tasty Bread With Butter",
+            "Monay With Coffee", "Pan De Coco",
+            // Noodles (₱15-40)
+            "Instant Pancit Canton", "Instant Mami", "Lucky Me With Egg",
+            // Drinks + light (₱15-35)
+            "3-In-1 Coffee With Pandesal", "Milo With Skyflakes", "Oatmeal With Banana",
+            // Hot meals (₱40-70)
+            "Tortang Talong", "Tortang Sardinas", "Pritong Itlog With Rice",
+            "Tuyo With Rice", "Daing With Rice", "Bangus Belly With Rice"
+          ],
+          lunch: [
+            // Canned goods (₱40-70)
+            "Sardines With Rice", "Corned Beef With Rice", "Meatloaf With Rice",
+            "Century Tuna With Rice", "Argentina With Rice", "Spam Lite With Rice",
+            // Egg dishes (₱35-60)
+            "Egg Fried Rice", "Scrambled Egg With Rice", "Omelette With Rice",
+            "Egg Sandwich", "Egg Salad With Bread",
+            // Noodles (₱25-55)
+            "Instant Noodles With Egg", "Pancit Canton Guisado", "Pancit Bihon",
+            "Sotanghon Soup", "Mami Soup",
+            // Vegetable dishes (₱45-75)
+            "Ginisang Sitaw", "Ginisang Pechay", "Ginisang Toge", "Chopsuey Budget",
+            "Pinakbet Light", "Ensaladang Talong",
+            // Meat (budget) (₱60-85)
+            "Chicken Skin With Rice", "Tokwa't Baboy", "Sisig Budget", "Longganisa With Rice"
+          ],
+          dinner: [
+            // Soups/Sabaw (₱50-90)
+            "Tinola Na Sabaw Lang", "Sinigang Na Baboy", "Nilaga Budget",
+            "Bulalo Sabaw", "Pesang Isda", "Sinigang Na Bangus",
+            // Guisado (₱55-85)
+            "Ginisang Monggo", "Sardinas Guisado", "Ginisang Ampalaya",
+            "Adobong Sitaw", "Ginisang Kalabasa", "Ginataang Kalabasa",
+            // Vegetable heavy (₱45-80)
+            "Pakbet", "Pinakbet Tagalog", "Dinengdeng", "Laing Budget",
+            "Ginataang Langka", "Kare-Kare Gulay",
+            // Protein (budget) (₱70-100)
+            "Adobong Manok Budget", "Pritong Tilapia", "Ginataang Tilapia",
+            "Rellenong Bangus Budget", "Pritong Galunggong", "Inihaw Na Bangus",
+            // One-pot meals (₱60-95)
+            "Arroz Caldo Dinner", "Lugaw Special", "Champorado Dinner",
+            "Pancit Guisado", "Batchoy Budget"
+          ]
+        };
+
+        const pickRandom = (arr, seen) => {
+          const available = arr.filter(x => !seen.has(x.toLowerCase()) && !monthSeen.has(x.toLowerCase()));
+          return available.length > 0 ? available[Math.floor(Math.random() * available.length)] : arr[Math.floor(Math.random() * arr.length)];
+        };
+
+        // Check which slots are missing
+        const hasBreakfast = dishes.some(d => d.slot === "breakfast");
+        const hasLunch = dishes.some(d => d.slot === "lunch");
+        const hasDinner = dishes.some(d => d.slot === "dinner");
+
+        // Fill in missing slots
+        if (!hasBreakfast) {
+          const b = pickRandom(fallbackOptions.breakfast, weekSeen);
+          dishes.push({ slot: "breakfast", name: titleCase(b), cost: budgetBreakfast, source: "ai" });
+          weekSeen.add(b.toLowerCase());
+        }
+
+        if (!hasLunch) {
+          const l = pickRandom(fallbackOptions.lunch, weekSeen);
+          dishes.push({ slot: "lunch", name: titleCase(l), cost: budgetLunch, source: "ai" });
+          weekSeen.add(l.toLowerCase());
+        }
+
+        if (!hasDinner) {
+          const din = pickRandom(fallbackOptions.dinner, weekSeen);
+          dishes.push({ slot: "dinner", name: titleCase(din), cost: budgetDinner, source: "ai" });
+          weekSeen.add(din.toLowerCase());
+        }
+
+        // Re-sort to ensure correct order (breakfast, lunch, dinner)
+        dishes.sort((a,b) => (SLOT_ORDER[a.slot]??999) - (SLOT_ORDER[b.slot]??999));
+      }
+
+      // Only add to weekSeen (not monthSeen) - monthSeen is for DB entries only
+      for (const it of dishes) weekSeen.add(it.name.toLowerCase());
+
+      normalized.push({ dateKey, jsDate: d, dishes });
+    }
 
     if (!normalized.length) {
       // AI returned but filtered to empty -> offer random or friendly msg

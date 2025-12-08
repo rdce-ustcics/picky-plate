@@ -366,6 +366,42 @@ export default function BarkadaVote() {
   });
   const [showAIPrefs, setShowAIPrefs] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [budgetWarning, setBudgetWarning] = useState(null);
+
+  // Minimum budget thresholds for restaurant dining (2024-2025 Philippine prices)
+  const MIN_BUDGET = {
+    perPerson: 100,     // Absolute minimum for a basic meal per person
+    warning: 150,       // Below this, options will be very limited (fast food level)
+  };
+
+  // Validate budget and set warning
+  const validateBudget = (value) => {
+    const numValue = Number(value);
+    if (!value || isNaN(numValue) || numValue <= 0) {
+      setBudgetWarning(null);
+      return;
+    }
+
+    if (numValue < MIN_BUDGET.perPerson) {
+      setBudgetWarning({
+        type: 'error',
+        message: `₱${numValue}/person is too low! Even fast food meals cost ₱80-120. Minimum: ₱${MIN_BUDGET.perPerson}`
+      });
+    } else if (numValue < MIN_BUDGET.warning) {
+      setBudgetWarning({
+        type: 'warning',
+        message: `₱${numValue}/person is very tight. Expect limited options (fast food, carinderia).`
+      });
+    } else {
+      setBudgetWarning(null);
+    }
+  };
+
+  // Handle budget change with validation
+  const handleBudgetChange = (value) => {
+    setAiPrefs((p) => ({ ...p, budgetPerPerson: value }));
+    validateBudget(value);
+  };
 
   const [guestRestrictions, setGuestRestrictions] = useState({
     allergens: "",
@@ -1908,26 +1944,29 @@ export default function BarkadaVote() {
               <div className="settings-group">
                 <label className="settings-label">
                   Budget per person (₱){" "}
-                  <span style={{ fontWeight: 400 }}>(optional — minimum ₱100)</span>
+                  <span style={{ fontWeight: 400 }}>(optional — minimum ₱{MIN_BUDGET.perPerson})</span>
                 </label>
                 <input
                   type="number"
-                  min={100}
-                  className="barkada-input"
+                  min={MIN_BUDGET.perPerson}
+                  className={`barkada-input ${budgetWarning?.type === 'error' ? 'input-error' : budgetWarning?.type === 'warning' ? 'input-warning' : ''}`}
                   placeholder="e.g. 200–400"
                   value={aiPrefs.budgetPerPerson}
-                  onChange={(e) => {
-                    let val = e.target.value;
-
-                    // Only clamp if user entered something
-                    if (val !== "" && Number(val) < 100) val = 100;
-
-                    setAiPrefs((p) => ({
-                      ...p,
-                      budgetPerPerson: val,
-                    }));
+                  onChange={(e) => handleBudgetChange(e.target.value)}
+                  onBlur={(e) => {
+                    // Clamp to minimum on blur if value is too low
+                    const val = e.target.value;
+                    if (val !== "" && Number(val) < MIN_BUDGET.perPerson) {
+                      handleBudgetChange(String(MIN_BUDGET.perPerson));
+                    }
                   }}
                 />
+                {budgetWarning && (
+                  <div className={`budget-warning ${budgetWarning.type}`}>
+                    <span>{budgetWarning.type === 'error' ? '⚠️' : '💡'}</span>
+                    <span>{budgetWarning.message}</span>
+                  </div>
+                )}
                 <p className="settings-hint">
                   If set, the AI will try to favor restaurants around this price per head.
                 </p>
@@ -2123,20 +2162,29 @@ export default function BarkadaVote() {
 
                 <div className="settings-group">
                   <label className="settings-label">
-                    Budget per person (₱)
+                    Budget per person (₱){" "}
+                    <span style={{ fontWeight: 400 }}>(minimum ₱{MIN_BUDGET.perPerson})</span>
                   </label>
                   <input
                     type="number"
-                    className="barkada-input"
+                    min={MIN_BUDGET.perPerson}
+                    className={`barkada-input ${budgetWarning?.type === 'error' ? 'input-error' : budgetWarning?.type === 'warning' ? 'input-warning' : ''}`}
                     placeholder="e.g. 200–400"
                     value={aiPrefs.budgetPerPerson}
-                    onChange={(e) =>
-                      setAiPrefs((p) => ({
-                        ...p,
-                        budgetPerPerson: e.target.value,
-                      }))
-                    }
+                    onChange={(e) => handleBudgetChange(e.target.value)}
+                    onBlur={(e) => {
+                      const val = e.target.value;
+                      if (val !== "" && Number(val) < MIN_BUDGET.perPerson) {
+                        handleBudgetChange(String(MIN_BUDGET.perPerson));
+                      }
+                    }}
                   />
+                  {budgetWarning && (
+                    <div className={`budget-warning ${budgetWarning.type}`}>
+                      <span>{budgetWarning.type === 'error' ? '⚠️' : '💡'}</span>
+                      <span>{budgetWarning.message}</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="settings-group">

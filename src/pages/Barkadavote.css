@@ -2940,9 +2940,56 @@
   .menu-editor-row {
     grid-template-columns: 3fr 3fr 2fr auto;
   }
-  
+
   .barkada-btn-delete {
     width: 2.5rem;
     height: 2.5rem;
   }
+}
+
+/* ========================================
+   BUDGET VALIDATION STYLES
+   ======================================== */
+
+.budget-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}
+
+.budget-warning.error {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.budget-warning.warning {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.barkada-input.input-error {
+  border-color: #f87171 !important;
+  background: #fef2f2;
+}
+
+.barkada-input.input-error:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1) !important;
+}
+
+.barkada-input.input-warning {
+  border-color: #fbbf24 !important;
+  background: #fffbeb;
+}
+
+.barkada-input.input-warning:focus {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.15) !important;
 }
