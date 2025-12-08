@@ -326,6 +326,8 @@ export default function BarkadaVote() {
     localStorage.getItem("barkada_vote_token") || ""
   );
 
+  const [showWaitingModal, setShowWaitingModal] = useState(false);
+
   const [ratings, setRatings] = useState({});
   const [menuDraft, setMenuDraft] = useState([]);
   const [myDraft, setMyDraft] = useState([
@@ -414,6 +416,13 @@ export default function BarkadaVote() {
       s.disconnect();
     };
   }, []);
+
+    useEffect(() => {
+    if (!isVotingOpen) {
+      setShowWaitingModal(false);
+    }
+  }, [isVotingOpen]);
+
 
   useEffect(() => {
     if (isVotingOpen && (currentView === "lobby" || currentView === "home")) {
@@ -748,6 +757,11 @@ export default function BarkadaVote() {
       (res) => {
         if (!res?.ok) return showAlert(res?.error || "Submit failed", "error");
         showAlert("Ratings submitted!", "success");
+
+            if (!isHost) {
+                setShowWaitingModal(true);
+                         }
+
       }
     );
   };
@@ -2275,9 +2289,31 @@ export default function BarkadaVote() {
             </button>
           )}
         </div>
-      </div>
-    );
-  }
+
+              {/* ⬇️ NEW: Waiting for others modal */}
+      {showWaitingModal && (
+        <div className="barkada-modal-overlay">
+          <div className="barkada-modal">
+            <div className="barkada-modal-header">
+              <h3 className="barkada-modal-title">Waiting for others to vote</h3>
+            </div>
+            <div className="barkada-modal-body">
+              <p style={{ fontSize: "0.9rem", color: "#78350f", marginBottom: "0.5rem" }}>
+                Your ratings have been submitted. 🎉
+              </p>
+              <p style={{ fontSize: "0.85rem", color: "#92400e" }}>
+                We’re waiting for the rest of your barkada to finish voting.
+                The results will appear automatically once the host ends the vote
+                or the timer runs out.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
   /* ========================================
      RESULTS VIEW
