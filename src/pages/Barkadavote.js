@@ -2394,6 +2394,34 @@ export default function BarkadaVote() {
   );
 }
 
+const resetToHome = () => {
+  // clear session + lobby-related state
+  setSessionCode("");
+  setIsHost(false);
+  setParticipants([]);
+  setOptions([]);
+  setIsVotingOpen(false);
+  setHost(null);
+  setCreatedAt(null);
+  setLastActivityAt(null);
+  setVotingEndsAt(null);
+  setExpiresAt(null);
+
+  // clear ratings + drafts
+  setRatings({});
+  setMenuDraft([]);
+  setMyDraft([{ name: "", tag: "", price: "" }]);
+
+  // reset settings
+  setSettings(defaultSettings);
+  setSettingsDraft(defaultSettings);
+
+  // clear stored results
+  window.__barkadaResults = null;
+
+  // go back to the internal home view
+  setCurrentView("home");
+};
 
 
   /* ========================================
@@ -2644,27 +2672,15 @@ export default function BarkadaVote() {
             })}
             </div>
 
-            <div className="flex-gap" style={{ marginTop: "1.5rem" }}>
-              <button
-                onClick={() => {
-                  setCurrentView("home");
-                  setParticipants([]);
-                  setOptions([]);
-                  window.__barkadaResults = null;
-                }}
-                className="barkada-btn barkada-btn-primary"
-                style={{ flex: 1, padding: "1rem" }}
-              >
-                New Session
-              </button>
-              <button
-                onClick={() => setCurrentView("voting")}
-                className="barkada-btn barkada-btn-secondary"
-                style={{ flex: 1, padding: "1rem" }}
-              >
-                Vote Again
-              </button>
-            </div>
+          <div className="flex-gap" style={{ marginTop: "1.5rem" }}>
+            <button
+              onClick={resetToHome}
+              className="barkada-btn barkada-btn-primary"
+              style={{ flex: 1, padding: "1rem" }}
+            >
+              Vote Again
+            </button>
+          </div>
           </div>
         </div>
       </div>
