@@ -120,51 +120,55 @@ const sanitizeSessionForClient = (s, requestingToken = null) => {
     io.to(code).emit('session:state', sanitizeSessionForClient(s));
   };
 
-  const computeResults = (s) => {
-    const W = s.settings?.weights || { taste: 40, mood: 40, value: 20 };
-    const wt = Number(W.taste) / 100;
-    const wm = Number(W.mood) / 100;
-    const wv = Number(W.value) / 100;
+const computeResults = (s) => {
+  const W = s.settings?.weights || { taste: 40, mood: 40, value: 20 };
+  const wt = Number(W.taste) / 100;
+  const wm = Number(W.mood) / 100;
+  const wv = Number(W.value) / 100;
 
-    const perOption = s.options.map((opt) => {
-      let voters = 0;
-      let tasteSum = 0;
-      let moodSum = 0;
-      let valueSum = 0;
-      s.ratings.forEach((byOption) => {
-        const r = byOption[opt.id];
-        if (r) {
-          voters++;
-          tasteSum += r.taste;
-          moodSum += r.mood;
-          valueSum += r.value;
-        }
-      });
-      const tasteAvg = voters ? tasteSum / voters : 0;
-      const moodAvg = voters ? moodSum / voters : 0;
-      const valueAvg = voters ? valueSum / voters : 0;
-      const score = tasteAvg * wt + moodAvg * wm + valueAvg * wv;
-      return {
-        ...opt,
-        tags: Array.from(opt.tags || []),   // 👈 FIX missing classification
-        voters,
-        tasteAvg,
-        moodAvg,
-        valueAvg,
-        score: Number(score.toFixed(3)),
-      };
+  const perOption = s.options.map((opt) => {
+    let voters = 0;
+    let tasteSum = 0;
+    let moodSum = 0;
+    let valueSum = 0;
+
+    s.ratings.forEach((byOption) => {
+      const r = byOption[opt.id];
+      if (r) {
+        voters++;
+        tasteSum += r.taste;
+        moodSum += r.mood;
+        valueSum += r.value;
+      }
     });
 
-    // Tie-breakers: score desc, voters desc, price asc, name asc
-    perOption.sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      if (b.voters !== a.voters) return b.voters - a.voters;
-      if (a.price !== b.price) return a.price - b.price;
-      return a.name.localeCompare(b.name);
-    });
+    const tasteAvg = voters ? tasteSum / voters : 0;
+    const moodAvg  = voters ? moodSum  / voters : 0;
+    const valueAvg = voters ? valueSum / voters : 0;
+    const score    = tasteAvg * wt + moodAvg * wm + valueAvg * wv;
 
-    return perOption;
-  };
+    return {
+      ...opt,
+      tags: Array.from(opt.tags || []),   // keep classifications for images
+      voters,
+      // 👇 rename to match frontend expectation
+      avgTaste: tasteAvg,
+      avgMood:  moodAvg,
+      avgValue: valueAvg,
+      score: Number(score.toFixed(3)),
+    };
+  });
+
+  // Tie-breakers: score desc, voters desc, price asc, name asc
+  perOption.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.voters !== a.voters) return b.voters - a.voters;
+    if (a.price !== b.price) return a.price - b.price;
+    return a.name.localeCompare(b.name);
+  });
+
+  return perOption;
+};
 
   const filterOptionsByNonNegotiables = (options, participants) => {
     const avoid = new Set();

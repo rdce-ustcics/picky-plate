@@ -272,6 +272,7 @@ export default function BarkadaVote() {
   // New state for modal-based forms
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [expandedResultId, setExpandedResultId] = useState(null);
 
   const [createName, setCreateName] = useState("");
   const [createPassword, setCreatePassword] = useState("");
@@ -2500,13 +2501,40 @@ export default function BarkadaVote() {
               const tag =
                 opt.tag ||
                 (Array.isArray(opt.tags) && opt.tags.length ? opt.tags[0] : "default");
-
               const imgSrc = getImageForTag(tag);
+
+              // 🔍 Coerce to numbers if possible (handles "4.5" as well)
+              const avgTaste =
+                opt.avgTaste !== undefined && opt.avgTaste !== null
+                  ? Number(opt.avgTaste)
+                  : null;
+              const avgMood =
+                opt.avgMood !== undefined && opt.avgMood !== null
+                  ? Number(opt.avgMood)
+                  : null;
+              const avgValue =
+                opt.avgValue !== undefined && opt.avgValue !== null
+                  ? Number(opt.avgValue)
+                  : null;
+
+              const hasBreakdown =
+                (avgTaste !== null && !Number.isNaN(avgTaste)) ||
+                (avgMood !== null && !Number.isNaN(avgMood)) ||
+                (avgValue !== null && !Number.isNaN(avgValue));
+
+              const isExpanded = expandedResultId === (opt.id || i);
 
               return (
                 <div
-                  key={opt.id}
+                  key={opt.id || i}
                   className={`leaderboard-item ${i === 0 ? "winner" : ""}`}
+                  style={{ cursor: hasBreakdown ? "pointer" : "default" }}
+                  onClick={() => {
+                    if (!hasBreakdown) return;
+                    setExpandedResultId((prev) =>
+                      prev === (opt.id || i) ? null : opt.id || i
+                    );
+                  }}
                 >
                   <div
                     style={{
@@ -2541,14 +2569,76 @@ export default function BarkadaVote() {
                       </p>
                     </div>
                   </div>
+
                   <div style={{ textAlign: "right" }}>
-                    <p className="leaderboard-score">
-                      {opt.score.toFixed(2)}
-                    </p>
-                    <p className="leaderboard-voters">
-                      voters: {opt.voters}
-                    </p>
+                    <p className="leaderboard-score">{opt.score.toFixed(2)}</p>
+                    <p className="leaderboard-voters">voters: {opt.voters}</p>
+                    {hasBreakdown && (
+                      <p
+                        style={{
+                          fontSize: "0.7rem",
+                          color: "#6b7280",
+                          marginTop: "0.25rem",
+                        }}
+                      >
+                        Click for breakdown
+                      </p>
+                    )}
                   </div>
+
+                  {hasBreakdown && isExpanded && (
+                    <div
+                      className="leaderboard-breakdown"
+                      style={{
+                        marginTop: "0.75rem",
+                        paddingTop: "0.75rem",
+                        borderTop: "1px solid #fbbf24",
+                        fontSize: "0.8rem",
+                        color: "#78350f",
+                      }}
+                    >
+                      <p
+                        style={{
+                          marginBottom: "0.5rem",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Average ratings (out of 5)
+                      </p>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(3, 1fr)",
+                          gap: "0.5rem",
+                        }}
+                      >
+                        <div>
+                          <p style={{ fontSize: "0.75rem", color: "#92400e" }}>Taste</p>
+                          <p style={{ fontWeight: 600 }}>
+                            {avgTaste !== null && !Number.isNaN(avgTaste)
+                              ? avgTaste.toFixed(2)
+                              : "–"}
+                          </p>
+                        </div>
+                        <div>
+                          <p style={{ fontSize: "0.75rem", color: "#92400e" }}>Mood</p>
+                          <p style={{ fontWeight: 600 }}>
+                            {avgMood !== null && !Number.isNaN(avgMood)
+                              ? avgMood.toFixed(2)
+                              : "–"}
+                          </p>
+                        </div>
+                        <div>
+                          <p style={{ fontSize: "0.75rem", color: "#92400e" }}>Value</p>
+                          <p style={{ fontWeight: 600 }}>
+                            {avgValue !== null && !Number.isNaN(avgValue)
+                              ? avgValue.toFixed(2)
+                              : "–"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
