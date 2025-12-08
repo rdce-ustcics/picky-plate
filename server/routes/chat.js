@@ -950,10 +950,13 @@ router.post("/chat", async (req, res) => {
         systemMessages.push({
       role: "system",
       content:
-        "When recommending RESTAURANTS (not dishes), ALWAYS clearly include one of these words in the restaurant description: “restaurant”, “diner”, “cafe”, “bistro”, or “spot”.\n" +
+        'When recommending RESTAURANTS (not dishes), ALWAYS clearly include one of these words in the restaurant description: "restaurant", "diner", "cafe", "bistro", or "spot".\n' +
         "This helps the user easily identify that it is a place to eat at, not just a dish name." +
         "Make sure that all of the restaurants are located in the Philippines.",
     });
+
+    // Note: Restaurant Locator buttons are shown ONLY when user clicks "I'm choosing this!" on a restaurant
+    // The button is added automatically in /api/history endpoint, not by the AI
 
     if (mood) {
       systemMessages.push({
@@ -1214,10 +1217,56 @@ router.post("/history", async (req, res) => {
     // - Append the follow-up assistant message
     if (chatIdRaw && ObjectId.isValid(chatIdRaw)) {
       try {
-        const followup =
-          `Yum, great choice! Since you picked "${label}", ` +
-          "do you want me to suggest side dishes, drinks, or desserts that go well with it? " +
-          "You can also use the buttons below if you’d like a recipe or restaurants for this.";
+        // Detect if the chosen item is a restaurant (not a dish)
+        const labelLower = label.toLowerCase();
+        const restaurantKeywords = [
+          // Generic terms that indicate a restaurant/establishment
+          'restaurant', 'resto', 'cafe', 'diner', 'bistro', 'spot', 'grill',
+          'dampa', 'eatery', 'kitchen', 'bar', 'pub', 'tavern', 'house',
+          'seaside', 'marketplace', 'food park', 'food court', 'company',
+          'group', 'place', 'joint', 'shack', 'hut', 'stop', 'station',
+          'alley', 'corner', 'express', 'central', 'hub', 'lounge',
+          // Fast food chains
+          'jollibee', 'mcdonalds', "mcdonald's", 'kfc', 'chowking', 'mang inasal',
+          'greenwich', 'shakey', 'pizza hut', 'burger king', 'wendy', 'subway',
+          'sbarro', 'yellow cab', 'army navy', 'max', 'bonchon', 'potato corner',
+          'wingstop', 'buffalo wild', 'popeyes', 'domino', 'papa john',
+          // Coffee & bakery
+          'starbucks', 'tim hortons', 'dunkin', 'krispy kreme', 'j.co',
+          'goldilocks', 'red ribbon', 'tous les jours', 'mary grace', 'cravings',
+          // Japanese restaurants
+          'yabu', 'ramen nagi', 'marugame', 'tokyo tokyo', 'teriyaki boy',
+          'ippudo', 'mendokoro', 'botejyu', 'genki sushi', 'sushi nori',
+          // Korean restaurants
+          'samgyupsalamat', 'kbbq', 'korean bbq', 'sibyullee', 'soban', 'romantic baboy',
+          // Buffets
+          'vikings', 'sambo kojin', 'yakimix', 'heat', 'buffet', 'unlimited', 'buffet 101',
+          // Other popular chains
+          'texas roadhouse', 'italianni', 'tgi friday', "chili's", 'outback',
+          'kenny rogers', 'kuya j', 'gerry', 'mesa', 'manam', 'locavore',
+          'conti', 'pancake house', 'ihop', 'denny', 'mango tree', 'bacolod'
+        ];
+
+        const isRestaurant = restaurantKeywords.some(keyword => labelLower.includes(keyword)) ||
+                            type === 'restaurant';
+
+        // Debug logging
+        console.log('[HISTORY] Label:', label, '| LabelLower:', labelLower, '| Type:', type, '| IsRestaurant:', isRestaurant);
+
+        let followup;
+        if (isRestaurant) {
+          // Restaurant-specific follow-up with locator marker
+          followup =
+            `Great choice! To find the nearest ${label}, you can use our Restaurant Locator feature! ` +
+            `Just click the 'Find Near Me' button below and I'll help you locate ${label} branches in your area. ` +
+            `[RESTAURANT_LOCATOR:${label}]`;
+        } else {
+          // Regular dish follow-up
+          followup =
+            `Yum, great choice! Since you picked "${label}", ` +
+            "do you want me to suggest side dishes, drinks, or desserts that go well with it? " +
+            "You can also use the buttons below if you'd like a recipe or restaurants for this.";
+        }
 
         await chats.updateOne(
           { _id: new ObjectId(chatIdRaw), ...owner },

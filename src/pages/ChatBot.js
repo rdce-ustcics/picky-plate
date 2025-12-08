@@ -11,6 +11,7 @@ import {
   Sparkles,
   X,
   ChevronRight,
+  MapPin,
 } from "lucide-react";
 import {
   getSessionId,
@@ -289,6 +290,30 @@ function stripRecommendationLines(text) {
     .trim();
 }
 
+// Extract [RESTAURANT_LOCATOR:RestaurantName] markers from AI response
+function extractRestaurantLocator(text) {
+  if (!text) return { restaurants: [], cleanedText: text };
+
+  const regex = /\[RESTAURANT_LOCATOR:([^\]]+)\]/gi;
+  const restaurants = [];
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    restaurants.push(match[1].trim());
+  }
+
+  // Remove the markers from display text
+  const cleanedText = text.replace(regex, "").trim();
+
+  return { restaurants, cleanedText };
+}
+
+// Strip restaurant locator markers from text for display
+function stripRestaurantLocatorMarkers(text) {
+  if (!text) return "";
+  return text.replace(/\[RESTAURANT_LOCATOR:[^\]]+\]/gi, "").trim();
+}
+
 function parseRecipe(content) {
   if (!content) return null;
 
@@ -330,20 +355,37 @@ function isRestaurantOption(text) {
   // Get only the title part BEFORE any description
   const title = text.split(":")[0].trim().toLowerCase();
 
-  // Strong restaurant indicators that rarely appear in dish names
+  // Strong restaurant indicators
   const keywords = [
-    "restaurant",
-    "diner",
-    "express",
-    "cafe",
-    "bistro",
-    "bar and grill",
-    "spot",
-    "known for",
+    // Generic terms
+    "restaurant", "resto", "diner", "cafe", "bistro", "spot", "grill",
+    "bar", "pub", "tavern", "eatery", "kitchen", "lounge",
+    "dampa", "seaside", "marketplace", "food park", "food court",
+    "company", "group", "place", "joint", "shack", "hut", "stop", "station",
+    "alley", "corner", "express", "central", "hub",
+    // Fast food chains
+    "jollibee", "mcdonalds", "mcdonald's", "kfc", "chowking", "mang inasal",
+    "greenwich", "shakey", "pizza hut", "burger king", "wendy", "subway",
+    "sbarro", "yellow cab", "army navy", "bonchon", "potato corner",
+    "wingstop", "buffalo wild", "popeyes", "domino", "papa john",
+    // Coffee & bakery
+    "starbucks", "tim hortons", "dunkin", "krispy kreme", "j.co",
+    "goldilocks", "red ribbon", "tous les jours", "mary grace", "cravings",
+    // Japanese
+    "yabu", "ramen nagi", "marugame", "tokyo tokyo", "teriyaki boy",
+    "ippudo", "mendokoro", "botejyu", "genki sushi",
+    // Korean
+    "samgyupsalamat", "kbbq", "korean bbq", "sibyullee", "soban", "romantic baboy",
+    // Buffets
+    "vikings", "sambo kojin", "yakimix", "heat", "buffet",
+    // Other chains
+    "texas roadhouse", "italianni", "tgi friday", "chili's", "outback",
+    "kenny rogers", "kuya j", "mesa", "manam", "locavore", "conti",
+    "pancake house", "mango tree", "known for",
   ];
 
   // Special cases: only match these if in the title (not description)
-  const weakKeywords = ["house", "kitchen"];
+  const weakKeywords = ["house"];
 
   return (
     keywords.some(k => title.includes(k)) ||
@@ -915,7 +957,7 @@ function handleChooseRecommendation(text, msgIndex) {
                 )
                 .concat({
                   role: "assistant",
-                  content: `Excellent choice! "${titleOnly}" is a great pick. You can use the button below to locate this restaurant near you!`,
+                  content: `Great choice! To find the nearest ${titleOnly}, you can use our Restaurant Locator feature! Just click the 'Find Near Me' button below and I'll help you locate ${titleOnly} branches in your area. [RESTAURANT_LOCATOR:${titleOnly}]`,
                 }),
             }
           : c
@@ -1686,14 +1728,17 @@ function renderMoodPill() {
                     const parsedRecipe = parseRecipe(m.content);
                     const isRecipe = !!parsedRecipe;
 
-                    
+                    // Extract restaurant locator markers
+                    const restaurantLocator = extractRestaurantLocator(m.content);
+                    const detectedRestaurants = restaurantLocator.restaurants;
 
                     if (m.role === "assistant") {
                       const extracted = extractRecommendationOptions(m.content);
                       if (extracted?.options?.length) {
                         options.push(...extracted.options);
                       }
-                      displayContent = stripRecommendationLines(m.content);
+                      // Strip both recommendation lines AND restaurant locator markers
+                      displayContent = stripRestaurantLocatorMarkers(stripRecommendationLines(m.content));
                     }
 
                     return (
@@ -1833,6 +1878,54 @@ function renderMoodPill() {
                                   </div>
                                 );
                               })}
+                            </div>
+                          )}
+
+                          {/* Restaurant Locator Buttons */}
+                          {detectedRestaurants.length > 0 && (
+                            <div
+                              style={{
+                                marginTop: 12,
+                                display: "flex",
+                                flexDirection: "column",
+                                gap: 8,
+                              }}
+                            >
+                              {detectedRestaurants.map((restaurant, rIdx) => (
+                                <button
+                                  key={rIdx}
+                                  onClick={() => {
+                                    navigate(`/restaurants?search=${encodeURIComponent(restaurant)}&nearme=true`);
+                                  }}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 8,
+                                    padding: "10px 16px",
+                                    borderRadius: 12,
+                                    border: "none",
+                                    background: "linear-gradient(135deg, #FFC42D 0%, #F59E0B 100%)",
+                                    color: "#78350F",
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    cursor: "pointer",
+                                    boxShadow: "0 2px 8px rgba(255, 196, 45, 0.4)",
+                                    transition: "all 0.2s ease",
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.target.style.transform = "translateY(-1px)";
+                                    e.target.style.boxShadow = "0 4px 12px rgba(255, 196, 45, 0.5)";
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.target.style.transform = "translateY(0)";
+                                    e.target.style.boxShadow = "0 2px 8px rgba(255, 196, 45, 0.4)";
+                                  }}
+                                >
+                                  <MapPin size={16} />
+                                  Find {restaurant} Near Me
+                                </button>
+                              ))}
                             </div>
                           )}
 
