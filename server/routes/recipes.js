@@ -3,6 +3,7 @@ const express = require("express");
 const Recipe = require("../models/Recipe");
 const { protect } = require("../middleware/auth");
 const { analyzeImage, quickSafetyCheck } = require("../services/imageModeration");
+const { analyzeRecipeText, quickSpamCheck } = require("../utils/spamDetection");
 
 const router = express.Router();
 const RecipeReport = require('../models/RecipeReport');
@@ -133,7 +134,12 @@ router.get("/", async (req, res) => {
     // Query - exclude image in lite mode for faster initial load
     const projection = isLiteMode ? { image: 0 } : {};
     const [rawItems, total] = await Promise.all([
-      Recipe.find(q, projection).sort({ createdAt: -1 }).skip((p - 1) * l).limit(l).lean(),
+      Recipe.find(q, projection)
+        .populate('createdBy', 'name email') // Populate user for current name
+        .sort({ createdAt: -1 })
+        .skip((p - 1) * l)
+        .limit(l)
+        .lean(),
       Recipe.countDocuments(q),
     ]);
 
@@ -145,8 +151,12 @@ router.get("/", async (req, res) => {
         Array.isArray(doc.reports) &&
         doc.reports.some((r) => String(r.user) === userHeaderId);
 
+      // Use populated user's current name, fallback to stored author
+      const displayAuthor = doc.createdBy?.name || doc.createdBy?.email || doc.author || "Anonymous";
+
       return {
         ...doc,
+        author: displayAuthor, // Override with current user name
         reportsCount: lifetime, // lifetime total
         weeklyReports: weekly, // last 7 days
         reportedByMe,
@@ -171,7 +181,9 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const userHeaderId = (req.headers["x-user-id"] || "").toString();
-    const doc = await Recipe.findById(req.params.id).lean();
+    const doc = await Recipe.findById(req.params.id)
+      .populate('createdBy', 'name email')
+      .lean();
     if (!doc) return res.status(404).json({ success: false, error: "not_found" });
 
     const { lifetime, weekly } = calcReportStats(doc.reports);
@@ -180,10 +192,14 @@ router.get("/:id", async (req, res) => {
       Array.isArray(doc.reports) &&
       doc.reports.some((r) => String(r.user) === userHeaderId);
 
+    // Use populated user's current name, fallback to stored author
+    const displayAuthor = doc.createdBy?.name || doc.createdBy?.email || doc.author || "Anonymous";
+
     res.json({
       success: true,
       recipe: {
         ...doc,
+        author: displayAuthor,
         reportsCount: lifetime,
         weeklyReports: weekly,
         reportedByMe,
@@ -311,6 +327,7 @@ router.post("/quick-safety-check", protect, async (req, res) => {
 /**
  * POST /api/recipes
  * Requires auth
+ * Includes anti-spam validation
  */
 router.post("/", protect, async (req, res) => {
   try {
@@ -339,6 +356,31 @@ router.post("/", protect, async (req, res) => {
 
     if (!title) return res.status(400).json({ success: false, error: "title_required" });
 
+    // Quick spam validation (hard reject for obvious issues)
+    const quickError = quickSpamCheck({ title, ingredients, instructions });
+    if (quickError) {
+      return res.status(400).json({ success: false, error: quickError });
+    }
+
+    // Full spam analysis for soft-flagging
+    const spamAnalysis = analyzeRecipeText({
+      title, description, ingredients, instructions, notes
+    });
+
+    // Hard reject if spam score is very high
+    if (spamAnalysis.isSpam) {
+      console.log('[Recipe Create] Spam detected:', {
+        userId: req.user?._id || req.user?.id,
+        score: spamAnalysis.score,
+        reasons: spamAnalysis.reasons
+      });
+      return res.status(400).json({
+        success: false,
+        error: "Recipe submission flagged as spam. Please ensure your recipe includes meaningful content.",
+        details: spamAnalysis.reasons
+      });
+    }
+
     const cleanTags = (Array.isArray(tags) ? tags : String(tags).split(","))
       .map((t) => String(t).trim().toLowerCase())
       .filter(Boolean);
@@ -346,6 +388,19 @@ router.post("/", protect, async (req, res) => {
     const cleanAllergens = (Array.isArray(allergens) ? allergens : String(allergens).split(","))
       .map((a) => String(a).trim().toLowerCase())
       .filter(Boolean);
+
+    // Determine initial state based on spam analysis
+    // If borderline suspicious, flag for review instead of immediate publish
+    const initialState = spamAnalysis.shouldFlag ? "forReview" : "active";
+    const shouldFlag = spamAnalysis.shouldFlag;
+
+    if (shouldFlag) {
+      console.log('[Recipe Create] Flagged for review:', {
+        userId: req.user?._id || req.user?.id,
+        score: spamAnalysis.score,
+        reasons: spamAnalysis.reasons
+      });
+    }
 
     const doc = await Recipe.create({
       title,
@@ -362,12 +417,22 @@ router.post("/", protect, async (req, res) => {
       tags: cleanTags,
       allergens: cleanAllergens,
       createdBy: req.user?._id || req.user?.id || null,
-      // reports/state default from schema
+      state: initialState,
+      isFlagged: shouldFlag,
+      flaggedAt: shouldFlag ? new Date() : null,
     });
 
-    res.status(201).json({ success: true, recipe: doc });
+    res.status(201).json({
+      success: true,
+      recipe: doc,
+      // Let the user know if their recipe is pending review
+      pendingReview: shouldFlag,
+      message: shouldFlag
+        ? "Recipe submitted for review. It will be visible once approved."
+        : undefined
+    });
   } catch (e) {
-    // console.error("create_recipe_error:", e);
+    console.error("create_recipe_error:", e);
     res.status(500).json({ success: false, error: "create_failed" });
   }
 });

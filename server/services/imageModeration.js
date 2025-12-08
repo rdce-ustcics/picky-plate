@@ -52,13 +52,21 @@ const FOOD_RELATED_LABELS = [
   'bbq', 'barbecue', 'grilled', 'baked'
 ];
 
-// Labels that indicate NON-FOOD primary content (cartoons, graphics, etc.)
-// NOTE: We ALLOW plates, bowls, utensils etc. since food is often served on them!
+// Labels that indicate NON-FOOD content that should be REJECTED
+// Focus on content that is clearly NOT food-related
 const REJECTION_LABELS = [
-  // Only reject actual non-food content (cartoons, illustrations, etc.)
-  'cartoon', 'illustration', 'drawing', 'clipart', 'icon', 'logo',
-  'graphic', 'design', 'art', 'artwork', 'vector', 'animation',
-  'sketch', 'painting', 'digital art', 'comic'
+  // People (without food context)
+  'person', 'people', 'portrait', 'selfie', 'face', 'human',
+  // Animals (not as food)
+  'pet', 'dog', 'cat', 'puppy', 'kitten',
+  // Vehicles/Objects
+  'car', 'vehicle', 'motorcycle', 'building', 'architecture',
+  // Nature without food
+  'landscape', 'mountain', 'beach', 'sunset', 'sky',
+  // Electronics
+  'computer', 'phone', 'screen', 'electronics',
+  // Other non-food
+  'fashion', 'clothing', 'shoe', 'furniture'
 ];
 
 // These are ACCEPTABLE - food is typically served on/with these
@@ -224,43 +232,55 @@ async function analyzeImage(imageSource) {
       score: label.score
     }));
 
-    // Check if image is primarily non-food content (cartoons, illustrations, etc.)
-    // NOTE: We DO NOT reject plates, bowls, utensils - those are fine with food!
-    const isCartoonOrIllustration = detectedLabels.some(label =>
-      REJECTION_LABELS.some(rejectionTerm =>
-        label.description.includes(rejectionTerm) ||
-        rejectionTerm.includes(label.description)
-      ) && label.score >= 0.6 // Higher threshold for rejection
-    );
+    // Helper function for strict word matching (prevents "glasses" matching "glass")
+    const matchesWord = (text, word) => {
+      const regex = new RegExp(`\\b${word}\\b`, 'i');
+      return regex.test(text);
+    };
 
-    // Check if serving items are present (plates, utensils, etc.) - this is GOOD, not bad
-    const hasServingItems = detectedLabels.some(label =>
-      ACCEPTABLE_SERVING_ITEMS.some(servingTerm =>
-        label.description.includes(servingTerm) ||
-        servingTerm.includes(label.description)
-      ) && label.score >= 0.5
-    );
-
-    // Legacy variable name for compatibility
-    const hasNonFoodItems = isCartoonOrIllustration;
-
-    // Check for food-related content
+    // Check for food-related content FIRST - this is the primary requirement
+    // Use strict word matching to prevent false positives like "glasses" matching "glass"
     const foodLabels = detectedLabels.filter(label =>
       FOOD_RELATED_LABELS.some(foodTerm =>
-        label.description.includes(foodTerm) ||
-        foodTerm.includes(label.description)
+        matchesWord(label.description, foodTerm)
       ) && label.score >= LABEL_CONFIDENCE_THRESHOLD
     );
 
+    // Check if serving items are present (plates, utensils, etc.) - this supports food context
+    const hasServingItems = detectedLabels.some(label =>
+      ACCEPTABLE_SERVING_ITEMS.some(servingTerm =>
+        matchesWord(label.description, servingTerm)
+      ) && label.score >= 0.5
+    );
+
+    // Check for non-food content (people, pets, cars, etc.)
+    const nonFoodLabels = detectedLabels.filter(label =>
+      REJECTION_LABELS.some(rejectionTerm =>
+        matchesWord(label.description, rejectionTerm)
+      ) && label.score >= 0.6
+    );
+
     // Image is food-related if:
-    // 1. Has enough food labels, OR
-    // 2. Has serving items (plate/bowl/utensils) with at least some food indication
-    // AND not a cartoon/illustration
+    // 1. Has food labels (cartoons/illustrations of food ARE acceptable!)
+    // 2. OR has serving items with cooking/ingredient context
     const hasSufficientFoodLabels = foodLabels.length >= MIN_FOOD_LABELS;
     const hasServingWithFood = hasServingItems && foodLabels.length >= 1;
-    const isFoodRelated = (hasSufficientFoodLabels || hasServingWithFood) && !isCartoonOrIllustration;
+    const isFoodRelated = hasSufficientFoodLabels || hasServingWithFood;
 
-    // Build response
+    // Check for non-food items - be more aggressive
+    // If NO food is detected, reject the image
+    const hasNonFoodItems = !isFoodRelated;
+
+    // Log for debugging
+    console.log('[Image Moderation] Analysis:', {
+      foodLabelsFound: foodLabels.map(l => l.description),
+      nonFoodLabelsFound: nonFoodLabels.map(l => l.description),
+      allLabels: detectedLabels.slice(0, 10).map(l => l.description),
+      isFoodRelated,
+      hasNonFoodItems
+    });
+
+    // Build response - MUST have food to be approved
     const isApproved = inappropriateFlags.length === 0 && isFoodRelated;
 
     return {
@@ -295,11 +315,10 @@ function generateMessage(inappropriateFlags, isFoodRelated, hasNonFoodItems) {
     return `Image rejected: Contains ${inappropriateFlags.join(', ')}. Please upload an appropriate food image.`;
   }
   if (hasNonFoodItems) {
-    // hasNonFoodItems now only refers to cartoons/illustrations
-    return 'Image rejected: This appears to be a cartoon or illustration. Please upload a real photo of your dish.';
+    return 'Image rejected: This appears to be a non-food image (person, pet, etc.). Please upload a photo of your dish.';
   }
   if (!isFoodRelated) {
-    return 'Image rejected: This doesn\'t appear to be a food-related image. Please upload a photo of your dish.';
+    return 'Image rejected: No food detected in this image. Please upload a photo of your dish (real photos or illustrations are both accepted).';
   }
   return 'Image approved!';
 }

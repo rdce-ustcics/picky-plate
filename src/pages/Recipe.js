@@ -40,12 +40,13 @@ const COOK_TIME_OPTIONS = [
 const SERVING_SIZE_OPTIONS = ["1","1-2","3-4","5-6","7-8","9+"];
 
 const REPORT_REASONS = [
-  "Inappropriate content",
-  "Spam / Advertising",
-  "Copyright / Plagiarism",
-  "Offensive language",
-  "Health or safety risk",
-  "Other",
+  { label: "Inappropriate content", value: "inappropriate" },
+  { label: "Spam / Advertising", value: "spam" },
+  { label: "Copyright / Plagiarism", value: "copyright" },
+  { label: "Offensive language", value: "offensive" },
+  { label: "Incorrect information", value: "incorrect_info" },
+  { label: "Duplicate recipe", value: "duplicate" },
+  { label: "Other", value: "other" },
 ];
 
 
@@ -98,6 +99,7 @@ export default function CommunityRecipes() {
   const [showTagMenu, setShowTagMenu] = useState(false);
   const [showAllergenMenu, setShowAllergenMenu] = useState(false);
   const [showMine, setShowMine] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   // NEW: State for dropdown positions
@@ -152,6 +154,7 @@ export default function CommunityRecipes() {
     image: null
   });
   const [uploadLoading, setUploadLoading] = useState(false);
+  const uploadingRef = useRef(false); // Ref-based guard against double-submission
   const [uploadImageValidating, setUploadImageValidating] = useState(false);
   const [uploadImageValidation, setUploadImageValidation] = useState(null);
 
@@ -176,6 +179,14 @@ export default function CommunityRecipes() {
     if (servingsFilter) count += 1;
     return count;
   }, [selectedTags, excludeAllergens, excludeTerms, prepFilter, cookFilter, difficultyFilter, servingsFilter]);
+
+  // Filter items by favorites when showFavorites is active
+  const displayedItems = useMemo(() => {
+    if (showFavorites) {
+      return items.filter(recipe => favorites.includes(recipe._id));
+    }
+    return items;
+  }, [items, favorites, showFavorites]);
 
   // NEW: Function to calculate dropdown position
   const calculateDropdownPosition = useCallback((buttonRef) => {
@@ -565,6 +576,7 @@ export default function CommunityRecipes() {
     setDifficultyFilter("");
     setServingsFilter("");
     setShowMine(false);
+    setShowFavorites(false);
     setPage(1);
     // Clear URL params
     setSearchParams({}, { replace: true });
@@ -794,7 +806,7 @@ export default function CommunityRecipes() {
   }
 
   async function submitReport() {
-    if (!selectedRecipe || !isAuthenticated || !reportReason.trim()) return;
+    if (!selectedRecipe || !isAuthenticated || !reportReason) return;
     setReportLoading(true);
     try {
       const headers = { "Content-Type": "application/json", ...(authHeaders ? authHeaders() : {}) };
@@ -803,7 +815,7 @@ export default function CommunityRecipes() {
       const res = await fetch(`${API_BASE}/api/recipes/${selectedRecipe._id}/report`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ reason: reportReason.trim(), comment: reportComment.trim() }),
+        body: JSON.stringify({ reason: reportReason, description: reportComment.trim() }),
       });
 
       const data = await res.json();
@@ -1252,6 +1264,8 @@ export default function CommunityRecipes() {
     });
     setUploadImageValidating(false);
     setUploadImageValidation(null);
+    setUploadLoading(false);
+    uploadingRef.current = false;
   };
 
   const handleUploadFormChange = (field, value) => {
@@ -1427,8 +1441,11 @@ export default function CommunityRecipes() {
   };
 
   const handleUploadSubmit = async () => {
+    // Prevent double-submission using both state and ref
+    if (uploadLoading || uploadingRef.current) return;
     if (!validateUploadForm()) return;
 
+    uploadingRef.current = true;
     setUploadLoading(true);
 
     const recipeData = {
@@ -1490,6 +1507,7 @@ export default function CommunityRecipes() {
         text: 'Please try again.',
       });
     } finally {
+      uploadingRef.current = false;
       setUploadLoading(false);
     }
   };
@@ -1518,11 +1536,19 @@ export default function CommunityRecipes() {
 
             <div className="cr-header-actions">
               <button
-                onClick={() => { setShowMine((v) => !v); setPage(1); }}
+                onClick={() => { setShowMine((v) => !v); setShowFavorites(false); setPage(1); }}
                 className={`cr-btn-toggle ${showMine ? 'active' : ''}`}
               >
                 <UtensilsCrossed className="w-4 h-4" />
                 {showMine ? "My Recipes" : "All Recipes"}
+              </button>
+
+              <button
+                onClick={() => { setShowFavorites((v) => !v); setShowMine(false); }}
+                className={`cr-btn-toggle ${showFavorites ? 'active' : ''}`}
+              >
+                <Heart className={`w-4 h-4 ${showFavorites ? 'fill-current' : ''}`} />
+                {showFavorites ? `Liked (${favorites.length})` : "Liked"}
               </button>
 
               {/* Changed from Link to button that opens modal */}
@@ -1600,7 +1626,7 @@ export default function CommunityRecipes() {
               </button>
 
               {/* Clear Filters */}
-              {(search || searchInput || activeFiltersCount > 0 || showMine) && (
+              {(search || searchInput || activeFiltersCount > 0 || showMine || showFavorites) && (
                 <button onClick={resetFilters} className="cr-clear-btn">
                   <X className="w-4 h-4" />
                   Clear
@@ -1776,21 +1802,33 @@ export default function CommunityRecipes() {
 
         {/* Recipe Grid */}
         <div className="cr-grid-container">
-          {items.length === 0 ? (
+          {displayedItems.length === 0 ? (
             <div className="cr-empty-state">
-              <ChefHat className="cr-empty-icon" />
-              <h3 className="cr-empty-title">No recipes found</h3>
-              <p className="cr-empty-text">
-                Try adjusting your filters or{" "}
-                <button onClick={openUploadModal} className="cr-empty-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                  be the first to add one!
-                </button>
-              </p>
+              {showFavorites ? (
+                <>
+                  <Heart className="cr-empty-icon" />
+                  <h3 className="cr-empty-title">No liked recipes yet</h3>
+                  <p className="cr-empty-text">
+                    Click the heart icon on recipes you love to save them here!
+                  </p>
+                </>
+              ) : (
+                <>
+                  <ChefHat className="cr-empty-icon" />
+                  <h3 className="cr-empty-title">No recipes found</h3>
+                  <p className="cr-empty-text">
+                    Try adjusting your filters or{" "}
+                    <button onClick={openUploadModal} className="cr-empty-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                      be the first to add one!
+                    </button>
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <>
               <div className="cr-recipe-grid">
-                {items.map((recipe) => (
+                {displayedItems.map((recipe) => (
                   <div
                     key={recipe._id}
                     className="recipe-card"
@@ -2128,7 +2166,7 @@ export default function CommunityRecipes() {
             >
               <option value="">Select a reason…</option>
               {REPORT_REASONS.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <option key={r.value} value={r.value}>{r.label}</option>
               ))}
             </select>
 
