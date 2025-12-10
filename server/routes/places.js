@@ -2,7 +2,12 @@
 /* eslint-disable no-await-in-loop */
 const express = require("express");
 const axios = require("axios");
-const FoodPlace = require("../models/FoodPlace");
+
+// Use new Restaurant model (supports both restaurants_2025 and foodplaces via env var)
+const Restaurant = require("../models/Restaurant");
+
+// Legacy import for backward compatibility (if needed for some operations)
+// const Restaurant = require("../models/Restaurant");
 
 const {
   // bounds / filters
@@ -62,8 +67,8 @@ router.get("/nearby", async (req, res) => {
     // When fetching ALL restaurants (radius=0), allow much higher limit
     const requestedLimit = parseInt(limit) || 100;
     const limitNum = maxDistance === null
-      ? Math.min(requestedLimit, 20000) // Allow up to 20k for "all" mode
-      : Math.min(requestedLimit, 10000); // Allow up to 10k for geo queries
+      ? Math.min(requestedLimit, 50000) // Allow up to 50k for "all" mode
+      : Math.min(requestedLimit, 20000); // Allow up to 20k for geo queries
     const skip = (pageNum - 1) * limitNum;
 
     // Build match conditions for filtering
@@ -79,12 +84,12 @@ router.get("/nearby", async (req, res) => {
       east: 121.15   // Marikina/Rizal eastern edge
     };
 
-    // Add NCR boundary conditions
-    matchConditions.lat = {
+    // Add NCR boundary conditions (use latitude/longitude for new schema)
+    matchConditions.latitude = {
       $gte: METRO_MANILA_BOUNDS.south,
       $lte: METRO_MANILA_BOUNDS.north
     };
-    matchConditions.lng = {
+    matchConditions.longitude = {
       $gte: METRO_MANILA_BOUNDS.west,
       $lte: METRO_MANILA_BOUNDS.east
     };
@@ -92,7 +97,7 @@ router.get("/nearby", async (req, res) => {
     if (cuisine) {
       const cuisineTypes = cuisine.split(",").map(c => c.trim().toLowerCase());
       matchConditions.$or = [
-        { types: { $in: cuisineTypes } },
+        { type: { $in: cuisineTypes } },
         { cuisine: { $regex: cuisineTypes.join("|"), $options: "i" } }
       ];
     }
@@ -106,7 +111,7 @@ router.get("/nearby", async (req, res) => {
     }
 
     if (city) {
-      matchConditions.city = { $regex: city, $options: "i" };
+      matchConditions["address.city"] = { $regex: city, $options: "i" };
     }
 
     if (search) {
@@ -119,12 +124,12 @@ router.get("/nearby", async (req, res) => {
       // "All restaurants" mode - no distance filter, use simple find
       const query = Object.keys(matchConditions).length > 0 ? matchConditions : {};
 
-      total = await FoodPlace.countDocuments(query);
+      total = await Restaurant.countDocuments(query);
 
       let sortOption = { rating: -1 }; // Default sort by rating
       if (sortBy === "name") sortOption = { name: 1 };
 
-      restaurants = await FoodPlace.find(query)
+      restaurants = await Restaurant.find(query)
         .sort(sortOption)
         .skip(skip)
         .limit(limitNum)
@@ -160,7 +165,7 @@ router.get("/nearby", async (req, res) => {
 
       // Get total count (without pagination)
       const countPipeline = [...pipeline, { $count: "total" }];
-      const countResult = await FoodPlace.aggregate(countPipeline);
+      const countResult = await Restaurant.aggregate(countPipeline);
       total = countResult[0]?.total || 0;
 
       // Add pagination
@@ -168,33 +173,43 @@ router.get("/nearby", async (req, res) => {
       pipeline.push({ $limit: limitNum });
 
       // Execute query
-      restaurants = await FoodPlace.aggregate(pipeline);
+      restaurants = await Restaurant.aggregate(pipeline);
     }
 
     // Format response to match frontend expectations
+    // Maps new schema fields to old field names for backward compatibility
     const formattedRestaurants = restaurants.map(r => ({
-      id: r.providerId || r._id.toString(),
+      id: r.sourceId || r._id.toString(),
       name: r.name,
-      lat: r.lat,
-      lng: r.lng,
-      address: r.address,
-      rating: r.rating,
-      userRatingCount: r.userRatingCount,
-      priceLevel: r.priceLevel,
-      priceLevelNum: r.priceLevelNum,
+      // Map new field names to old for frontend compatibility
+      lat: r.latitude || r.lat,
+      lng: r.longitude || r.lng,
+      address: r.address?.formatted || r.address,
+      rating: r.rating || null,
+      userRatingCount: r.userRatingCount || null,
+      priceLevel: r.priceLevel || null,
+      priceLevelNum: r.priceLevelNum || null,
       cuisine: r.cuisine,
-      locality: r.locality,
-      city: r.city,
-      hasOnlineDelivery: r.hasOnlineDelivery,
-      hasTableBooking: r.hasTableBooking,
-      isDeliveringNow: r.isDeliveringNow,
-      averageCostForTwo: r.averageCostForTwo,
-      currency: r.currency,
-      googleMapsUri: r.googleMapsUri,
-      zomatoUrl: r.zomatoUrl,
-      types: r.types,
-      // Handle null distance (when fetching all restaurants without location)
-      distance: r.distance != null ? Math.round(r.distance) : null,
+      locality: r.locality || r.address?.barangay,
+      city: r.address?.city || r.city,
+      hasOnlineDelivery: r.hasOnlineDelivery || false,
+      hasTableBooking: r.hasTableBooking || false,
+      isDeliveringNow: r.isDeliveringNow || false,
+      averageCostForTwo: r.averageCostForTwo || null,
+      currency: r.currency || "₱",
+      googleMapsUri: r.googleMapsUri || null,
+      zomatoUrl: r.zomatoUrl || null,
+      // New schema has single type, convert to array for frontend
+      types: r.types || (r.type ? [r.type] : []),
+      // New fields from restaurants_2025
+      type: r.type,
+      brand: r.brand,
+      phone: r.contact?.phone,
+      website: r.contact?.website,
+      openingHours: r.openingHours,
+      // Handle distance - $geoNear returns METERS, convert to KM for frontend
+      // When radius=0 (all mode), distance is null and frontend calculates client-side
+      distance: r.distance != null ? (r.distance / 1000) : null,  // Convert to km
       distanceKm: r.distance != null ? (r.distance / 1000).toFixed(2) : null
     }));
 
@@ -225,7 +240,7 @@ router.get("/nearby", async (req, res) => {
 // Get all unique cities for dropdown filter
 router.get("/cities", async (_req, res) => {
   try {
-    const cities = await FoodPlace.distinct("city");
+    const cities = await Restaurant.distinct("address.city");
     const filtered = cities.filter(c => c && c.trim()).sort();
     res.json({ cities: filtered });
   } catch (err) {
@@ -236,8 +251,14 @@ router.get("/cities", async (_req, res) => {
 // Get all unique cuisine types for filter
 router.get("/cuisines", async (_req, res) => {
   try {
-    const types = await FoodPlace.distinct("types");
-    const filtered = types.filter(t => t && t.trim()).sort();
+    // Get both cuisine field and type field for comprehensive list
+    const [cuisines, types] = await Promise.all([
+      Restaurant.distinct("cuisine"),
+      Restaurant.distinct("type")
+    ]);
+    // Combine and filter
+    const combined = [...new Set([...cuisines, ...types])];
+    const filtered = combined.filter(t => t && t.trim()).sort();
     res.json({ cuisines: filtered });
   } catch (err) {
     res.status(500).json({ error: "Failed to get cuisines" });
@@ -247,14 +268,14 @@ router.get("/cuisines", async (_req, res) => {
 // Get restaurant stats
 router.get("/stats", async (_req, res) => {
   try {
-    const [total, withRating, cities] = await Promise.all([
-      FoodPlace.countDocuments(),
-      FoodPlace.countDocuments({ rating: { $gt: 0 } }),
-      FoodPlace.distinct("city")
+    const [total, withCuisine, cities] = await Promise.all([
+      Restaurant.countDocuments(),
+      Restaurant.countDocuments({ cuisine: { $exists: true, $ne: null } }),
+      Restaurant.distinct("address.city")
     ]);
     res.json({
       total,
-      withRating,
+      withCuisine,
       cities: cities.filter(c => c).length
     });
   } catch (err) {
@@ -291,18 +312,18 @@ router.get("/saved", async (req, res) => {
     const filter = {};
     if (req.query.types) {
       const arr = String(req.query.types).split(",").map(s => s.trim()).filter(Boolean);
-      if (arr.length) filter.types = { $in: arr };
+      if (arr.length) filter.type = { $in: arr };
     }
-    if (req.query.provider) filter.provider = String(req.query.provider);
+    if (req.query.provider) filter.source = String(req.query.provider);
 
     if (countOnly) {
-      const total = await FoodPlace.countDocuments(filter);
+      const total = await Restaurant.countDocuments(filter);
       return res.json({ count: total });
     }
 
     const [docs, total] = await Promise.all([
-      FoodPlace.find(filter).sort({ name: 1 }).skip(skip).limit(limit).lean(),
-      FoodPlace.countDocuments(filter),
+      Restaurant.find(filter).sort({ name: 1 }).skip(skip).limit(limit).lean(),
+      Restaurant.countDocuments(filter),
     ]);
     res.json({ places: docs, total, skip, limit });
   } catch (err) {
@@ -315,11 +336,11 @@ router.get("/saved/export", async (req, res) => {
     const filter = {};
     if (req.query.types) {
       const arr = String(req.query.types).split(",").map(s => s.trim()).filter(Boolean);
-      if (arr.length) filter.types = { $in: arr };
+      if (arr.length) filter.type = { $in: arr };
     }
-    if (req.query.provider) filter.provider = String(req.query.provider);
+    if (req.query.provider) filter.source = String(req.query.provider);
 
-    const docs = await FoodPlace.find(filter).sort({ name: 1 }).lean();
+    const docs = await Restaurant.find(filter).sort({ name: 1 }).lean();
     res.setHeader("Content-Type", "application/json");
     res.setHeader("Content-Disposition", 'attachment; filename="ncr_food_places.json"');
     res.send(JSON.stringify({ exportedAt: new Date().toISOString(), count: docs.length, places: docs }, null, 2));
@@ -419,30 +440,29 @@ router.get("/search-ncr", async (req, res) => {
     });
   } catch (err) {
     // ---- Mongo fallback (online/offline) ----
-    const q = { lat: { $gte: NCR_BOUNDS.south, $lte: NCR_BOUNDS.north },
-                lng: { $gte: NCR_BOUNDS.west, $lte: NCR_BOUNDS.east } };
+    const q = { latitude: { $gte: NCR_BOUNDS.south, $lte: NCR_BOUNDS.north },
+                longitude: { $gte: NCR_BOUNDS.west, $lte: NCR_BOUNDS.east } };
     if (keyword && keyword.trim()) {
       const re = new RegExp(keyword.trim(), "i");
-      q.$or = [{ name: re }, { address: re }];
+      q.$or = [{ name: re }, { "address.formatted": re }];
     }
     if (types) {
       const t = String(types).split(",").map(s=>s.trim()).filter(Boolean);
-      if (t.length) q.types = { $in: t };
+      if (t.length) q.type = { $in: t };
     }
-    if (ratingMin) q.rating = { $gte: Number(ratingMin) };
 
-    const docs = await FoodPlace.find(q).limit(20000).lean();
+    const docs = await Restaurant.find(q).limit(20000).lean();
     const places = docs.map((d) => ({
-      id: d.googlePlaceId || d.providerId || d._id.toString(),
+      id: d.sourceId || d._id.toString(),
       displayName: { text: d.name },
-      formattedAddress: d.address,
-      location: { latitude: d.lat, longitude: d.lng },
-      rating: d.rating,
-      userRatingCount: d.userRatingCount,
-      priceLevel: Number.isFinite(d.priceLevelNum) ? d.priceLevelNum : d.priceLevel,
-      types: d.types || [],
+      formattedAddress: d.address?.formatted || d.address,
+      location: { latitude: d.latitude, longitude: d.longitude },
+      rating: d.rating || null,
+      userRatingCount: d.userRatingCount || null,
+      priceLevel: d.priceLevelNum || d.priceLevel || null,
+      types: d.type ? [d.type] : [],
       googleMapsUri: d.googleMapsUri || "",
-      websiteUri: d.websiteUri || "",
+      websiteUri: d.contact?.website || "",
     }));
     res.json({ places, center: { lat: 14.5995, lng: 120.9842 }, usedEndpoint: "offline-mongo" });
   }
@@ -513,7 +533,7 @@ router.post("/admin/crawl-ncr-food", requireAdmin, async (req, res) => {
         },
       };
     });
-    const result = ops.length ? await FoodPlace.bulkWrite(ops, { ordered: false }) : null;
+    const result = ops.length ? await Restaurant.bulkWrite(ops, { ordered: false }) : null;
 
     res.json({
       ok: true,
@@ -529,12 +549,12 @@ router.post("/admin/crawl-ncr-food", requireAdmin, async (req, res) => {
 // -------- Admin: fix indexes (safe to re-run) ----------
 router.post("/admin/fix-indexes", requireAdmin, async (_req, res) => {
   try {
-    try { await FoodPlace.collection.dropIndex("placeId_1"); } catch {}
-    await FoodPlace.collection.createIndex({ googlePlaceId: 1 }, { unique: true, background: true, sparse: true });
-    await FoodPlace.collection.createIndex({ provider: 1, providerId: 1 }, { unique: true, background: true, sparse: true });
-    await FoodPlace.collection.createIndex({ name: 1 }, { background: true });
-    await FoodPlace.collection.createIndex({ lat: 1, lng: 1 }, { background: true });
-    const idx = await FoodPlace.collection.indexes();
+    try { await Restaurant.collection.dropIndex("placeId_1"); } catch {}
+    await Restaurant.collection.createIndex({ googlePlaceId: 1 }, { unique: true, background: true, sparse: true });
+    await Restaurant.collection.createIndex({ provider: 1, providerId: 1 }, { unique: true, background: true, sparse: true });
+    await Restaurant.collection.createIndex({ name: 1 }, { background: true });
+    await Restaurant.collection.createIndex({ lat: 1, lng: 1 }, { background: true });
+    const idx = await Restaurant.collection.indexes();
     res.json({ ok: true, indexes: idx });
   } catch (err) {
     res.status(500).json({ error: "index fix failed", detail: err.message });

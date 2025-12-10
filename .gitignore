@@ -21,6 +21,7 @@ npm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+nul
 
 # IDE
 .vscode/
@@ -28,3 +29,19 @@ Thumbs.db
 
 # ESLint
 .eslintcache
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Large data files (too big for Git)
+data-sources/*.json
+data-sources/data/*.json
+!data-sources/README*.md
+public/data/*.json
+data/
+
+# Debug/temporary scripts
+scripts/test-*.js
+scripts/debug-*.js
+scripts/check-*.js
+scripts/diagnose-*.js

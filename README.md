@@ -1,70 +1,164 @@
-# Getting Started with Create React App
+# Picky Plate - Metro Manila Restaurant Locator
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A restaurant discovery app featuring **44,000+ restaurants** in Metro Manila, Philippines with interactive maps, clustering, and smart search.
 
-## Available Scripts
+## Features
 
-In the project directory, you can run:
+- **44,800+ Restaurants** - Comprehensive Metro Manila coverage from OSM + Overture Maps
+- **Interactive Map** - Google Maps with SuperCluster marker clustering
+- **Smart Search** - Search by name, cuisine, or location
+- **Filters** - By type (restaurant, cafe, fast food, bakery, bar), price, rating
+- **Near Me** - Find restaurants closest to your location
+- **Google Maps Style UI** - Familiar popup design with images
 
-### `npm start`
+## Database Info
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+| Field | Value |
+|-------|-------|
+| Database | MongoDB |
+| Collection (Active) | `restaurants_2025` |
+| Collection (Backup) | `foodplaces` |
+| Total Records | 44,816 |
+| Data Sources | OpenStreetMap + Overture Maps |
+| Last Refresh | December 2025 |
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Data Coverage
 
-### `npm test`
+| Type | Count |
+|------|-------|
+| Restaurants | ~15,000 |
+| Fast Food | ~8,000 |
+| Cafes | ~6,000 |
+| Bakeries | ~3,000 |
+| Bars | ~2,000 |
+| Other | ~10,000 |
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Getting Started
 
-### `npm run build`
+### Prerequisites
+- Node.js 18+
+- MongoDB (local or Atlas)
+- Google Maps API Key
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Installation
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```bash
+# Clone repo
+git clone <your-repo-url>
+cd picky-plate
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+# Install dependencies
+npm install
 
-### `npm run eject`
+# Set up environment variables
+cp server/.env.example server/.env
+# Edit server/.env with your values
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+# Start development server (runs both frontend and backend)
+npm run dev
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Environment Variables
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Key variables in `server/.env`:
+```env
+MONGO_URI=mongodb://127.0.0.1:27017/pickaplate
+RESTAURANT_COLLECTION=restaurants_2025
+PORT=4000
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Frontend variables in `.env`:
+```env
+REACT_APP_GOOGLE_MAPS_API_KEY=your_google_maps_key
+REACT_APP_API_URL=http://localhost:4000
+```
 
-## Learn More
+## Project Structure
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```
+picky-plate/
+├── server/
+│   ├── routes/
+│   │   └── places.js              # Restaurant API endpoints
+│   └── models/
+│       └── Restaurant.js          # MongoDB schema for restaurants_2025
+├── src/
+│   ├── pages/
+│   │   ├── RestaurantLocator.js   # Main map component
+│   │   └── RestaurantLocator.css  # Google Maps style CSS
+│   └── utils/
+│       └── getRestaurantImage.js  # Cuisine-based placeholder images
+├── scripts/                       # Data pipeline scripts
+│   ├── fetch-osm-expanded.js      # Fetch from OpenStreetMap
+│   ├── fetch-overture.js          # Fetch from Overture Maps
+│   ├── transform-osm.js           # Transform OSM data
+│   ├── transform-overture.js      # Transform Overture data
+│   ├── merge-and-dedupe.js        # Merge & deduplicate
+│   └── import-to-new-collection.js # Import to MongoDB
+└── data-sources/                  # (gitignored) Raw data files
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Annual Data Refresh
 
-### Code Splitting
+To refresh data for a new year, see `docs/DATA_REFRESH_GUIDE.md`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+Quick steps:
+```bash
+# 1. Fetch fresh data
+node scripts/fetch-osm-expanded.js
+node scripts/fetch-overture.js
 
-### Analyzing the Bundle Size
+# 2. Transform
+node scripts/transform-osm.js
+node scripts/transform-overture.js
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+# 3. Merge and import
+node scripts/merge-and-dedupe.js
+node scripts/import-to-new-collection.js
 
-### Making a Progressive Web App
+# 4. Update .env
+RESTAURANT_COLLECTION=restaurants_2026
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## API Endpoints
 
-### Advanced Configuration
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/places/nearby` | GET | Get restaurants near location |
+| `/api/places/cuisines` | GET | List all cuisines |
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+### Query Parameters
 
-### Deployment
+```
+GET /api/places/nearby?lat=14.5&lng=121.0&radius=2000&cuisine=filipino&limit=50
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+## Tech Stack
 
-### `npm run build` fails to minify
+- **Frontend**: React.js, Google Maps API
+- **Backend**: Node.js, Express
+- **Database**: MongoDB with 2dsphere indexes
+- **Clustering**: SuperCluster (use-supercluster)
+- **Images**: Unsplash (cuisine-based placeholders)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+## Data Sources & Attribution
+
+- **OpenStreetMap**: Community-verified POIs - [openstreetmap.org/copyright](https://www.openstreetmap.org/copyright)
+- **Overture Maps**: Meta, Microsoft, Amazon, TomTom data - [overturemaps.org](https://overturemaps.org)
+
+## Changelog
+
+### December 2025
+- Fresh 2025 data refresh (44,816 restaurants)
+- Added SuperCluster marker clustering for 46k+ markers
+- Google Maps style InfoWindow popup design
+- Google Maps style teardrop pin markers
+- Type-based marker colors with emojis
+- Interactive map legend
+- Fixed distance calculation (meters vs km)
+- Removed water markers (Laguna de Bay, Manila Bay)
+- Cuisine-based placeholder images
+
+---
+
+Made with love for Metro Manila food lovers

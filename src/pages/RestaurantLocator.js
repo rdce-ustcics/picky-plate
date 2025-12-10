@@ -3,10 +3,57 @@ import { useLocation } from "react-router-dom";
 import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from "@vis.gl/react-google-maps";
 import useSupercluster from "use-supercluster";
 import LoadingModal from "../components/LoadingModal";
+import { getRestaurantImage as getPlaceholderImage } from "../utils/getRestaurantImage";
 import "./RestaurantLocator.css";
 
-// SuperCluster-based Markers component - FAST clustering for 18k+ points
-function ClusteredMarkers({ restaurants, onMarkerClick, getMarkerColor, bounds, zoom }) {
+// Restaurant type colors for markers
+const TYPE_COLORS = {
+  restaurant: '#E65100',  // Orange
+  fast_food: '#C62828',   // Red
+  cafe: '#5D4037',        // Brown
+  bakery: '#F9A825',      // Golden
+  bar: '#7B1FA2',         // Purple
+  ice_cream: '#00ACC1',   // Cyan
+  food_court: '#388E3C',  // Green
+  food_stand: '#FF7043',  // Deep Orange
+  default: '#1976D2'      // Blue
+};
+
+// Restaurant type emojis
+const TYPE_EMOJIS = {
+  restaurant: '🍽️',
+  fast_food: '🍔',
+  cafe: '☕',
+  bakery: '🥐',
+  bar: '🍺',
+  ice_cream: '🍦',
+  food_court: '🏬',
+  food_stand: '🥡',
+  default: '📍'
+};
+
+// Get cluster color based on count
+function getClusterColor(count) {
+  if (count >= 1000) return { bg: '#B71C1C', text: 'white' };      // Dark red
+  if (count >= 500) return { bg: '#C62828', text: 'white' };       // Red
+  if (count >= 100) return { bg: '#EF6C00', text: 'white' };       // Orange
+  if (count >= 50) return { bg: '#F9A825', text: '#5D4037' };      // Golden
+  if (count >= 20) return { bg: '#FDD835', text: '#5D4037' };      // Yellow
+  return { bg: '#81C784', text: '#1B5E20' };                        // Green
+}
+
+// Get cluster size based on count
+function getClusterSize(count) {
+  if (count >= 1000) return 60;
+  if (count >= 500) return 52;
+  if (count >= 100) return 44;
+  if (count >= 50) return 38;
+  if (count >= 20) return 32;
+  return 28;
+}
+
+// SuperCluster-based Markers component - FAST clustering for 46k+ points
+function ClusteredMarkers({ restaurants, onMarkerClick, onClusterClick, bounds, zoom }) {
   // Convert restaurants to GeoJSON points for SuperCluster
   const points = useMemo(() => {
     return restaurants
@@ -31,9 +78,10 @@ function ClusteredMarkers({ restaurants, onMarkerClick, getMarkerColor, bounds, 
     bounds: bounds || [-180, -85, 180, 85],
     zoom: zoom || 11,
     options: {
-      radius: 75,
-      maxZoom: 16,
-      minZoom: 0
+      radius: 80,
+      maxZoom: 18,
+      minZoom: 0,
+      minPoints: 3
     }
   });
 
@@ -44,17 +92,21 @@ function ClusteredMarkers({ restaurants, onMarkerClick, getMarkerColor, bounds, 
         const { cluster: isCluster, point_count: pointCount, restaurant } = cluster.properties;
 
         if (isCluster) {
-          // Render cluster marker - Dashboard golden style
-          const size = Math.min(55, 24 + (pointCount / restaurants.length) * 100);
+          // Render cluster marker with color based on count
+          const size = getClusterSize(pointCount);
+          const colors = getClusterColor(pointCount);
+
           return (
             <AdvancedMarker
               key={`cluster-${cluster.id}`}
               position={{ lat, lng }}
               onClick={() => {
+                // Zoom into the cluster
                 const expansionZoom = Math.min(
                   supercluster.getClusterExpansionZoom(cluster.id),
-                  16
+                  18
                 );
+                onClusterClick({ lat, lng }, expansionZoom);
               }}
             >
               <div
@@ -62,45 +114,45 @@ function ClusteredMarkers({ restaurants, onMarkerClick, getMarkerColor, bounds, 
                 style={{
                   width: `${size}px`,
                   height: `${size}px`,
-                  background: `linear-gradient(135deg, #F5B83D 0%, #E8A828 100%)`,
+                  background: colors.bg,
                   borderRadius: '50%',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#92400E',
+                  color: colors.text,
                   fontWeight: '800',
-                  fontSize: size > 40 ? '15px' : '13px',
-                  boxShadow: '0 4px 16px rgba(245, 184, 61, 0.4)',
-                  border: '4px solid white',
+                  fontSize: size > 44 ? '14px' : '12px',
+                  boxShadow: `0 4px 12px ${colors.bg}66`,
+                  border: '3px solid white',
                   cursor: 'pointer',
-                  fontFamily: "'Nunito', 'Poppins', sans-serif"
+                  fontFamily: "'Nunito', 'Poppins', sans-serif",
+                  transition: 'transform 0.2s ease'
                 }}
+                title={`${pointCount} restaurants - Click to zoom`}
               >
-                {pointCount}
+                {pointCount >= 1000 ? `${(pointCount / 1000).toFixed(1)}k` : pointCount}
               </div>
             </AdvancedMarker>
           );
         }
 
-        // Render individual restaurant marker - Dashboard style
+        // Render individual restaurant marker - Google Maps Pin Style
+        const type = restaurant?.type || 'default';
+        const color = TYPE_COLORS[type] || TYPE_COLORS.default;
+        const emoji = TYPE_EMOJIS[type] || TYPE_EMOJIS.default;
+
         return (
           <AdvancedMarker
             key={`restaurant-${restaurant?.id || cluster.id}`}
             position={{ lat, lng }}
             onClick={() => onMarkerClick(restaurant)}
           >
-            <div
-              className="restaurant-marker"
-              style={{
-                width: '28px',
-                height: '28px',
-                background: getMarkerColor(restaurant?.priceLevelNum),
-                borderRadius: '50%',
-                border: '4px solid white',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-                cursor: 'pointer'
-              }}
-            />
+            <div className="gm-pin-marker" title={restaurant?.name || 'Restaurant'}>
+              <div className="gm-pin-head" style={{ background: color }}>
+                <span className="gm-pin-icon">{emoji}</span>
+              </div>
+              <div className="gm-pin-tail" style={{ borderTopColor: color }} />
+            </div>
           </AdvancedMarker>
         );
       })}
@@ -135,6 +187,65 @@ function MapBoundsTracker({ onBoundsChange }) {
   }, [map, onBoundsChange]);
 
   return null;
+}
+
+// Map Legend Component - shows marker type colors
+function MapLegend({ isVisible, onToggle }) {
+  const legendItems = [
+    { type: 'restaurant', label: 'Restaurant', emoji: '🍽️', color: TYPE_COLORS.restaurant },
+    { type: 'fast_food', label: 'Fast Food', emoji: '🍔', color: TYPE_COLORS.fast_food },
+    { type: 'cafe', label: 'Cafe', emoji: '☕', color: TYPE_COLORS.cafe },
+    { type: 'bakery', label: 'Bakery', emoji: '🥐', color: TYPE_COLORS.bakery },
+    { type: 'bar', label: 'Bar', emoji: '🍺', color: TYPE_COLORS.bar },
+    { type: 'ice_cream', label: 'Ice Cream', emoji: '🍦', color: TYPE_COLORS.ice_cream },
+  ];
+
+  const clusterItems = [
+    { count: '1000+', color: '#B71C1C', label: 'Very Dense' },
+    { count: '100-999', color: '#EF6C00', label: 'Dense' },
+    { count: '20-99', color: '#FDD835', label: 'Moderate' },
+    { count: '<20', color: '#81C784', label: 'Sparse' },
+  ];
+
+  return (
+    <div className={`map-legend ${isVisible ? 'expanded' : 'collapsed'}`}>
+      <button className="legend-toggle" onClick={onToggle}>
+        {isVisible ? '◀' : '▶'} Legend
+      </button>
+
+      {isVisible && (
+        <div className="legend-content">
+          <div className="legend-section">
+            <h4>Restaurant Types</h4>
+            {legendItems.map(item => (
+              <div key={item.type} className="legend-item">
+                <span
+                  className="legend-marker"
+                  style={{ borderColor: item.color }}
+                >
+                  {item.emoji}
+                </span>
+                <span className="legend-label">{item.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="legend-section">
+            <h4>Cluster Density</h4>
+            {clusterItems.map(item => (
+              <div key={item.count} className="legend-item">
+                <span
+                  className="legend-cluster"
+                  style={{ background: item.color }}
+                />
+                <span className="legend-label">{item.count} - {item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // Move calculateDistance outside component to avoid recreation
@@ -279,14 +390,6 @@ const ChevronDownIcon = () => (
   </svg>
 );
 
-const ExternalLinkIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-    <polyline points="15 3 21 3 21 9"/>
-    <line x1="10" y1="14" x2="21" y2="3"/>
-  </svg>
-);
-
 const WarningIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
@@ -335,6 +438,7 @@ export default function RestaurantLocator() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [totalFromApi, setTotalFromApi] = useState(0);
   const [useApiMode, setUseApiMode] = useState(true);
+  const [showLegend, setShowLegend] = useState(false);
 
   // Progress tracking for loading bar
   const [loadingProgress, setLoadingProgress] = useState({
@@ -421,19 +525,29 @@ export default function RestaurantLocator() {
     "Starbucks": "https://upload.wikimedia.org/wikipedia/en/thumb/d/d3/Starbucks_Corporation_Logo_2011.svg/200px-Starbucks_Corporation_Logo_2011.svg.png",
   };
 
-  const getRestaurantImage = (name) => {
-    if (!name) return "https://img.icons8.com/color/200/restaurant.png";
-    const nameStr = String(name);
+  // Get restaurant image - prioritizes chain logos, falls back to cuisine-based Unsplash photos
+  const getRestaurantImage = (restaurant) => {
+    // If passed a string (name only), create minimal object
+    const r = typeof restaurant === 'string' ? { name: restaurant } : restaurant;
+    if (!r || !r.name) return getPlaceholderImage(r);
+
+    const nameStr = String(r.name);
+
+    // Check for exact match on chain logos
     if (RESTAURANT_IMAGES[nameStr]) {
       return RESTAURANT_IMAGES[nameStr];
     }
+
+    // Check for partial match on chain logos
     const lowerName = nameStr.toLowerCase();
     for (const [key, value] of Object.entries(RESTAURANT_IMAGES)) {
       if (lowerName.includes(key.toLowerCase())) {
         return value;
       }
     }
-    return "https://img.icons8.com/color/200/restaurant.png";
+
+    // Fall back to cuisine/type-based Unsplash placeholder
+    return getPlaceholderImage(r);
   };
 
   // Quick filters with proper toggle functionality
@@ -573,19 +687,14 @@ export default function RestaurantLocator() {
     setSearchRadius(5);
   };
 
-  // Updated marker colors - Dashboard golden theme
-  const getMarkerColor = useCallback((priceLevelNum) => {
-    const colors = {
-      1: '#16A34A', // Green - Budget
-      2: '#F5B83D', // Gold - Moderate
-      3: '#EA580C', // Orange - Premium
-      4: '#DC2626'  // Red - Luxury
-    };
-    return colors[priceLevelNum] || '#F5B83D';
-  }, []);
-
   const handleBoundsChange = useCallback((bounds, zoom) => {
     setMapBounds(bounds);
+    setMapZoom(zoom);
+  }, []);
+
+  // Handle cluster click - zoom into the cluster
+  const handleClusterClick = useCallback((position, zoom) => {
+    setMapCenter(position);
     setMapZoom(zoom);
   }, []);
 
@@ -668,7 +777,7 @@ export default function RestaurantLocator() {
           ...item,
           id: item.id || `${item.name}_${item.lat}_${item.lng}`,
           priceLevelNum: item.priceLevelNum || getPriceLevelNum(item.priceLevel),
-          image: getRestaurantImage(item.name)
+          image: getRestaurantImage(item)
         })),
         total: data.pagination.total,
         hasMore: data.pagination.hasMore
@@ -751,7 +860,7 @@ export default function RestaurantLocator() {
                 const fullResult = await fetchRestaurantsFromApi(
                   locationToUse.lat,
                   locationToUse.lng,
-                  { radius: 0, limit: 20000 }
+                  { radius: 0, limit: 50000 }
                 );
 
                 if (isCancelled) return;
@@ -806,7 +915,7 @@ export default function RestaurantLocator() {
           ...item,
           id: item.id || `${item.name}_${item.lat}_${item.lng}`,
           priceLevelNum: getPriceLevelNum(item.priceLevel),
-          image: getRestaurantImage(item.name)
+          image: getRestaurantImage(item)
         }));
         setRestaurants(processedData);
         setCacheStatus('fallback');
@@ -883,7 +992,8 @@ export default function RestaurantLocator() {
   const filteredRestaurants = useMemo(() => {
     let filtered = restaurants;
 
-    if (userLocation && filtered.length > 0 && !filtered[0].distance) {
+    // Calculate distance client-side if not provided by API (null/undefined)
+    if (userLocation && filtered.length > 0 && (filtered[0].distance === null || filtered[0].distance === undefined)) {
       filtered = filtered.map(restaurant => {
         const distance = calculateDistance(
           userLocation.lat,
@@ -926,7 +1036,9 @@ export default function RestaurantLocator() {
         const query = debouncedSearchQuery.toLowerCase();
         filtered = filtered.filter(restaurant => {
           const name = String(restaurant.name || '').toLowerCase();
-          const address = String(restaurant.address || '').toLowerCase();
+          const address = (typeof restaurant.address === 'string'
+            ? restaurant.address
+            : (restaurant.address?.formatted || restaurant.address?.city || '')).toLowerCase();
           return name.includes(query) || address.includes(query);
         });
       }
@@ -1064,8 +1176,14 @@ export default function RestaurantLocator() {
               </div>
             </div>
             <div className="header-stats">
-              <span className="stat-value">{filteredRestaurants.length.toLocaleString()}</span>
-              <span className="stat-label">Places Found</span>
+              <span className="stat-value">
+                {totalFromApi > 0 ? totalFromApi.toLocaleString() : filteredRestaurants.length.toLocaleString()}
+              </span>
+              <span className="stat-label">
+                {filteredRestaurants.length !== totalFromApi && totalFromApi > 0
+                  ? `(${filteredRestaurants.length.toLocaleString()} shown)`
+                  : 'Places Found'}
+              </span>
             </div>
           </div>
         </header>
@@ -1199,7 +1317,7 @@ export default function RestaurantLocator() {
                     <ClusteredMarkers
                       restaurants={filteredRestaurants}
                       onMarkerClick={setSelectedRestaurant}
-                      getMarkerColor={getMarkerColor}
+                      onClusterClick={handleClusterClick}
                       bounds={mapBounds}
                       zoom={mapZoom}
                     />
@@ -1221,24 +1339,114 @@ export default function RestaurantLocator() {
                         position={{ lat: selectedRestaurant.lat, lng: selectedRestaurant.lng }}
                         onCloseClick={() => setSelectedRestaurant(null)}
                       >
-                        <div className="info-window">
-                          <h3>{selectedRestaurant.name}</h3>
-                          <p className="info-address">{selectedRestaurant.address}</p>
-                          {selectedRestaurant.rating && (
-                            <p className="info-rating">
-                              <StarIcon filled={true} />
-                              <span>{selectedRestaurant.rating} ({selectedRestaurant.userRatingCount || 0} reviews)</span>
-                            </p>
-                          )}
-                          {selectedRestaurant.priceLevelNum && (
-                            <p className="info-price">{getPriceLevelSymbol(selectedRestaurant.priceLevelNum)}</p>
-                          )}
-                          {selectedRestaurant.googleMapsUri && (
-                            <a href={selectedRestaurant.googleMapsUri} target="_blank" rel="noopener noreferrer" className="info-link">
-                              <span>View on Google Maps</span>
-                              <ExternalLinkIcon />
+                        <div className="gm-style-infowindow">
+                          {/* Restaurant Image */}
+                          <div className="iw-image-container">
+                            <img
+                              src={selectedRestaurant.image || getRestaurantImage(selectedRestaurant)}
+                              alt={selectedRestaurant.name}
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=300&fit=crop";
+                              }}
+                            />
+                          </div>
+
+                          {/* Content */}
+                          <div className="iw-content">
+                            {/* Restaurant Name */}
+                            <h3 className="iw-title">{selectedRestaurant.name}</h3>
+
+                            {/* Address Block - Google Maps Style */}
+                            <div className="iw-address">
+                              <div className="iw-address-icon">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="#70757a">
+                                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                </svg>
+                              </div>
+                              <div className="iw-address-lines">
+                                {selectedRestaurant.address?.street && (
+                                  <span>{selectedRestaurant.address.street}</span>
+                                )}
+                                {(selectedRestaurant.address?.barangay || selectedRestaurant.address?.city) && (
+                                  <span>
+                                    {[selectedRestaurant.address?.barangay, selectedRestaurant.address?.city]
+                                      .filter(Boolean).join(', ')}
+                                  </span>
+                                )}
+                                {!selectedRestaurant.address?.street && !selectedRestaurant.address?.barangay && (
+                                  <span>
+                                    {typeof selectedRestaurant.address === 'string'
+                                      ? selectedRestaurant.address
+                                      : (selectedRestaurant.address?.formatted || selectedRestaurant.city || 'Metro Manila')}
+                                  </span>
+                                )}
+                                <span>Metro Manila, Philippines</span>
+                              </div>
+                            </div>
+
+                            {/* Tags Row */}
+                            <div className="iw-tags">
+                              {selectedRestaurant.type && (
+                                <span className="iw-type-tag">
+                                  {TYPE_EMOJIS[selectedRestaurant.type] || '📍'} {selectedRestaurant.type.replace('_', ' ')}
+                                </span>
+                              )}
+                              {selectedRestaurant.cuisine && (
+                                <span className="iw-cuisine-tag">{selectedRestaurant.cuisine}</span>
+                              )}
+                              {selectedRestaurant.rating && (
+                                <span className="iw-rating-tag">
+                                  ⭐ {selectedRestaurant.rating}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Contact Details */}
+                            <div className="iw-details">
+                              {selectedRestaurant.phone && (
+                                <div className="iw-detail-row">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#70757a">
+                                    <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                                  </svg>
+                                  <a href={`tel:${selectedRestaurant.phone}`}>{selectedRestaurant.phone}</a>
+                                </div>
+                              )}
+
+                              {selectedRestaurant.openingHours && (
+                                <div className="iw-detail-row">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#70757a">
+                                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/>
+                                  </svg>
+                                  <span>{selectedRestaurant.openingHours}</span>
+                                </div>
+                              )}
+
+                              {selectedRestaurant.website && (
+                                <div className="iw-detail-row">
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="#70757a">
+                                    <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.9-4.33-3.56zm2.95-8H5.08c.96-1.66 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/>
+                                  </svg>
+                                  <a href={selectedRestaurant.website} target="_blank" rel="noopener noreferrer">
+                                    Visit website
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Google Maps Link */}
+                            <a
+                              href={selectedRestaurant.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${selectedRestaurant.lat},${selectedRestaurant.lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="iw-google-link"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="#1a73e8">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                              </svg>
+                              View on Google Maps
                             </a>
-                          )}
+                          </div>
                         </div>
                       </InfoWindow>
                     )}
@@ -1257,6 +1465,12 @@ export default function RestaurantLocator() {
                     <LocationIcon />
                   </button>
                 )}
+
+                {/* Map Legend */}
+                <MapLegend
+                  isVisible={showLegend}
+                  onToggle={() => setShowLegend(!showLegend)}
+                />
               </div>
             )}
 
@@ -1290,12 +1504,12 @@ export default function RestaurantLocator() {
                         >
                           <div className="card-image">
                             <img
-                              src={restaurant.image || getRestaurantImage(restaurant.name)}
+                              src={restaurant.image || getRestaurantImage(restaurant)}
                               alt={restaurant.name}
                               loading="lazy"
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = "https://img.icons8.com/color/200/restaurant.png";
+                                e.target.src = "https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=400&h=300&fit=crop";
                               }}
                             />
                             {restaurant.rating && restaurant.rating >= 4.5 && (
@@ -1320,7 +1534,11 @@ export default function RestaurantLocator() {
                               )}
                             </div>
 
-                            <p className="restaurant-address">{restaurant.address}</p>
+                            <p className="restaurant-address">
+                              {typeof restaurant.address === 'string'
+                                ? restaurant.address
+                                : (restaurant.address?.formatted || restaurant.address?.city || 'Metro Manila')}
+                            </p>
 
                             {restaurant.rating && (
                               <div className="rating-info">

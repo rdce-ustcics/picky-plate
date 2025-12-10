@@ -748,16 +748,63 @@ body {
   }
 }
 
-/* Cluster Markers - Dashboard Golden Style */
+/* ============================================
+   GOOGLE MAPS STYLE MARKERS
+   ============================================ */
+
+/* Cluster Markers */
 .cluster-marker {
   transition: transform 0.2s ease;
   will-change: transform;
+  cursor: pointer;
 }
 
 .cluster-marker:hover {
   transform: scale(1.15);
 }
 
+/* Google Maps Pin Marker */
+.gm-pin-marker {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.2s ease;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.gm-pin-marker:hover {
+  transform: scale(1.15) translateY(-2px);
+}
+
+.gm-pin-head {
+  width: 32px;
+  height: 32px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.gm-pin-icon {
+  transform: rotate(45deg);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.gm-pin-tail {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid;
+  margin-top: -4px;
+}
+
+/* Alternative: Simple circle markers (fallback) */
 .restaurant-marker {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   will-change: transform;
@@ -797,6 +844,104 @@ body {
   box-shadow: var(--shadow-xl);
   background: var(--primary-gold);
   color: white;
+}
+
+/* Map Legend */
+.map-legend {
+  position: absolute;
+  bottom: 24px;
+  left: 12px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  font-family: 'Nunito', 'Poppins', sans-serif;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.map-legend.collapsed {
+  width: auto;
+}
+
+.map-legend.expanded {
+  width: 200px;
+}
+
+.legend-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #F5B83D 0%, #E8A828 100%);
+  color: #5D4037;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  width: 100%;
+  text-align: left;
+  transition: background 0.2s ease;
+}
+
+.legend-toggle:hover {
+  background: linear-gradient(135deg, #E8A828 0%, #D49A20 100%);
+}
+
+.legend-content {
+  padding: 12px;
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.legend-section {
+  margin-bottom: 12px;
+}
+
+.legend-section:last-child {
+  margin-bottom: 0;
+}
+
+.legend-section h4 {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #888;
+  margin: 0 0 8px 0;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.legend-marker {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.legend-cluster {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-label {
+  font-size: 12px;
+  color: #333;
+  font-weight: 500;
 }
 
 /* Info Window - Dashboard Style */
@@ -859,6 +1004,195 @@ body {
 .info-window .info-link:hover {
   background: var(--primary-gold);
   color: white;
+}
+
+/* ============================================
+   GOOGLE MAPS STYLE INFOWINDOW
+   ============================================ */
+
+/* Main container */
+.gm-style-infowindow {
+  font-family: 'Roboto', 'Arial', sans-serif;
+  width: 300px;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Image container */
+.iw-image-container {
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+}
+
+.iw-image-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Content area */
+.iw-content {
+  padding: 12px 16px 16px;
+}
+
+/* Restaurant name */
+.iw-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #202124;
+  margin: 0 0 12px 0;
+  line-height: 1.3;
+}
+
+/* Address Block - Google Maps Style */
+.iw-address {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.iw-address-icon {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.iw-address-lines {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  color: #70757a;
+  line-height: 1.5;
+}
+
+.iw-address-lines span {
+  display: block;
+}
+
+/* Tags row */
+.iw-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.iw-type-tag {
+  font-size: 12px;
+  color: #202124;
+  background: #f1f3f4;
+  padding: 4px 10px;
+  border-radius: 16px;
+  text-transform: capitalize;
+}
+
+.iw-cuisine-tag {
+  font-size: 12px;
+  color: #1a73e8;
+  background: #e8f0fe;
+  padding: 4px 10px;
+  border-radius: 16px;
+  text-transform: capitalize;
+}
+
+.iw-rating-tag {
+  font-size: 12px;
+  color: #ea8600;
+  background: #fef7e0;
+  padding: 4px 10px;
+  border-radius: 16px;
+}
+
+/* Contact details */
+.iw-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.iw-detail-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #3c4043;
+}
+
+.iw-detail-row svg {
+  flex-shrink: 0;
+}
+
+.iw-detail-row a {
+  color: #1a73e8;
+  text-decoration: none;
+}
+
+.iw-detail-row a:hover {
+  text-decoration: underline;
+}
+
+/* Google Maps link */
+.iw-google-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #1a73e8;
+  text-decoration: none;
+  padding-top: 12px;
+  border-top: 1px solid #e8eaed;
+}
+
+.iw-google-link:hover {
+  text-decoration: underline;
+}
+
+.iw-google-link svg {
+  flex-shrink: 0;
+}
+
+/* Override default Google Maps InfoWindow styling */
+.gm-style-iw-c {
+  padding: 0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 7px 1px rgba(0,0,0,0.3) !important;
+}
+
+.gm-style-iw-d {
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.gm-style-iw-tc {
+  display: none !important;
+}
+
+/* Style the close button */
+.gm-ui-hover-effect {
+  top: 8px !important;
+  right: 8px !important;
+  background: white !important;
+  border-radius: 50% !important;
+  width: 30px !important;
+  height: 30px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
+  opacity: 1 !important;
+}
+
+.gm-ui-hover-effect:hover {
+  background: #f1f3f4 !important;
+}
+
+.gm-ui-hover-effect > span {
+  background-color: #5f6368 !important;
 }
 
 /* List Container */
