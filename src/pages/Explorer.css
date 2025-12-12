@@ -1,13 +1,13 @@
-/* Explorer.css - Complete Updated Styles with Unique Header */
+/* Explorer.css - Enhanced with Filipino Cultural Elements */
 
 .explorer {
   padding: 0;
   min-height: 100vh;
-  min-height: 100dvh; /* Dynamic viewport for mobile browsers */
+  min-height: 100dvh;
   background: linear-gradient(to bottom right, #fffbeb, #fef3c7, #ffedd5);
 }
 
-/* ===== UNIQUE EXPLORER HEADER V2 ===== */
+/* ===== ENHANCED FILIPINO EXPLORER HEADER ===== */
 .explorer-header-v2 {
   position: relative;
   background: linear-gradient(120deg, #92400e 0%, #b45309 30%, #d97706 60%, #f59e0b 100%);
@@ -28,9 +28,10 @@
   position: absolute;
   inset: 0;
   background-image: 
-    radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.05) 0%, transparent 30%);
+    radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.12) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.08) 0%, transparent 30%),
+    radial-gradient(circle at 60% 70%, rgba(255, 237, 213, 0.1) 0%, transparent 40%);
 }
 
 .header-glow {
@@ -40,59 +41,157 @@
 }
 
 .header-glow-1 {
-  width: 200px;
-  height: 200px;
-  background: rgba(251, 191, 36, 0.3);
+  width: 220px;
+  height: 220px;
+  background: rgba(251, 191, 36, 0.25);
   top: -50px;
   right: 10%;
-  animation: glowPulse 4s ease-in-out infinite;
+  animation: glowPulse 5s ease-in-out infinite;
 }
 
 .header-glow-2 {
-  width: 150px;
-  height: 150px;
-  background: rgba(252, 211, 77, 0.25);
+  width: 180px;
+  height: 180px;
+  background: rgba(252, 211, 77, 0.2);
   bottom: -30px;
-  left: 20%;
-  animation: glowPulse 4s ease-in-out infinite 2s;
+  left: 15%;
+  animation: glowPulse 5s ease-in-out infinite 2.5s;
 }
 
 @keyframes glowPulse {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.1); }
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.15); }
 }
 
-/* Main header content */
+/* Sparkling Stars */
+.header-star {
+  position: absolute;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.9);
+}
+
+.header-star-1 {
+  width: 4px;
+  height: 4px;
+  top: 15%;
+  left: 15%;
+  animation: sparkle 2s ease-in-out infinite;
+}
+
+.header-star-2 {
+  width: 3px;
+  height: 3px;
+  top: 35%;
+  right: 25%;
+  animation: sparkle 2.3s ease-in-out infinite 0.5s;
+}
+
+.header-star-3 {
+  width: 4px;
+  height: 4px;
+  top: 55%;
+  left: 30%;
+  animation: sparkle 2.1s ease-in-out infinite 1s;
+}
+
+.header-star-4 {
+  width: 3px;
+  height: 3px;
+  top: 25%;
+  right: 40%;
+  animation: sparkle 2.5s ease-in-out infinite 0.8s;
+}
+
+.header-star-5 {
+  width: 4px;
+  height: 4px;
+  bottom: 35%;
+  right: 18%;
+  animation: sparkle 2.2s ease-in-out infinite 1.3s;
+}
+
+.header-star-6 {
+  width: 3px;
+  height: 3px;
+  bottom: 45%;
+  left: 25%;
+  animation: sparkle 2.4s ease-in-out infinite 1.7s;
+}
+
+@keyframes sparkle {
+  0%, 100% { 
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Filipino Cultural Elements */
+.filipino-element {
+  position: absolute;
+  font-size: 32px;
+  opacity: 0.15;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  animation: floatElement 6s ease-in-out infinite;
+}
+
+.filipino-element-1 {
+  top: 15%;
+  right: 8%;
+  animation-delay: 0s;
+}
+
+.filipino-element-2 {
+  bottom: 25%;
+  left: 12%;
+  animation-delay: 2s;
+}
+
+.filipino-element-3 {
+  top: 40%;
+  right: 15%;
+  font-size: 28px;
+  animation-delay: 4s;
+}
+
+@keyframes floatElement {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translateY(-10px) rotate(5deg);
+    opacity: 0.25;
+  }
+}
+
+/* Main header content - BALANCED PADDING */
 .explorer-header-content {
   position: relative;
   z-index: 2;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 28px 32px;
-  gap: 24px;
+  padding: 24px 32px 12px 32px; /* Increased top padding to occupy blank space */
+  gap: 20px;
   flex-wrap: wrap;
-}
-
-@media (max-width: 768px) {
-  .explorer-header-content {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 24px 20px;
-    gap: 16px;
-  }
 }
 
 /* Title section */
 .explorer-title-section {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 16px;
+  flex: 1;
 }
 
 .explorer-icon-badge {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 54px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.1) 100%);
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 16px;
@@ -115,33 +214,48 @@
 }
 
 .explorer-compass-icon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   color: white;
+}
+
+.explorer-title-text {
+  flex: 1;
 }
 
 .explorer-title-text h1 {
-  font-size: 32px;
   font-weight: 800;
   color: white;
-  margin: 0;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  margin: 0 0 4px 0; /* Reduced from 6px to 4px */
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
   letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
-@media (max-width: 640px) {
-  .explorer-title-text h1 {
-    font-size: 24px;
+/* Desktop - Large title like Restaurant Locator */
+@media (min-width: 1024px) {
+  .explorer-title-section {
+    align-items: center;
   }
-  
+
   .explorer-icon-badge {
-    width: 48px;
-    height: 48px;
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
   }
-  
+
   .explorer-compass-icon {
-    width: 24px;
-    height: 24px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .explorer-title-text h1 {
+    font-size: 3rem;
+    margin-top: 5%;
+  }
+
+  .explorer-subtitle {
+    font-size: 1.25rem;
   }
 }
 
@@ -149,8 +263,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 6px 0 0 0;
-  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 6px 0; /* Reduced from 10px to 6px */
+  color: rgba(255, 255, 255, 0.9);
   font-size: 14px;
   font-weight: 500;
 }
@@ -158,7 +272,43 @@
 .subtitle-icon {
   width: 14px;
   height: 14px;
-  opacity: 0.8;
+  opacity: 0.9;
+}
+
+/* Stats Badges */
+.explorer-stats-badges {
+  display: flex;
+  gap: 8px; /* Reduced from 10px */
+  flex-wrap: wrap;
+  margin-top: 4px; /* Reduced from 8px */
+}
+
+.stats-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.stats-badge:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.badge-icon {
+  width: 16px;
+  height: 16px;
 }
 
 /* Actions section */
@@ -166,13 +316,6 @@
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-@media (max-width: 768px) {
-  .explorer-header-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
 }
 
 /* Custom region selector */
@@ -232,10 +375,10 @@
   pointer-events: none;
 }
 
-/* Bottom wave */
+/* Bottom wave - EXTRA COMPACT */
 .header-wave {
   position: relative;
-  height: 40px;
+  height: 24px; /* Reduced from 30px */
   margin-top: -1px;
 }
 
@@ -291,7 +434,7 @@
 .dish-card img {
   width: 100%;
   height: 180px;
-  aspect-ratio: 16 / 10; /* Consistent image proportions */
+  aspect-ratio: 16 / 10;
   object-fit: cover;
   border-radius: 16px;
   margin-bottom: 16px;
@@ -478,7 +621,7 @@
 .modal-img {
   width: 100%;
   height: 220px;
-  aspect-ratio: 16 / 9; /* Consistent modal image proportions */
+  aspect-ratio: 16 / 9;
   object-fit: cover;
   border-radius: 16px;
   margin: 16px 0;
@@ -831,33 +974,273 @@
   border-color: #fca5a5;
 }
 
-/* ===== SMALL MOBILE BREAKPOINT (480px and below) ===== */
-@media (max-width: 480px) {
+/* ===== RESPONSIVE BREAKPOINTS ===== */
+
+/* Tablet breakpoint */
+@media (max-width: 768px) {
   .explorer-header-content {
-    padding: 16px 12px;
-    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 22px 20px 12px 20px;
+    gap: 16px;
+  }
+
+  .explorer-title-section {
+    width: 100%;
   }
 
   .explorer-title-text h1 {
-    font-size: 20px;
-  }
-
-  .explorer-icon-badge {
-    width: 42px;
-    height: 42px;
-  }
-
-  .explorer-compass-icon {
-    width: 20px;
-    height: 20px;
+    font-size: 30px;
+    margin-bottom: 4px;
   }
 
   .explorer-subtitle {
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+
+  .explorer-header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .explorer-stats-badges {
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+
+  .stats-badge {
     font-size: 12px;
+    padding: 6px 13px;
+  }
+
+  .region-selector select {
+    min-width: 150px;
+  }
+}
+
+/* Mobile breakpoint - CENTERED LAYOUT */
+@media (max-width: 640px) {
+  .explorer-header-content {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 22px 20px 14px 20px;
+    gap: 18px;
+    text-align: center;
+  }
+
+  .explorer-title-section {
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    gap: 0; /* No gap when logo is hidden */
+  }
+
+  /* Hide logo on mobile for cleaner look */
+  .explorer-icon-badge {
+    display: none;
+  }
+
+  .explorer-title-text {
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .explorer-title-text h1 {
+    font-size: 32px;
+    line-height: 1.2;
+    margin: 0 0 6px 0;
+    text-align: center;
+  }
+
+  .explorer-subtitle {
+    font-size: 14px;
+    margin: 0 0 8px 0;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .explorer-stats-badges {
+    justify-content: center;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .stats-badge {
+    font-size: 12px;
+    padding: 6px 14px;
+  }
+
+  .badge-icon {
+    width: 15px;
+    height: 15px;
+  }
+
+  .explorer-header-actions {
+    width: 100%;
+    max-width: 400px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .region-selector {
+    width: 100%;
+  }
+
+  .region-selector select {
+    width: 100%;
+    min-width: auto;
+    padding: 14px 44px 14px 40px;
+    font-size: 15px;
+    text-align: center;
+    border-radius: 14px;
+  }
+
+  .btn-admin-add {
+    width: 100%;
+    justify-content: center;
+    padding: 14px 24px;
+    font-size: 16px;
+    border-radius: 14px;
+  }
+
+  .filipino-element {
+    font-size: 24px;
+  }
+
+  .header-wave {
+    height: 28px;
   }
 
   .explorer-grid {
     grid-template-columns: 1fr;
+    padding: 18px 16px;
+    gap: 18px;
+  }
+
+  .dish-card {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .dish-card img {
+    height: 160px;
+    border-radius: 14px;
+  }
+
+  .dish-card h2 {
+    font-size: 19px;
+  }
+
+  .card-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .card-actions .btn-primary,
+  .card-actions .btn-outline,
+  .card-actions .btn-ghost {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .modal {
+    padding: 18px;
+    border-radius: 22px 22px 0 0;
+    max-height: 90vh;
+  }
+
+  .modal-header h2 {
+    font-size: 1.15rem;
+  }
+
+  .modal-img {
+    height: 170px;
+    border-radius: 14px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .modal-actions .btn-primary,
+  .modal-actions .btn-outline {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    padding: 13px;
+    font-size: 16px;
+  }
+}
+
+/* Small mobile breakpoint */
+@media (max-width: 480px) {
+  .explorer-header-content {
+    padding: 20px 16px 12px 16px;
+    gap: 16px;
+    margin-right: 7%;
+  }
+
+  .explorer-title-text h1 {
+    font-size: 28px;
+    margin-bottom: 5px;
+  }
+
+  .explorer-subtitle {
+    font-size: 13px;
+    margin-bottom: 7px;
+  }
+
+  .explorer-stats-badges {
+    gap: 6px;
+    margin-top: 5px;
+            margin-bottom: -40px;
+  }
+
+  .stats-badge {
+    font-size: 11px;
+    padding: 5px 12px;
+  }
+
+  .badge-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .explorer-header-actions {
+    max-width: 100%;
+    gap: 10px;
+  }
+
+  .region-selector select {
+    padding: 13px 40px 13px 36px;
+    font-size: 14px;
+  }
+
+  .btn-admin-add {
+    padding: 13px 20px;
+    font-size: 15px;
+  }
+
+  .filipino-element {
+    font-size: 20px;
+  }
+
+  .header-wave {
+    height: 24px;
+  }
+
+  .explorer-grid {
     padding: 16px 12px;
     gap: 16px;
   }
@@ -875,55 +1258,25 @@
   .dish-card h2 {
     font-size: 18px;
   }
+}
 
-  .card-actions {
-    flex-direction: column;
-    gap: 8px;
+/* Medium mobile breakpoint (481-640px) */
+@media (min-width: 481px) and (max-width: 640px) {
+  .explorer-title-text h1 {
+    font-size: 34px;
   }
 
-  .card-actions .btn-primary,
-  .card-actions .btn-outline,
-  .card-actions .btn-ghost {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .modal {
-    padding: 16px;
-    border-radius: 20px 20px 0 0;
-    max-height: 90vh;
-  }
-
-  .modal-header h2 {
-    font-size: 1.125rem;
-  }
-
-  .modal-img {
-    height: 160px;
-    border-radius: 12px;
-  }
-
-  .modal-actions {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .modal-actions .btn-primary,
-  .modal-actions .btn-outline {
-    width: 100%;
-    justify-content: center;
+  .explorer-subtitle {
+    font-size: 15px;
   }
 
   .region-selector select {
-    min-width: 140px;
-    padding: 10px 40px 10px 36px;
-    font-size: 14px;
+    padding: 15px 44px 15px 40px;
+    font-size: 16px;
   }
 
-  .form-group input,
-  .form-group textarea,
-  .form-group select {
-    padding: 12px;
-    font-size: 16px; /* Prevent zoom on iOS */
+  .btn-admin-add {
+    padding: 15px 26px;
+    font-size: 16px;
   }
 }

@@ -33,12 +33,12 @@
   margin-bottom: 2rem;
   position: relative;
   padding: 2rem 2.5rem;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(254, 243, 199, 0.8) 100%);
+  background: linear-gradient(135deg, #b45309 0%, #d97706 25%, #f59e0b 50%, #fbbf24 75%, #fcd34d 100%);
   border-radius: 2rem;
-  box-shadow: 
-    0 10px 40px -10px rgba(180, 83, 9, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  border: 2px solid rgba(251, 191, 36, 0.3);
+  box-shadow:
+    0 10px 40px -10px rgba(180, 83, 9, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border: none;
   overflow: hidden;
 }
 
@@ -47,11 +47,13 @@
   content: '';
   position: absolute;
   top: 0;
+  left: 0;
   right: 0;
-  width: 300px;
-  height: 100%;
-  background: 
-    radial-gradient(ellipse 80% 100% at 100% 50%, rgba(251, 191, 36, 0.15) 0%, transparent 70%);
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at 10% 20%, rgba(255, 255, 255, 0.2) 0%, transparent 30%),
+    radial-gradient(ellipse at 90% 80%, rgba(255, 255, 255, 0.15) 0%, transparent 25%),
+    radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 40%);
   pointer-events: none;
 }
 
@@ -68,14 +70,16 @@
 .calendar-page-header-icon {
   width: 72px;
   height: 72px;
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
   border-radius: 1.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 
-    0 8px 20px -4px rgba(217, 119, 6, 0.4),
+  box-shadow:
+    0 8px 20px -4px rgba(0, 0, 0, 0.15),
     inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
@@ -88,7 +92,7 @@
   left: -50%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, transparent 50%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 50%);
   transform: rotate(45deg);
 }
 
@@ -107,14 +111,15 @@
 }
 
 .calendar-page-title {
-  font-size: 2rem;
+  font-size: 3rem !important;
   font-weight: 800;
-  color: #78350f;
-  margin-bottom: 0.5rem;
-  line-height: 1.2;
+  color: white;
+  text-shadow: 0 2px 4px rgba(120, 53, 15, 0.3);
+  margin-bottom: 0;
+  line-height: 1;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 2rem;
   flex-wrap: wrap;
 }
 
@@ -123,7 +128,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.375rem;
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(4px);
   color: white;
   font-size: 0.6875rem;
   font-weight: 700;
@@ -131,7 +137,8 @@
   border-radius: 9999px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   white-space: nowrap;
 }
 
@@ -141,10 +148,11 @@
 }
 
 .calendar-page-subtitle {
-  color: #b45309;
+  color: rgba(255, 255, 255, 0.9);
   font-size: 1rem;
   font-weight: 500;
   max-width: 500px;
+  margin-top: 0.25rem;
 }
 
 /* Right side decorations */
@@ -161,12 +169,12 @@
 .header-decor-item {
   width: 48px;
   height: 48px;
-  background: rgba(251, 191, 36, 0.1);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid rgba(251, 191, 36, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.25);
   animation: pulse-soft 3s ease-in-out infinite;
 }
 
@@ -185,8 +193,8 @@
 .header-decor-item svg {
   width: 50%;
   height: 50%;
-  color: #d97706;
-  opacity: 0.6;
+  color: white;
+  opacity: 0.7;
 }
 
 @keyframes pulse-soft {
@@ -296,7 +304,7 @@
   }
   
   .calendar-page-title {
-    font-size: 1.5rem;
+    font-size: 2.5rem !important;
     justify-content: center;
   }
   
@@ -336,7 +344,7 @@
   }
   
   .calendar-page-title {
-    font-size: 1.25rem;
+    font-size: 2rem !important;
   }
   
   .calendar-page-title-badge {

@@ -1065,23 +1065,52 @@
 }
 
 .home-hero-title {
-  font-size: 3rem;
-  font-weight: 800;
+  font-family: 'Poppins', sans-serif !important;
+  font-size: 2.75rem !important;
+  font-weight: 800 !important;
   color: #78350f;
   margin: 0 0 0.75rem;
   line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+@media (min-width: 640px) {
+  .home-hero-title {
+    font-size: 3.25rem !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-hero-title {
+    font-size: 4rem !important;
+  }
 }
 
 .home-hero-title .highlight {
   color: #f59e0b;
+  font-weight: 800 !important;
 }
 
 .home-hero-subtitle {
-  font-size: 1.25rem;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 1.125rem;
+  font-weight: 500;
   color: #92400e;
   max-width: 500px;
   margin: 0 auto;
   line-height: 1.5;
+}
+
+@media (min-width: 640px) {
+  .home-hero-subtitle {
+    font-size: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-hero-subtitle {
+    font-size: 1.35rem;
+  }
 }
 
 /* Main Action Buttons */
@@ -1469,14 +1498,14 @@
   }
 
   .home-hero-title {
-    font-size: 2.5rem;
+    font-size: 2.25rem !important;
     color: white;
     text-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
   }
 
   .home-hero-title .highlight {
     display: block;
-    font-size: 2.75rem;
+    font-size: 2.5rem !important;
     color: white;
     opacity: 0.95;
   }
@@ -2903,11 +2932,11 @@
 @media (max-width: 375px) {
   
   .home-hero-title {
-    font-size: 2rem;
+    font-size: 1.75rem !important;
   }
 
   .home-hero-title .highlight {
-    font-size: 2.25rem;
+    font-size: 2rem !important;
   }
 
   .home-hero-subtitle {

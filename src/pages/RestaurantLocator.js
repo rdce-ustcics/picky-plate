@@ -4,6 +4,10 @@ import { APIProvider, Map, AdvancedMarker, InfoWindow, useMap } from "@vis.gl/re
 import useSupercluster from "use-supercluster";
 import LoadingModal from "../components/LoadingModal";
 import { getRestaurantImage as getPlaceholderImage } from "../utils/getRestaurantImage";
+import {
+  UtensilsCrossed, Sandwich, Coffee, Croissant, Wine, IceCream,
+  Store, ShoppingBag, MapPin, Star
+} from "lucide-react";
 import "./RestaurantLocator.css";
 
 // Restaurant type colors for markers
@@ -19,17 +23,17 @@ const TYPE_COLORS = {
   default: '#1976D2'      // Blue
 };
 
-// Restaurant type emojis
-const TYPE_EMOJIS = {
-  restaurant: '🍽️',
-  fast_food: '🍔',
-  cafe: '☕',
-  bakery: '🥐',
-  bar: '🍺',
-  ice_cream: '🍦',
-  food_court: '🏬',
-  food_stand: '🥡',
-  default: '📍'
+// Restaurant type icons (Lucide React)
+const TYPE_ICONS = {
+  restaurant: UtensilsCrossed,
+  fast_food: Sandwich,
+  cafe: Coffee,
+  bakery: Croissant,
+  bar: Wine,
+  ice_cream: IceCream,
+  food_court: Store,
+  food_stand: ShoppingBag,
+  default: MapPin
 };
 
 // Get cluster color based on count
@@ -139,7 +143,7 @@ function ClusteredMarkers({ restaurants, onMarkerClick, onClusterClick, bounds, 
         // Render individual restaurant marker - Google Maps Pin Style
         const type = restaurant?.type || 'default';
         const color = TYPE_COLORS[type] || TYPE_COLORS.default;
-        const emoji = TYPE_EMOJIS[type] || TYPE_EMOJIS.default;
+        const IconComponent = TYPE_ICONS[type] || TYPE_ICONS.default;
 
         return (
           <AdvancedMarker
@@ -149,7 +153,9 @@ function ClusteredMarkers({ restaurants, onMarkerClick, onClusterClick, bounds, 
           >
             <div className="gm-pin-marker" title={restaurant?.name || 'Restaurant'}>
               <div className="gm-pin-head" style={{ background: color }}>
-                <span className="gm-pin-icon">{emoji}</span>
+                <span className="gm-pin-icon">
+                  <IconComponent size={14} strokeWidth={2.5} color="white" />
+                </span>
               </div>
               <div className="gm-pin-tail" style={{ borderTopColor: color }} />
             </div>
@@ -192,12 +198,12 @@ function MapBoundsTracker({ onBoundsChange }) {
 // Map Legend Component - shows marker type colors
 function MapLegend({ isVisible, onToggle }) {
   const legendItems = [
-    { type: 'restaurant', label: 'Restaurant', emoji: '🍽️', color: TYPE_COLORS.restaurant },
-    { type: 'fast_food', label: 'Fast Food', emoji: '🍔', color: TYPE_COLORS.fast_food },
-    { type: 'cafe', label: 'Cafe', emoji: '☕', color: TYPE_COLORS.cafe },
-    { type: 'bakery', label: 'Bakery', emoji: '🥐', color: TYPE_COLORS.bakery },
-    { type: 'bar', label: 'Bar', emoji: '🍺', color: TYPE_COLORS.bar },
-    { type: 'ice_cream', label: 'Ice Cream', emoji: '🍦', color: TYPE_COLORS.ice_cream },
+    { type: 'restaurant', label: 'Restaurant', Icon: UtensilsCrossed, color: TYPE_COLORS.restaurant },
+    { type: 'fast_food', label: 'Fast Food', Icon: Sandwich, color: TYPE_COLORS.fast_food },
+    { type: 'cafe', label: 'Cafe', Icon: Coffee, color: TYPE_COLORS.cafe },
+    { type: 'bakery', label: 'Bakery', Icon: Croissant, color: TYPE_COLORS.bakery },
+    { type: 'bar', label: 'Bar', Icon: Wine, color: TYPE_COLORS.bar },
+    { type: 'ice_cream', label: 'Ice Cream', Icon: IceCream, color: TYPE_COLORS.ice_cream },
   ];
 
   const clusterItems = [
@@ -210,7 +216,7 @@ function MapLegend({ isVisible, onToggle }) {
   return (
     <div className={`map-legend ${isVisible ? 'expanded' : 'collapsed'}`}>
       <button className="legend-toggle" onClick={onToggle}>
-        {isVisible ? '◀' : '▶'} Legend
+        {isVisible ? '◀' : '▶'} Info
       </button>
 
       {isVisible && (
@@ -221,9 +227,9 @@ function MapLegend({ isVisible, onToggle }) {
               <div key={item.type} className="legend-item">
                 <span
                   className="legend-marker"
-                  style={{ borderColor: item.color }}
+                  style={{ borderColor: item.color, background: item.color }}
                 >
-                  {item.emoji}
+                  <item.Icon size={12} strokeWidth={2.5} color="white" />
                 </span>
                 <span className="legend-label">{item.label}</span>
               </div>
@@ -421,7 +427,7 @@ export default function RestaurantLocator() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [searchRadius, setSearchRadius] = useState(5);
-  const [showNearbyOnly, setShowNearbyOnly] = useState(false);
+  const [showNearbyOnly, setShowNearbyOnly] = useState(true);
   const [selectedCuisine, setSelectedCuisine] = useState("all");
   const [deliveryFilter, setDeliveryFilter] = useState("all");
   const [openNowFilter, setOpenNowFilter] = useState(false);
@@ -1389,7 +1395,11 @@ export default function RestaurantLocator() {
                             <div className="iw-tags">
                               {selectedRestaurant.type && (
                                 <span className="iw-type-tag">
-                                  {TYPE_EMOJIS[selectedRestaurant.type] || '📍'} {selectedRestaurant.type.replace('_', ' ')}
+                                  {(() => {
+                                    const TypeIcon = TYPE_ICONS[selectedRestaurant.type] || TYPE_ICONS.default;
+                                    return <TypeIcon size={12} strokeWidth={2} style={{ marginRight: '4px', verticalAlign: 'middle' }} />;
+                                  })()}
+                                  {selectedRestaurant.type.replace('_', ' ')}
                                 </span>
                               )}
                               {selectedRestaurant.cuisine && (
@@ -1397,7 +1407,8 @@ export default function RestaurantLocator() {
                               )}
                               {selectedRestaurant.rating && (
                                 <span className="iw-rating-tag">
-                                  ⭐ {selectedRestaurant.rating}
+                                  <Star size={12} fill="#fbbf24" color="#fbbf24" style={{ marginRight: '4px', verticalAlign: 'middle' }} />
+                                  {selectedRestaurant.rating}
                                 </span>
                               )}
                             </div>
@@ -1436,7 +1447,7 @@ export default function RestaurantLocator() {
 
                             {/* Google Maps Link */}
                             <a
-                              href={selectedRestaurant.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${selectedRestaurant.lat},${selectedRestaurant.lng}`}
+                              href={selectedRestaurant.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedRestaurant.name + (selectedRestaurant.city ? ' ' + selectedRestaurant.city : ''))}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="iw-google-link"

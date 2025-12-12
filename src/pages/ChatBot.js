@@ -24,7 +24,8 @@ import { useAuth } from "../auth/AuthContext";
 
 const BOT_PNG = `${process.env.PUBLIC_URL || ""}/images/PickAPlate.png`;
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
-const SESSION_ID = getSessionId();
+// Get fresh session ID each time (don't cache at module level)
+const getSession = () => getSessionId();
 
 const brand = {
   primary: "#FFC42D",
@@ -454,26 +455,23 @@ export default function ChatBot() {
   }
 
   function buildPayload({ message, history, chatId, mood }) {
-    const localHour = new Date().getHours();   
-    const base = { message, history, chatId, localHour };
+    const localHour = new Date().getHours();
+    // Always include sessionId as fallback in case token is invalid
+    const base = { message, history, chatId, localHour, sessionId: getSession() };
     if (mood) base.mood = mood;
 
-    return isAuthenticated ? base : { ...base, sessionId: SESSION_ID };
+    return isAuthenticated ? { ...base, ...authHeaders() } : base;
   }
 
   function oneChatUrl(serverId) {
-    return isAuthenticated
-      ? `${API_BASE}/api/chats/${serverId}`
-      : `${API_BASE}/api/chats/${serverId}?sessionId=${encodeURIComponent(
-          SESSION_ID
-        )}`;
+    // Always include sessionId as fallback in case token is invalid
+    return `${API_BASE}/api/chats/${serverId}?sessionId=${encodeURIComponent(getSession())}`;
   }
 
   const chatsListUrlStr = React.useMemo(
     () =>
-      isAuthenticated
-        ? `${API_BASE}/api/chats`
-        : `${API_BASE}/api/chats?sessionId=${encodeURIComponent(SESSION_ID)}`,
+      // Always include sessionId as fallback in case token is invalid
+      `${API_BASE}/api/chats?sessionId=${encodeURIComponent(getSession())}`,
     [isAuthenticated]
   );
 
@@ -569,8 +567,13 @@ export default function ChatBot() {
       const canUseLocal = !isAuthenticated && !suppressLocalLoadRef.current;
 
       try {
-        const res = await fetch(chatsListUrlStr, { headers: headersForList });
-        if (!res.ok) throw new Error(await res.text());
+        // Build headers with auth token if available
+        const headers = isAuthenticated ? authHeaders() : {};
+
+        const res = await fetch(chatsListUrlStr, { headers });
+        if (!res.ok) {
+          throw new Error(await res.text());
+        }
         const list = await res.json();
 
         if (Array.isArray(list) && list.length) {
@@ -625,7 +628,7 @@ export default function ChatBot() {
         setActiveChatId(null);
       }
     })();
-  }, [chatsListUrlStr, headersForList, isAuthenticated]);
+  }, [chatsListUrlStr, isAuthenticated, authHeaders]);
 
   useEffect(() => {
     if (!isAuthenticated && !suppressLocalLoadRef.current)
@@ -890,11 +893,8 @@ export default function ChatBot() {
       const serverId =
         chat.chatId || (typeof chat.id === "string" ? chat.id : null);
       if (serverId) {
-        const url = isAuthenticated
-          ? `${API_BASE}/api/chats/${serverId}`
-          : `${API_BASE}/api/chats/${serverId}?sessionId=${encodeURIComponent(
-              SESSION_ID
-            )}`;
+        // Always include sessionId as fallback in case token is invalid
+        const url = `${API_BASE}/api/chats/${serverId}?sessionId=${encodeURIComponent(getSession())}`;
         const res = await fetch(url, {
           method: "DELETE",
           headers: buildHeaders(),
@@ -1712,11 +1712,12 @@ function renderMoodPill() {
               >
                 {activeChat?.messages?.length ? (
                   activeChat.messages.map((m, idx) => {
-                                        if (
+                    // Hide internal system messages from user view
+                    if (
                       m.role === "user" &&
                       typeof m.content === "string" &&
-                      m.content.startsWith('Give me a simple recipe for "') ||     
-                      m.content.startsWith("The user finalized their decision") 
+                      (m.content.startsWith('Give me a simple recipe for "') ||
+                       m.content.startsWith("The user finalized their decision"))
                     ) {
                       return null; // don't render this bubble at all
                     }

@@ -190,7 +190,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
+  background:
     radial-gradient(ellipse at 10% 20%, rgba(255, 255, 255, 0.2) 0%, transparent 30%),
     radial-gradient(ellipse at 90% 80%, rgba(255, 255, 255, 0.15) 0%, transparent 25%),
     radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.08) 0%, transparent 40%),
@@ -233,8 +233,7 @@ body {
   top: 0;
   left: 0;
   pointer-events: none;
-  background: 
-    /* Scattered glowing dots */
+  background:
     radial-gradient(circle at 5% 40%, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.35) 6px, transparent 6px),
     radial-gradient(circle at 12% 70%, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.25) 4px, transparent 4px),
     radial-gradient(circle at 20% 25%, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.2) 8px, transparent 8px),
@@ -280,14 +279,19 @@ body {
 }
 
 .brand {
-  display: flex;
-  align-items: center;
+  display: grid !important;
+  grid-template-columns: auto 1fr !important;
+  align-items: start !important;
   gap: var(--spacing-md);
   position: relative;
   z-index: 3;
 }
 
 .logo-icon {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  align-self: flex-start !important;
+  margin-top: 4px;
   width: 64px;
   height: 64px;
   background: rgba(255, 255, 255, 0.25);
@@ -295,7 +299,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 
+  box-shadow:
     0 8px 32px rgba(120, 53, 15, 0.25),
     inset 0 2px 0 rgba(255, 255, 255, 0.3);
   border: 2px solid rgba(255, 255, 255, 0.3);
@@ -318,34 +322,70 @@ body {
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
 }
 
+.brand-text {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+}
+
 .brand-text h1 {
+  font-family: 'Poppins', sans-serif !important;
   color: white;
-  font-size: 2.25rem;
-  font-weight: 800;
+  font-size: 2.75rem !important;
+  font-weight: 800 !important;
   margin: 0;
-  letter-spacing: -0.5px;
-  text-shadow: 0 2px 8px rgba(120, 53, 15, 0.3);
+  letter-spacing: -0.02em;
+  text-shadow:
+    2px 2px 0 rgba(120, 53, 15, 0.3),
+    0 0 20px rgba(255, 255, 255, 0.3);
+  line-height: 1.1;
+}
+
+@media (min-width: 640px) {
+  .brand-text h1 {
+    font-size: 3.25rem !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  .brand-text h1 {
+    font-size: 4rem !important;
+  }
 }
 
 .brand-text p {
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 0.95rem;
-  margin: 0;
-  font-weight: 600;
+  font-family: 'Inter', sans-serif !important;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  margin: 4px 0 0 0;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+@media (min-width: 640px) {
+  .brand-text p {
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .brand-text p {
+    font-size: 1.25rem;
+  }
 }
 
 .header-stats {
-  background: rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
   padding: var(--spacing-md) var(--spacing-xl);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  box-shadow: 
-    0 4px 24px rgba(120, 53, 15, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  border: none;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   position: relative;
   z-index: 3;
@@ -353,9 +393,7 @@ body {
 
 .header-stats:hover {
   transform: translateY(-3px);
-  box-shadow: 
-    0 8px 32px rgba(120, 53, 15, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
 }
 
 .stat-value {
@@ -468,8 +506,9 @@ body {
   background: var(--card-bg);
   border: 2px solid var(--card-border);
   border-radius: var(--radius-lg);
-  font-size: 0.85rem;
-  font-weight: 700;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.875rem;
+  font-weight: 500;
   color: var(--text-primary);
   cursor: pointer;
   transition: all 0.3s ease;
@@ -793,6 +832,14 @@ body {
   transform: rotate(45deg);
   font-size: 14px;
   line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gm-pin-icon svg {
+  width: 14px;
+  height: 14px;
 }
 
 .gm-pin-tail {
@@ -931,6 +978,11 @@ body {
   flex-shrink: 0;
 }
 
+.legend-marker svg {
+  width: 12px;
+  height: 12px;
+}
+
 .legend-cluster {
   width: 20px;
   height: 20px;
@@ -1012,7 +1064,7 @@ body {
 
 /* Main container */
 .gm-style-infowindow {
-  font-family: 'Roboto', 'Arial', sans-serif;
+  font-family: 'Inter', sans-serif !important;
   width: 300px;
   background: white;
   border-radius: 8px;
@@ -1038,10 +1090,11 @@ body {
   padding: 12px 16px 16px;
 }
 
-/* Restaurant name */
+/* Restaurant name - Poppins (clean, modern) */
 .iw-title {
+  font-family: 'Poppins', sans-serif !important;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   color: #202124;
   margin: 0 0 12px 0;
   line-height: 1.3;
@@ -1164,7 +1217,8 @@ body {
 }
 
 .gm-style-iw-d {
-  overflow: hidden !important;
+  overflow: auto !important;
+  max-height: 350px !important;
   padding: 0 !important;
 }
 

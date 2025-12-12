@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Edit, Trash2, X, Download, Camera, MapPin, Compass, ChevronDown } from "lucide-react";
+import { Plus, Edit, Trash2, X, Download, Camera, MapPin, Compass, ChevronDown, Utensils, Star, Globe } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import jsPDF from "jspdf";
 import LoadingModal from "../components/LoadingModal";
@@ -254,26 +254,22 @@ export default function Explorer() {
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         alert('Please select an image file.');
         return;
       }
 
-      // Validate file size (max 10MB before compression)
       if (file.size > 10 * 1024 * 1024) {
         alert('Image must be less than 10MB.');
         return;
       }
 
-      // Compress and resize image using canvas
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const maxSize = 1200; // Max 1200px
+        const maxSize = 1200;
         let { width, height } = img;
 
-        // Calculate new dimensions while maintaining aspect ratio
         if (width > height && width > maxSize) {
           height = Math.round((height * maxSize) / width);
           width = maxSize;
@@ -290,7 +286,6 @@ export default function Explorer() {
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Convert to JPEG at 85% quality
         const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
         setImagePreview(compressedDataUrl);
         setRecipeForm(prev => ({ ...prev, img: compressedDataUrl }));
@@ -504,17 +499,25 @@ export default function Explorer() {
       {loading && <LoadingModal message="Loading cultural recipes..." />}
 
       <div className="explorer">
-        {/* New Unique Header */}
+        {/* Enhanced Filipino Explorer Header */}
         <header className="explorer-header-v2">
           {/* Decorative background elements */}
           <div className="explorer-header-bg">
             <div className="header-pattern"></div>
             <div className="header-glow header-glow-1"></div>
             <div className="header-glow header-glow-2"></div>
+            {/* Add sparkling stars */}
+            <div className="header-star header-star-1"></div>
+            <div className="header-star header-star-2"></div>
+            <div className="header-star header-star-3"></div>
+            <div className="header-star header-star-4"></div>
+            <div className="header-star header-star-5"></div>
+            <div className="header-star header-star-6"></div>
+            {/* Filipino cultural decorations */}
+            <div className="filipino-element filipino-element-1">🌺</div>
+            <div className="filipino-element filipino-element-2">🥥</div>
+            <div className="filipino-element filipino-element-3">🍍</div>
           </div>
-
-          {/* Left decorative border */}
-          <div className="header-accent-bar"></div>
 
           <div className="explorer-header-content">
             {/* Title Section */}
@@ -525,9 +528,23 @@ export default function Explorer() {
               <div className="explorer-title-text">
                 <h1>Explore Filipino Cuisine</h1>
                 <p className="explorer-subtitle">
-                  <MapPin className="subtitle-icon" />
                   <span>Discover authentic recipes from across the Philippines</span>
                 </p>
+                {/* Add stats badges */}
+                <div className="explorer-stats-badges">
+                  <div className="stats-badge">
+                    <Utensils className="badge-icon" />
+                    <span>{dishes.length} Recipes</span>
+                  </div>
+                  <div className="stats-badge">
+                    <Globe className="badge-icon" />
+                    <span>3 Regions</span>
+                  </div>
+                  <div className="stats-badge">
+                    <Star className="badge-icon" />
+                    <span>Authentic</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -880,7 +897,7 @@ export default function Explorer() {
                 <div className="form-group-header">
                   <label>Cooking Instructions</label>
                   <button className="btn-add-item" onClick={addInstruction}>
-                    <Plus className="icon-xs" />
+                    <Plus className="icon-sm" />
                     Add Step
                   </button>
                 </div>

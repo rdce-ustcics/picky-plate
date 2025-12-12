@@ -43,7 +43,15 @@
       "Bash(cmd //c \"taskkill /PID 28344 /F\")",
       "Bash(find:*)",
       "Bash(powershell -Command:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(del \"c:\\React\\pappy2\\picky-plate\\scripts\\check-coordinates.js\")",
+      "Bash(cmd /c del \"c:\\React\\pappy2\\picky-plate\\scripts\\check-coordinates.js\")",
+      "Bash(if exist scriptscheck-coordinates.js echo \"check-coordinates.js exists\" else echo \"check-coordinates.js not found\")",
+      "Bash(cmd /c \"dir data-sources\\*.json\")",
+      "Bash(cmd /c \"if exist scripts\\check-coordinates.js (echo EXISTS) else (echo NOT FOUND)\")",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

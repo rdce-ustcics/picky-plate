@@ -510,28 +510,38 @@ export default function Dashboard() {
 
           <div className="header-container-v2">
             <div className="header-content-v2">
-              {/* Brand */}
-              <div className="header-brand">
-                <div className="header-logo-wrapper">
-                  <div className="header-logo-v2">
-                    <div className="logo-plate">
-                      <Utensils className="logo-utensils-icon" />
-                    </div>
-                    <div className="logo-sparkle logo-sparkle-1">
-                      <Sparkles size={12} />
-                    </div>
-                    <div className="logo-sparkle logo-sparkle-2">
-                      <Sparkles size={12} />
-                    </div>
+              {/* Brand - CSS GRID: Icon LEFT, Title RIGHT */}
+              <div
+                className="header-brand"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'auto 1fr',
+                  alignItems: 'center',
+                  gap: '16px'
+                }}
+              >
+                {/* ICON - Column 1 */}
+                <div
+                  className="header-logo-v2"
+                  style={{
+                    gridColumn: 1,
+                    gridRow: 1
+                  }}
+                >
+                  <div className="logo-plate">
+                    <Utensils className="logo-utensils-icon" />
+                  </div>
+                  <div className="logo-sparkle logo-sparkle-1">
+                    <Sparkles size={14} />
+                  </div>
+                  <div className="logo-sparkle logo-sparkle-2">
+                    <Sparkles size={14} />
                   </div>
                 </div>
-                <div className="header-text-group">
-                  <div className="header-title-row">
-                    <h1 className="header-title-v2">Pick-A-Plate</h1>
-                  </div>
-                  <p className="header-tagline">
-                    Your personal food companion
-                  </p>
+                {/* TEXT - Column 2 */}
+                <div style={{ gridColumn: 2, gridRow: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <h1 className="header-title-v2" style={{ margin: 0 }}>Pick A Plate</h1>
+                  <p className="header-tagline" style={{ margin: 0 }}>Your personal food companion</p>
                 </div>
               </div>
 
@@ -566,11 +576,11 @@ export default function Dashboard() {
             <div className="ai-chat-card">
               <div className="ai-chat-decoration"></div>
               <div className="ai-chat-content">
-                <div className="ai-chat-header">
-                  <div className="ai-chat-icon-container"><Bot className="ai-chat-icon" /></div>
-                  <div>
-                    <h2 className="ai-chat-title">AI Assistant</h2>
-                    <p className="ai-chat-subtitle">{greeting}! How can I help?</p>
+                <div className="ai-chat-header" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'center', gap: '12px' }}>
+                  <div className="ai-chat-icon-container" style={{ gridColumn: 1, gridRow: 1 }}><Bot className="ai-chat-icon" /></div>
+                  <div style={{ gridColumn: 2, gridRow: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
+                    <h2 className="ai-chat-title" style={{ margin: 0 }}>AI Assistant</h2>
+                    <p className="ai-chat-subtitle" style={{ margin: '2px 0 0 0' }}>{greeting}! How can I help?</p>
                   </div>
                 </div>
                 <div className="ai-chat-features">
@@ -647,11 +657,11 @@ export default function Dashboard() {
           {/* Food Mood & Fun Facts Section */}
           <div className="mood-facts-section">
             <div className="mood-picker-card">
-              <div className="mood-picker-header">
-                <div className="mood-picker-icon-wrapper"><Flame className="mood-picker-icon" /></div>
-                <div>
-                  <h3 className="mood-picker-title">What's Your Food Mood?</h3>
-                  <p className="mood-picker-subtitle">Tap how you're feeling, we'll find the perfect dish!</p>
+              <div className="mood-picker-header" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', alignItems: 'center', gap: '12px' }}>
+                <div className="mood-picker-icon-wrapper" style={{ gridColumn: 1, gridRow: 1 }}><Flame className="mood-picker-icon" /></div>
+                <div style={{ gridColumn: 2, gridRow: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
+                  <h3 className="mood-picker-title" style={{ margin: 0 }}>What's Your Food Mood?</h3>
+                  <p className="mood-picker-subtitle" style={{ margin: '2px 0 0 0' }}>Tap how you're feeling, we'll find the perfect dish!</p>
                 </div>
               </div>
               <div className="mood-grid">

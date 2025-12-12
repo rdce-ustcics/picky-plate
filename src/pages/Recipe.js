@@ -1519,19 +1519,33 @@ export default function CommunityRecipes() {
       {loading && <LoadingModal message="Loading community recipes..." />}
 
       <div className="community-recipes-page">
-        {/* Header */}
+        {/* Header - Explorer Style with Community Recipes Content */}
         <div className="cr-header">
-          {/* Floating decoration circles */}
-          <div className="cr-header-decoration cr-header-decoration-1"></div>
-          <div className="cr-header-decoration cr-header-decoration-2"></div>
-          <div className="cr-header-decoration cr-header-decoration-3"></div>
-          <div className="cr-header-decoration cr-header-decoration-4"></div>
-          <div className="cr-header-decoration cr-header-decoration-15"></div>
+          {/* Background decorations */}
+          <div className="cr-header-bg">
+            <div className="header-pattern" />
+            <div className="header-glow header-glow-1" />
+            <div className="header-glow header-glow-2" />
+            <div className="header-star header-star-1" />
+            <div className="header-star header-star-2" />
+            <div className="header-star header-star-3" />
+            <div className="header-star header-star-4" />
+            <div className="header-star header-star-5" />
+            <div className="header-star header-star-6" />
+          </div>
 
+          {/* Main header content */}
           <div className="cr-header-content">
-            <div>
-              <h1 className="cr-title">Community Recipes</h1>
-              <p className="cr-subtitle">Discover and share delicious meals with the community</p>
+            <div className="cr-title-section">
+              <div className="cr-icon-badge">
+                <ChefHat className="cr-header-icon" />
+              </div>
+              <div className="cr-title-text">
+                <h1>Community Recipes</h1>
+                <div className="cr-subtitle-row">
+                  <span>Discover and share delicious meals with the community</span>
+                </div>
+              </div>
             </div>
 
             <div className="cr-header-actions">
@@ -1551,12 +1565,18 @@ export default function CommunityRecipes() {
                 {showFavorites ? `Liked (${favorites.length})` : "Liked"}
               </button>
 
-              {/* Changed from Link to button that opens modal */}
               <button onClick={openUploadModal} className="cr-btn-upload">
                 <Plus className="w-4 h-4" />
                 Upload Recipe
               </button>
             </div>
+          </div>
+
+          {/* Wave at bottom */}
+          <div className="header-wave">
+            <svg viewBox="0 0 1440 40" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+              <path d="M0 20C240 40 480 0 720 20C960 40 1200 0 1440 20V40H0V20Z" fill="#FEF3C7"/>
+            </svg>
           </div>
 
           {/* Filters Section */}
