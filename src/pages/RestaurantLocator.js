@@ -442,6 +442,7 @@ export default function RestaurantLocator() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [debouncedRadius, setDebouncedRadius] = useState(5);
   const [totalFromApi, setTotalFromApi] = useState(0);
   const [useApiMode, setUseApiMode] = useState(true);
   const [showLegend, setShowLegend] = useState(false);
@@ -454,13 +455,21 @@ export default function RestaurantLocator() {
     message: ''
   });
 
-  // Debounce search query
+  // Debounce search query - 800ms delay for better UX
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-    }, 300);
+    }, 800);
     return () => clearTimeout(timer);
   }, [searchQuery]);
+
+  // Debounce radius slider - 600ms delay for better UX
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedRadius(searchRadius);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [searchRadius]);
 
   // Handle URL parameters (from Barkada Vote winner redirect)
   useEffect(() => {
@@ -716,47 +725,73 @@ export default function RestaurantLocator() {
       return;
     }
 
+    // Success handler
+    const onSuccess = (position) => {
+      const { latitude, longitude, accuracy } = position.coords;
+      const location = { lat: latitude, lng: longitude, accuracy: accuracy };
+
+      setUserLocation(location);
+      setLocationLoading(false);
+      setMapCenter({ lat: latitude, lng: longitude });
+      // Zoom level based on accuracy - less accurate = zoom out more
+      const zoomLevel = accuracy > 1000 ? 12 : accuracy > 500 ? 13 : 14;
+      setMapZoom(zoomLevel);
+      setShowNearbyOnly(true);
+    };
+
+    // Error handler
+    const onError = (error) => {
+      let errorMessage = "Unable to get your location";
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          errorMessage = "Location permission denied. Please enable location access in your browser settings and reload the page.";
+          break;
+        case error.POSITION_UNAVAILABLE:
+          errorMessage = "Location unavailable. Make sure GPS/Location Services are enabled on your device.";
+          break;
+        case error.TIMEOUT:
+          errorMessage = "Location request timed out. Trying with lower accuracy...";
+          break;
+        default:
+          errorMessage = `Location error: ${error.message}`;
+      }
+
+      // If timeout, try again with lower accuracy (faster for laptops)
+      if (error.code === error.TIMEOUT) {
+        navigator.geolocation.getCurrentPosition(
+          onSuccess,
+          () => {
+            setLocationError("Could not get location. Please try again.");
+            setLocationLoading(false);
+          },
+          {
+            enableHighAccuracy: false,
+            timeout: 10000,
+            maximumAge: 60000 // Accept cached location up to 1 minute old
+          }
+        );
+        return;
+      }
+
+      setLocationError(errorMessage);
+      setLocationLoading(false);
+    };
+
+    // First try with low accuracy for faster response (better for laptops)
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude, accuracy } = position.coords;
-        const location = { lat: latitude, lng: longitude, accuracy: accuracy };
-
-        setUserLocation(location);
-        setLocationLoading(false);
-        setMapCenter({ lat: latitude, lng: longitude });
-        setMapZoom(14);
-        setShowNearbyOnly(true);
-      },
-      (error) => {
-        let errorMessage = "Unable to get your location";
-        switch(error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = "Location permission denied. Please enable location access in your browser settings and reload the page.";
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = "Location unavailable. Make sure GPS/Location Services are enabled on your device.";
-            break;
-          case error.TIMEOUT:
-            errorMessage = "Location request timed out. Try moving near a window or outside for better GPS signal.";
-            break;
-          default:
-            errorMessage = `Location error: ${error.message}`;
-        }
-
-        setLocationError(errorMessage);
-        setLocationLoading(false);
-      },
+      onSuccess,
+      onError,
       {
-        enableHighAccuracy: true,
-        timeout: 30000,
-        maximumAge: 0
+        enableHighAccuracy: false, // Start with low accuracy for faster response
+        timeout: 10000,
+        maximumAge: 30000 // Accept cached location up to 30 seconds old
       }
     );
   };
 
   const fetchRestaurantsFromApi = useCallback(async (lat, lng, options = {}) => {
     const {
-      radius = searchRadius * 1000,
+      radius = debouncedRadius * 1000,
       cuisine = selectedCuisine !== "all" ? selectedCuisine : undefined,
       minRatingFilter = minRating > 0 ? minRating : undefined,
       priceLevel = selectedPriceLevel !== "all" ? selectedPriceLevel : undefined,
@@ -794,7 +829,7 @@ export default function RestaurantLocator() {
     } catch (error) {
       throw error;
     }
-  }, [searchRadius, selectedCuisine, minRating, selectedPriceLevel, debouncedSearchQuery]);
+  }, [debouncedRadius, selectedCuisine, minRating, selectedPriceLevel, debouncedSearchQuery]);
 
   // Load cuisines list from API
   useEffect(() => {
@@ -836,7 +871,7 @@ export default function RestaurantLocator() {
           const result = await fetchRestaurantsFromApi(
             locationToUse.lat,
             locationToUse.lng,
-            { radius: showNearbyOnly ? searchRadius * 1000 : 0, limit: initialLimit }
+            { radius: showNearbyOnly ? debouncedRadius * 1000 : 0, limit: initialLimit }
           );
 
           if (isCancelled) return;
@@ -951,7 +986,7 @@ export default function RestaurantLocator() {
     return () => {
       isCancelled = true;
     };
-  }, [userLocation, useApiMode, fetchRestaurantsFromApi, showNearbyOnly, searchRadius]);
+  }, [userLocation, useApiMode, fetchRestaurantsFromApi, showNearbyOnly, debouncedRadius]);
 
   // Refetch when TEXT filters change - no extra debounce needed since debouncedSearchQuery is already debounced
   const isFetchingRef = useRef(false);
@@ -974,7 +1009,7 @@ export default function RestaurantLocator() {
           locationToUse.lat,
           locationToUse.lng,
           {
-            radius: showNearbyOnly ? searchRadius * 1000 : 0,
+            radius: showNearbyOnly ? debouncedRadius * 1000 : 0,
             limit: showNearbyOnly ? 5000 : 5000,
             cuisine: selectedCuisine !== "all" ? selectedCuisine : undefined,
             minRatingFilter: minRating > 0 ? minRating : undefined,
@@ -1004,7 +1039,7 @@ export default function RestaurantLocator() {
       isFetchingRef.current = false;
     };
   }, [debouncedSearchQuery, selectedCuisine, selectedPriceLevel, minRating,
-      showNearbyOnly, searchRadius, userLocation, useApiMode, fetchRestaurantsFromApi]);
+      showNearbyOnly, debouncedRadius, userLocation, useApiMode, fetchRestaurantsFromApi]);
 
   // Simplified filtering
   const filteredRestaurants = useMemo(() => {
@@ -1272,6 +1307,78 @@ export default function RestaurantLocator() {
               ))}
             </div>
 
+            {/* Distance Radius Slider - Shows when Near Me is active */}
+            {showNearbyOnly && (
+              <div className="radius-slider-container" style={{
+                background: 'linear-gradient(135deg, #FFF9E6 0%, #FFF4D6 100%)',
+                border: '2px solid #FFC42D',
+                borderRadius: '16px',
+                padding: '20px 24px',
+                marginBottom: '16px',
+                boxShadow: '0 4px 12px rgba(255, 196, 45, 0.25)'
+              }}>
+                {/* Large Radius Display */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: '16px',
+                  gap: '12px'
+                }}>
+                  <span style={{ fontSize: '16px', color: '#92400E', fontWeight: '600' }}></span>
+                  <div style={{
+                    background: searchRadius !== debouncedRadius ? '#FF9500' : '#FFC42D',
+                    color: '#fff',
+                    padding: '12px 28px',
+                    borderRadius: '30px',
+                    fontWeight: '800',
+                    fontSize: '24px',
+                    boxShadow: '0 4px 12px rgba(255, 196, 45, 0.4)',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    {searchRadius} km
+                    {searchRadius !== debouncedRadius && (
+                      <span style={{
+                        width: '16px',
+                        height: '16px',
+                        border: '2px solid #fff',
+                        borderTop: '2px solid transparent',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite'
+                      }}></span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Slider */}
+                <input
+                  type="range"
+                  min="1"
+                  max="20"
+                  step="0.5"
+                  value={searchRadius}
+                  onChange={(e) => setSearchRadius(parseFloat(e.target.value))}
+                  style={{
+                    width: '100%',
+                    height: '12px',
+                    borderRadius: '6px',
+                    background: `linear-gradient(to right, #FFC42D 0%, #FFC42D ${(searchRadius - 1) / 19 * 100}%, #E5E7EB ${(searchRadius - 1) / 19 * 100}%, #E5E7EB 100%)`,
+                    outline: 'none',
+                    cursor: 'pointer',
+                    WebkitAppearance: 'none'
+                  }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '13px', color: '#B45309', fontWeight: '500' }}>
+                  <span>1 km</span>
+                  <span>10 km</span>
+                  <span>20 km</span>
+                </div>
+              </div>
+            )}
+
             {/* Filter Actions */}
             <div className="filter-actions">
               <button
@@ -1321,6 +1428,59 @@ export default function RestaurantLocator() {
             {/* Map Container */}
             {activeView === 'map' && (
               <div className="map-container">
+                {/* My Location Button */}
+                <button
+                  className="my-location-btn"
+                  onClick={() => {
+                    if (userLocation) {
+                      // Already have location, just center on it
+                      setMapCenter({ lat: userLocation.lat, lng: userLocation.lng });
+                      setMapZoom(15);
+                    } else {
+                      // Get location (which will auto-center the map)
+                      getUserLocation();
+                    }
+                  }}
+                  title={userLocation ? "Center on my location" : "Find my location"}
+                  style={{
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    zIndex: 100,
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '10px',
+                    border: userLocation ? '2px solid #FFC42D' : '2px solid transparent',
+                    background: userLocation ? '#FFF9E6' : 'white',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#FFC42D';
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = userLocation ? '#FFF9E6' : 'white';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  {locationLoading ? (
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFC42D" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}>
+                      <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="10" />
+                    </svg>
+                  ) : (
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill={userLocation ? "#FFC42D" : "none"} stroke={userLocation ? "#FFC42D" : "#333"} strokeWidth="2">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                      <circle cx="12" cy="12" r="8" fill="none" />
+                    </svg>
+                  )}
+                </button>
+
                 <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
                   <Map
                     style={mapContainerStyle}
@@ -1351,11 +1511,55 @@ export default function RestaurantLocator() {
                     {userLocation && (
                       <AdvancedMarker
                         position={{ lat: userLocation.lat, lng: userLocation.lng }}
-                        title="Your Location"
+                        title={`Your Location (±${Math.round(userLocation.accuracy || 0)}m accuracy)`}
+                        zIndex={9999}
                       >
-                        <div className="user-location-marker">
-                          <div className="pulse-ring"></div>
-                          <div className="user-dot"></div>
+                        <div className="user-location-marker" style={{
+                          position: 'relative',
+                          width: '80px',
+                          height: '80px'
+                        }}>
+                          {/* Accuracy circle - larger when less accurate */}
+                          <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: `${Math.min(120, Math.max(60, (userLocation.accuracy || 100) / 10))}px`,
+                            height: `${Math.min(120, Math.max(60, (userLocation.accuracy || 100) / 10))}px`,
+                            background: 'rgba(66, 133, 244, 0.15)',
+                            border: '2px solid rgba(66, 133, 244, 0.4)',
+                            borderRadius: '50%',
+                            zIndex: 1
+                          }}></div>
+                          {/* Pulse ring */}
+                          <div className="pulse-ring" style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '60px',
+                            height: '60px',
+                            background: 'rgba(66, 133, 244, 0.3)',
+                            border: '3px solid rgba(66, 133, 244, 0.5)',
+                            borderRadius: '50%',
+                            animation: 'pulse 2s infinite',
+                            zIndex: 2
+                          }}></div>
+                          {/* Center dot */}
+                          <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '24px',
+                            height: '24px',
+                            background: '#4285F4',
+                            border: '4px solid white',
+                            borderRadius: '50%',
+                            boxShadow: '0 3px 12px rgba(66, 133, 244, 0.7)',
+                            zIndex: 3
+                          }}></div>
                         </div>
                       </AdvancedMarker>
                     )}
