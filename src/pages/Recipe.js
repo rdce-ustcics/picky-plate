@@ -49,60 +49,6 @@ const REPORT_REASONS = [
   { label: "Other", value: "other" },
 ];
 
-// Profanity filter - list of blocked words/phrases
-const BLOCKED_WORDS = [
-  "fuck", "fucking", "fucked", "fucker", "fck", "f*ck", "f**k",
-  "shit", "bullshit", "shitty", "sh*t", "s**t",
-  "ass", "asshole", "a**hole", "a$$",
-  "bitch", "b*tch", "b**ch",
-  "damn", "damned",
-  "bastard", "b*stard",
-  "crap",
-  "dick", "d*ck",
-  "pussy", "p*ssy",
-  "cock", "c*ck",
-  "cunt", "c*nt",
-  "whore", "slut",
-  "nigger", "nigga", "n*gger", "n*gga",
-  "faggot", "fag", "f*ggot",
-  "retard", "retarded",
-  "idiot", "stupid",
-  "puta", "putangina", "gago", "bobo", "tanga", "tangina", "tarantado",
-  "pakyu", "leche", "punyeta", "ulol", "inutil"
-];
-
-// Check if text contains profanity - returns the found word or null
-const containsProfanity = (text) => {
-  if (!text) return null;
-  const lowerText = text.toLowerCase();
-  // Check for whole words or within words
-  for (const word of BLOCKED_WORDS) {
-    // Match as whole word or part of word
-    const regex = new RegExp(word.replace(/\*/g, '.'), 'i');
-    if (regex.test(lowerText)) {
-      return word;
-    }
-  }
-  return null;
-};
-
-// Check multiple text fields for profanity
-const checkFieldsForProfanity = (fields) => {
-  for (const { value, fieldName } of fields) {
-    if (Array.isArray(value)) {
-      for (const item of value) {
-        const found = containsProfanity(item);
-        if (found) return { field: fieldName, word: found };
-      }
-    } else {
-      const found = containsProfanity(value);
-      if (found) return { field: fieldName, word: found };
-    }
-  }
-  return null;
-};
-
-
 export default function CommunityRecipes() {
   const { isAuthenticated, authHeaders, user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -1119,18 +1065,6 @@ export default function CommunityRecipes() {
       errors.instructions = "At least one instruction is required";
     }
 
-    // Check for profanity in all text fields
-    const profanityCheck = checkFieldsForProfanity([
-      { value: editForm.title, fieldName: "title" },
-      { value: editForm.description, fieldName: "description" },
-      { value: editForm.notes || "", fieldName: "notes" },
-      { value: validIngredients, fieldName: "ingredients" },
-      { value: validInstructions, fieldName: "instructions" }
-    ]);
-    if (profanityCheck) {
-      errors[profanityCheck.field] = "Inappropriate language detected. Please keep it family-friendly.";
-    }
-
     // Check image validation if a new image was uploaded
     if (editImagePreview && editImageValidation && !editImageValidation.approved && !editImageValidation.skipped) {
       errors.image = "Image not approved - please upload a valid food image";
@@ -1489,18 +1423,6 @@ export default function CommunityRecipes() {
     if (!uploadForm.cookTime) errs.push("Cook time is required");
     if (!uploadForm.servings) errs.push("Serving size is required");
     if (!uploadForm.difficulty) errs.push("Difficulty is required");
-
-    // Check for profanity in all text fields
-    const profanityCheck = checkFieldsForProfanity([
-      { value: uploadForm.title, fieldName: "Title" },
-      { value: uploadForm.description, fieldName: "Description" },
-      { value: uploadForm.notes, fieldName: "Notes" },
-      { value: cleanIngredients, fieldName: "Ingredients" },
-      { value: cleanInstructions, fieldName: "Instructions" }
-    ]);
-    if (profanityCheck) {
-      errs.push(`Inappropriate language detected in ${profanityCheck.field}. Please keep it family-friendly.`);
-    }
 
     // Check image validation if image exists
     if (uploadForm.image && uploadImageValidation && !uploadImageValidation.approved && !uploadImageValidation.skipped) {
