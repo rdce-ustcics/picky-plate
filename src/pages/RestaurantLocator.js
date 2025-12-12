@@ -1307,49 +1307,15 @@ export default function RestaurantLocator() {
               ))}
             </div>
 
-            {/* Distance Radius Slider - Shows when Near Me is active */}
-            {showNearbyOnly && (
-              <div className="radius-slider-container" style={{
-                background: 'linear-gradient(135deg, #FFF9E6 0%, #FFF4D6 100%)',
-                border: '2px solid #FFC42D',
-                borderRadius: '16px',
-                padding: '20px 24px',
-                marginBottom: '16px',
-                boxShadow: '0 4px 12px rgba(255, 196, 45, 0.25)'
-              }}>
-                {/* Large Radius Display */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '16px',
-                  gap: '12px'
-                }}>
-                  <span style={{ fontSize: '16px', color: '#92400E', fontWeight: '600' }}></span>
-                  <div style={{
-                    background: searchRadius !== debouncedRadius ? '#FF9500' : '#FFC42D',
-                    color: '#fff',
-                    padding: '12px 28px',
-                    borderRadius: '30px',
-                    fontWeight: '800',
-                    fontSize: '24px',
-                    boxShadow: '0 4px 12px rgba(255, 196, 45, 0.4)',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px'
-                  }}>
+            {/* Distance Radius Slider - Shows when Near Me is active AND in Map View */}
+            {showNearbyOnly && activeView === 'map' && (
+              <div className="radius-slider-box">
+                {/* Compact layout with label and value inline */}
+                <div className="radius-slider-header">
+                  <span className="radius-label">Radius</span>
+                  <div className={`radius-value ${searchRadius !== debouncedRadius ? 'loading' : ''}`}>
                     {searchRadius} km
-                    {searchRadius !== debouncedRadius && (
-                      <span style={{
-                        width: '16px',
-                        height: '16px',
-                        border: '2px solid #fff',
-                        borderTop: '2px solid transparent',
-                        borderRadius: '50%',
-                        animation: 'spin 1s linear infinite'
-                      }}></span>
-                    )}
+                    {searchRadius !== debouncedRadius && <span className="radius-spinner"></span>}
                   </div>
                 </div>
 
@@ -1361,20 +1327,15 @@ export default function RestaurantLocator() {
                   step="0.5"
                   value={searchRadius}
                   onChange={(e) => setSearchRadius(parseFloat(e.target.value))}
+                  className="radius-slider-input"
                   style={{
-                    width: '100%',
-                    height: '12px',
-                    borderRadius: '6px',
-                    background: `linear-gradient(to right, #FFC42D 0%, #FFC42D ${(searchRadius - 1) / 19 * 100}%, #E5E7EB ${(searchRadius - 1) / 19 * 100}%, #E5E7EB 100%)`,
-                    outline: 'none',
-                    cursor: 'pointer',
-                    WebkitAppearance: 'none'
+                    background: `linear-gradient(to right, #FFC42D 0%, #FFC42D ${(searchRadius - 1) / 19 * 100}%, #E5E7EB ${(searchRadius - 1) / 19 * 100}%, #E5E7EB 100%)`
                   }}
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '13px', color: '#B45309', fontWeight: '500' }}>
-                  <span>1 km</span>
-                  <span>10 km</span>
-                  <span>20 km</span>
+                <div className="radius-markers">
+                  <span>1</span>
+                  <span>10</span>
+                  <span>20</span>
                 </div>
               </div>
             )}
