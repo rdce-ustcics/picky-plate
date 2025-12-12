@@ -556,11 +556,14 @@ export default function RestaurantLocator() {
     return getPlaceholderImage(r);
   };
 
+  // State for "Featured" filter (restaurants with complete profiles)
+  const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
+
   // Quick filters with proper toggle functionality
   const handleQuickFilter = (filterId) => {
     const isCurrentlyActive = (() => {
       switch(filterId) {
-        case 'popular': return minRating >= 4;
+        case 'popular': return showFeaturedOnly; // Changed from minRating to featured
         case 'healthy': return selectedCuisine === 'vegan';
         case 'nearme': return showNearbyOnly;
         case 'cheap': return selectedPriceLevel === "1";
@@ -573,7 +576,7 @@ export default function RestaurantLocator() {
     if (isCurrentlyActive) {
       switch(filterId) {
         case 'popular':
-          setMinRating(0);
+          setShowFeaturedOnly(false); // Toggle off featured filter
           break;
         case 'healthy':
           setSelectedCuisine('all');
@@ -596,7 +599,7 @@ export default function RestaurantLocator() {
     } else {
       switch(filterId) {
         case 'popular':
-          setMinRating(4);
+          setShowFeaturedOnly(true); // Show featured restaurants (with phone/website/hours)
           break;
         case 'healthy':
           setSelectedCuisine('vegan');
@@ -631,7 +634,7 @@ export default function RestaurantLocator() {
 
   const isQuickFilterActive = (filterId) => {
     switch(filterId) {
-      case 'popular': return minRating >= 4;
+      case 'popular': return showFeaturedOnly; // Shows restaurants with complete profiles
       case 'healthy': return selectedCuisine === 'vegan';
       case 'nearme': return showNearbyOnly;
       case 'cheap': return selectedPriceLevel === "1";
@@ -950,9 +953,12 @@ export default function RestaurantLocator() {
     };
   }, [userLocation, useApiMode, fetchRestaurantsFromApi, showNearbyOnly, searchRadius]);
 
-  // Refetch when TEXT filters change
+  // Refetch when TEXT filters change - no extra debounce needed since debouncedSearchQuery is already debounced
+  const isFetchingRef = useRef(false);
+
   useEffect(() => {
-    if (!useApiMode || loading) return;
+    if (!useApiMode) return;
+    if (isFetchingRef.current) return; // Prevent concurrent fetches
     if (!debouncedSearchQuery && selectedCuisine === "all" &&
         selectedPriceLevel === "all" && minRating === 0) return;
 
@@ -960,6 +966,7 @@ export default function RestaurantLocator() {
 
     const refetchWithFilters = async () => {
       const locationToUse = userLocation || defaultCenter;
+      isFetchingRef.current = true;
 
       try {
         setLoading(true);
@@ -980,16 +987,21 @@ export default function RestaurantLocator() {
 
         setRestaurants(result.restaurants);
         setTotalFromApi(result.total);
-        setLoading(false);
       } catch (error) {
-        if (!isCancelled) setLoading(false);
+        // Error handled silently
+      } finally {
+        if (!isCancelled) {
+          setLoading(false);
+          isFetchingRef.current = false;
+        }
       }
     };
 
-    const timer = setTimeout(refetchWithFilters, 300);
+    refetchWithFilters();
+
     return () => {
-      clearTimeout(timer);
       isCancelled = true;
+      isFetchingRef.current = false;
     };
   }, [debouncedSearchQuery, selectedCuisine, selectedPriceLevel, minRating,
       showNearbyOnly, searchRadius, userLocation, useApiMode, fetchRestaurantsFromApi]);
@@ -1077,11 +1089,18 @@ export default function RestaurantLocator() {
       if (showNearbyOnly && userLocation) {
         filtered = filtered.filter(restaurant => restaurant.distance <= searchRadius);
       }
+
+      // Featured filter - show restaurants with complete profiles (phone, website, or opening hours)
+      if (showFeaturedOnly) {
+        filtered = filtered.filter(restaurant =>
+          restaurant.phone || restaurant.website || restaurant.openingHours
+        );
+      }
     }
 
     return filtered;
   }, [restaurants, userLocation, deliveryFilter, openNowFilter, useApiMode,
-      debouncedSearchQuery, selectedCuisine, selectedPriceLevel, minRating, showNearbyOnly, searchRadius]);
+      debouncedSearchQuery, selectedCuisine, selectedPriceLevel, minRating, showNearbyOnly, searchRadius, showFeaturedOnly]);
 
   // Limit markers for performance
   const displayedRestaurants = useMemo(() => {
@@ -1092,12 +1111,13 @@ export default function RestaurantLocator() {
       selectedCuisine !== "all" ||
       deliveryFilter !== "all" ||
       openNowFilter ||
-      showNearbyOnly;
+      showNearbyOnly ||
+      showFeaturedOnly;
 
     const maxMarkers = hasActiveFilters ? 500 : 200;
     return filteredRestaurants.slice(0, maxMarkers);
   }, [filteredRestaurants, debouncedSearchQuery, selectedPriceLevel, minRating,
-      selectedCuisine, deliveryFilter, openNowFilter, showNearbyOnly]);
+      selectedCuisine, deliveryFilter, openNowFilter, showNearbyOnly, showFeaturedOnly]);
 
   // Pagination calculations
   const paginatedRestaurants = useMemo(() => {
